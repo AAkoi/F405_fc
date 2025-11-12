@@ -20,3 +20,12 @@ bool icm42688p_get_temperature(float *temp_celsius);
 bool icm42688p_get_all_data(int16_t *gyro_x, int16_t *gyro_y, int16_t *gyro_z,
                             int16_t *accel_x, int16_t *accel_y, int16_t *accel_z,
                             float *temp_celsius);
+
+// 更新传感器数据（检查中断标志位并读取）
+bool icm42688p_update(int16_t *gyro_x, int16_t *gyro_y, int16_t *gyro_z,
+                      int16_t *accel_x, int16_t *accel_y, int16_t *accel_z,
+                      float *temp_celsius);
+
+// 数据就绪标志位（外部可访问，中断中设置）
+extern volatile uint8_t icm42688p_data_ready;
+extern volatile uint8_t spi1_dma_flag;

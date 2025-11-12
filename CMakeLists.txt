@@ -48,10 +48,18 @@ target_sources(${CMAKE_PROJECT_NAME} PRIVATE
     Core/BSP/Bsp_System/bsp_System.c
     Core/BSP/BSP_IO/bsp_IO.c
     Core/BSP/BSP_SPI/bsp_spi.c
+    Core/BSP/Bsp_IIC/bsp_iic.c
     
     # ICM42688P IMU Library
     Core/Lib/icm42688p/icm42688p.c
     Core/Lib/icm42688p/icm42688p_lib.c
+    
+    # BMP280 Barometer Library
+    Core/Lib/bmp280/bmp280.c
+    Core/Lib/bmp280/bmp280_lib.c
+    
+    # PID Controller
+    Core/Control/PID/pid.c
 )
 
 # Add include paths
@@ -60,8 +68,11 @@ target_include_directories(${CMAKE_PROJECT_NAME} PRIVATE
     Core/BSP/Bsp_System
     Core/BSP/BSP_IO
     Core/BSP/BSP_SPI
+    Core/BSP/Bsp_IIC            # I2C BSP
     Core/Src                    # bsp_pins.h
     Core/Lib/icm42688p          # ICM42688P library
+    Core/Lib/bmp280             # BMP280 library
+    Core/Control/PID            # PID controller
 )
 
 # Add project symbols (macros)

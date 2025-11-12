@@ -5,6 +5,11 @@
 extern SPI_HandleTypeDef hspi1;
 icm42688p_dev_t icm;
 
+/* === 数据就绪标志位 === */
+// 数据就绪标志位（中断中设置，主循环中清除）
+volatile uint8_t icm42688p_data_ready = 0;
+volatile uint8_t spi1_dma_flag = 0;
+
 /* === 写寄存器函数 === */
 void icm_spi_write_reg(uint8_t reg, uint8_t value)
 {
@@ -32,24 +37,17 @@ uint8_t icm_spi_read_reg(uint8_t reg)
     return rx[1];  // 返回寄存器数据
 }
 
-/* === 连续读寄存器（可用于DMA） === */
+/* === 连续读寄存器（DMA方式） === */
 void icm_spi_read_burst(uint8_t reg, uint8_t *buffer, uint16_t len)
 {
     reg |= 0x80;  // 读命令
 
     ICM42688P_CS_LOW();
+    spi1_dma_flag=0;
 
     // 先发出起始寄存器地址
     HAL_SPI_Transmit(&hspi1, &reg, 1, HAL_MAX_DELAY);
-
-#if defined(ICM_USE_DMA)
-    // --- DMA 版本 ---
     HAL_SPI_Receive_DMA(&hspi1, buffer, len);
-#else
-    // --- 普通阻塞版本 ---
-    HAL_SPI_Receive(&hspi1, buffer, len, HAL_MAX_DELAY);
-    ICM42688P_CS_HIGH();
-#endif
 }
 
 /* === 延时函数 === */
@@ -57,25 +55,6 @@ void icm_delay_ms(uint32_t ms)
 {
     HAL_Delay(ms);
 }
-
-#if defined(ICM_USE_DMA)
-/**
- * @brief SPI DMA接收完成回调函数
- * @param hspi SPI句柄
- */
-void HAL_SPI_RxCpltCallback(SPI_HandleTypeDef *hspi)
-{
-    if (hspi->Instance == SPI1)
-    {
-        // DMA接收完成，拉高CS
-        ICM42688P_CS_HIGH();
-        
-        // 可以在这里设置标志位，通知主程序数据已就绪
-        // icm42688p_dma_complete_flag = 1;
-    }
-}
-#endif
-
 
 
 void icm42688p_init_driver(void)
@@ -207,4 +186,78 @@ bool icm42688p_get_all_data(int16_t *gyro_x, int16_t *gyro_y, int16_t *gyro_z,
         return true;
     }
     return false;
+}
+
+/**
+ * @brief GPIO外部中断回调函数 - ICM42688P数据就绪中断
+ * @param GPIO_Pin 触发中断的引脚
+ * @note 中断中只设置标志位，数据读取在主循环中进行
+ */
+void HAL_GPIO_EXTI_Callback(uint16_t GPIO_Pin)
+{
+  if (GPIO_Pin == ICM42688P_INT_PIN)
+  {
+    /* ICM42688P数据就绪中断 - 设置标志位 */
+    icm42688p_data_ready = 1;
+  }
+}
+
+/**
+ * @brief 更新ICM42688P传感器数据
+ * @param gyro_x, gyro_y, gyro_z 陀螺仪三轴数据
+ * @param accel_x, accel_y, accel_z 加速度计三轴数据
+ * @param temp_celsius 温度数据
+ * @return 如果有新数据并读取成功返回true，否则返回false
+ * @note 检查标志位，如果有新数据则读取并清除标志位
+ */
+bool icm42688p_update(int16_t *gyro_x, int16_t *gyro_y, int16_t *gyro_z,
+                      int16_t *accel_x, int16_t *accel_y, int16_t *accel_z,
+                      float *temp_celsius)
+{
+    // 检查数据就绪标志位
+    if (!icm42688p_data_ready)
+    {
+        return false;
+    }
+    
+    // 清除标志位
+    icm42688p_data_ready = 0;
+    
+    // 读取传感器数据
+    icm42688p_gyro_data_t gyro_data;
+    icm42688p_accel_data_t accel_data;
+    icm42688p_temp_data_t temp_data;
+    
+    if (icm42688p_read_all(&icm, &gyro_data, &accel_data, &temp_data))
+    {
+        // 复制数据到输出参数
+        *gyro_x = gyro_data.x;
+        *gyro_y = gyro_data.y;
+        *gyro_z = gyro_data.z;
+        
+        *accel_x = accel_data.x;
+        *accel_y = accel_data.y;
+        *accel_z = accel_data.z;
+        
+        *temp_celsius = temp_data.celsius;
+        
+        return true;
+    }
+    
+    return false;
+}
+
+/**
+ * @brief SPI DMA接收完成回调函数
+ * @param hspi SPI句柄
+ * @note DMA传输完成后拉高CS引脚
+ */
+void HAL_SPI_RxCpltCallback(SPI_HandleTypeDef *hspi)
+{
+    if (hspi->Instance == SPI1)
+    {
+        // DMA接收完成，拉高CS
+        spi1_dma_flag=1;
+        ICM42688P_CS_HIGH();
+    }
 }

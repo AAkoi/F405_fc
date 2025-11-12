@@ -11,11 +11,12 @@ void MX_GPIO_Init(void)
 
   /* GPIO Ports Clock Enable */
   __HAL_RCC_GPIOA_CLK_ENABLE();
+  __HAL_RCC_GPIOB_CLK_ENABLE();
   __HAL_RCC_GPIOC_CLK_ENABLE();
 
   /* USER CODE BEGIN MX_GPIO_Init_2 */
 
-  /* 配置ICM42688P中断引脚 PC3 */
+  /* 配置 ICM42688P 中断引脚 PC3 */
   GPIO_InitTypeDef GPIO_InitStruct = {0};
   
   GPIO_InitStruct.Pin = ICM42688P_INT_PIN;
@@ -25,8 +26,16 @@ void MX_GPIO_Init(void)
   HAL_GPIO_Init(ICM42688P_INT_GPIO_PORT, &GPIO_InitStruct);
   
   /* 配置EXTI中断优先级并使能 */
-  HAL_NVIC_SetPriority(ICM42688P_INT_EXTI_IRQn, 5, 0);
+  HAL_NVIC_SetPriority(ICM42688P_INT_EXTI_IRQn, 1, 0);
   HAL_NVIC_EnableIRQ(ICM42688P_INT_EXTI_IRQn);
+
+  /* 配置 ICM42688P CS 引脚 PC2 为推挽输出，默认拉高不选中 */
+  GPIO_InitStruct.Pin = ICM42688P_CS_PIN;
+  GPIO_InitStruct.Mode = GPIO_MODE_OUTPUT_PP;
+  GPIO_InitStruct.Pull = GPIO_NOPULL;
+  GPIO_InitStruct.Speed = GPIO_SPEED_FREQ_HIGH;
+  HAL_GPIO_Init(ICM42688P_CS_GPIO_PORT, &GPIO_InitStruct);
+  ICM42688P_CS_HIGH();
 
   /* USER CODE END MX_GPIO_Init_2 */
 }
@@ -37,19 +46,4 @@ void MX_GPIO_Init(void)
 void EXTI3_IRQHandler(void)
 {
   HAL_GPIO_EXTI_IRQHandler(ICM42688P_INT_PIN);
-}
-
-/**
- * @brief GPIO外部中断回调函数
- * @param GPIO_Pin 触发中断的引脚
- */
-void HAL_GPIO_EXTI_Callback(uint16_t GPIO_Pin)
-{
-  if (GPIO_Pin == ICM42688P_INT_PIN)
-  {
-    /* ICM42688P数据就绪中断 */
-    // 在这里添加你的中断处理代码
-    // 例如：设置标志位，在主循环中读取数据
-    // icm42688p_data_ready_flag = 1;
-  }
 }

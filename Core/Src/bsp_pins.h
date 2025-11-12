@@ -30,12 +30,20 @@
  * ============================================================================ */
 
 // SPI片选引脚 (CS)
-#define ICM42688P_CS_GPIO_PORT          GPIOA
-#define ICM42688P_CS_PIN                GPIO_PIN_4
+#define ICM42688P_CS_GPIO_PORT          GPIOC
+#define ICM42688P_CS_PIN                GPIO_PIN_2
+#define ICM42688P_SPI1_GPIO_PORT          GPIOA
+#define ICM42688P_SCK_PIN               GPIO_PIN_5 //PA5
+#define ICM42688P_MISO_PIN              GPIO_PIN_6 //PA6
+#define ICM42688P_MOSI_PIN              GPIO_PIN_7 //PA7
 
 // 中断引脚 (INT1)
 #define ICM42688P_INT_GPIO_PORT         GPIOC
 #define ICM42688P_INT_PIN               GPIO_PIN_3
+
+#define BMP280_IIC1_GPIO_PORT          GPIOB
+#define BMP280_IIC1_SCL                GPIO_PIN_6
+#define BMP280_IIC1_SDA                GPIO_PIN_7
 
 /* ============================================================================
  * ICM42688P GPIO 控制宏
