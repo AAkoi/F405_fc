@@ -49,6 +49,7 @@ target_sources(${CMAKE_PROJECT_NAME} PRIVATE
     Core/BSP/BSP_IO/bsp_IO.c
     Core/BSP/BSP_SPI/bsp_spi.c
     Core/BSP/Bsp_IIC/bsp_iic.c
+    Core/BSP/Bsp_UART/bsp_uart.c
     
     # ICM42688P IMU Library
     Core/Lib/icm42688p/icm42688p.c
@@ -57,6 +58,10 @@ target_sources(${CMAKE_PROJECT_NAME} PRIVATE
     # BMP280 Barometer Library
     Core/Lib/bmp280/bmp280.c
     Core/Lib/bmp280/bmp280_lib.c
+    
+    # ELRS/CRSF UART helper
+    Core/Lib/esrl/elrs_crsf_uart.c
+    Core/Lib/esrl/elrs_crsf_port.c
     
     # PID Controller
     Core/Control/PID/pid.c
@@ -72,9 +77,11 @@ target_include_directories(${CMAKE_PROJECT_NAME} PRIVATE
     Core/BSP/BSP_IO
     Core/BSP/BSP_SPI
     Core/BSP/Bsp_IIC            # I2C BSP
+    Core/BSP/Bsp_UART           # UART BSP
     Core/Src                    # bsp_pins.h
     Core/Lib/icm42688p          # ICM42688P library
     Core/Lib/bmp280             # BMP280 library
+    Core/Lib/esrl               # ELRS/CRSF helper
     Core/Control/PID            # PID controller
     "Core/Control/Attitude Control"  # Attitude module
 )
@@ -84,6 +91,7 @@ target_compile_definitions(${CMAKE_PROJECT_NAME} PRIVATE
     # Add user defined symbols
     USE_HAL_DRIVER
     ICM_USE_DMA             # Enable DMA for ICM42688P
+    USE_UART1               # Enable UART1 BSP
 )
 
 # Remove wrong libob.a library dependency when using cpp files
