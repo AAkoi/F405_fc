@@ -26,6 +26,13 @@ bool icm42688p_update(int16_t *gyro_x, int16_t *gyro_y, int16_t *gyro_z,
                       int16_t *accel_x, int16_t *accel_y, int16_t *accel_z,
                       float *temp_celsius);
 
+// 传感器数据预处理：读取原始值并给出规范化数值（gyro: dps, accel: g）
+bool icm42688p_dataPreprocess(int16_t *gyro_x, int16_t *gyro_y, int16_t *gyro_z,
+                      int16_t *accel_x, int16_t *accel_y, int16_t *accel_z,
+                       float *gyro_x_norm,float *gyro_y_norm,float *gyro_z_norm,
+                      float *accel_x_norm,float *accel_y_norm,float *accel_z_norm,
+                      float *temp_celsius);
+
 // 数据就绪标志位（外部可访问，中断中设置）
 extern volatile uint8_t icm42688p_data_ready;
 extern volatile uint8_t spi1_dma_flag;

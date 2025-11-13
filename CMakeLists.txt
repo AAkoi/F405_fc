@@ -60,6 +60,9 @@ target_sources(${CMAKE_PROJECT_NAME} PRIVATE
     
     # PID Controller
     Core/Control/PID/pid.c
+    
+    # Attitude Estimator
+    "Core/Control/Attitude Control/attitude.c"
 )
 
 # Add include paths
@@ -73,6 +76,7 @@ target_include_directories(${CMAKE_PROJECT_NAME} PRIVATE
     Core/Lib/icm42688p          # ICM42688P library
     Core/Lib/bmp280             # BMP280 library
     Core/Control/PID            # PID controller
+    "Core/Control/Attitude Control"  # Attitude module
 )
 
 # Add project symbols (macros)

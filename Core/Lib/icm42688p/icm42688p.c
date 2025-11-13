@@ -248,6 +248,53 @@ bool icm42688p_update(int16_t *gyro_x, int16_t *gyro_y, int16_t *gyro_z,
 }
 
 /**
+ * @brief Read and preprocess IMU data (raw + normalized values)
+ *
+ * Normalization rules:
+ * - Gyro: raw value converted to dps using current FSR scale (raw/gyro_scale)
+ * - Accel: raw value converted to g using current FSR scale (raw/accel_scale)
+ *
+ * @return true if new data was read and outputs are updated, false otherwise
+ */
+bool icm42688p_dataPreprocess(int16_t *gyro_x, int16_t *gyro_y, int16_t *gyro_z,
+                      int16_t *accel_x, int16_t *accel_y, int16_t *accel_z,
+                       float *gyro_x_norm,float *gyro_y_norm,float *gyro_z_norm,
+                      float *accel_x_norm,float *accel_y_norm,float *accel_z_norm,
+                      float *temp_celsius)
+{
+    icm42688p_gyro_data_t gyro_data;
+    icm42688p_accel_data_t accel_data;
+    icm42688p_temp_data_t temp_data;
+
+    // Prefer update() path when using data-ready interrupt
+    if (!icm42688p_update(gyro_x, gyro_y, gyro_z, accel_x, accel_y, accel_z, temp_celsius)) {
+        // Fallback: do a direct burst read
+        if (!icm42688p_read_all(&icm, &gyro_data, &accel_data, &temp_data)) {
+            return false;
+        }
+        if (gyro_x)  *gyro_x  = gyro_data.x;
+        if (gyro_y)  *gyro_y  = gyro_data.y;
+        if (gyro_z)  *gyro_z  = gyro_data.z;
+        if (accel_x) *accel_x = accel_data.x;
+        if (accel_y) *accel_y = accel_data.y;
+        if (accel_z) *accel_z = accel_data.z;
+        if (temp_celsius) *temp_celsius = temp_data.celsius;
+    }
+
+    // Use current scale factors from device config
+    // Note: icm.gyro_scale is LSB per dps; icm.accel_scale is LSB per g
+    if (gyro_x && gyro_x_norm) *gyro_x_norm = ((float)(*gyro_x)) / (icm.gyro_scale > 0.0f ? icm.gyro_scale : 1.0f);
+    if (gyro_y && gyro_y_norm) *gyro_y_norm = ((float)(*gyro_y)) / (icm.gyro_scale > 0.0f ? icm.gyro_scale : 1.0f);
+    if (gyro_z && gyro_z_norm) *gyro_z_norm = ((float)(*gyro_z)) / (icm.gyro_scale > 0.0f ? icm.gyro_scale : 1.0f);
+
+    if (accel_x && accel_x_norm) *accel_x_norm = ((float)(*accel_x)) / (icm.accel_scale > 0.0f ? icm.accel_scale : 1.0f);
+    if (accel_y && accel_y_norm) *accel_y_norm = ((float)(*accel_y)) / (icm.accel_scale > 0.0f ? icm.accel_scale : 1.0f);
+    if (accel_z && accel_z_norm) *accel_z_norm = ((float)(*accel_z)) / (icm.accel_scale > 0.0f ? icm.accel_scale : 1.0f);
+
+    return true;
+}
+
+/**
  * @brief SPI DMA接收完成回调函数
  * @param hspi SPI句柄
  * @note DMA传输完成后拉高CS引脚

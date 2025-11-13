@@ -1,5 +1,6 @@
 #include "bsp_spi.h"
 #include "stm32f4xx_hal_spi.h"
+#include "bsp_pins.h"
 
 
 extern void Error_Handler(void);
@@ -57,4 +58,30 @@ void MX_SPI1_Init(void)
   HAL_NVIC_EnableIRQ(DMA2_Stream0_IRQn);
 
   /* 不再配置 TX DMA */
+}
+
+/* MSP GPIO 配置迁移至 BSP：配置 SPI1 引脚 PA5/PA6/PA7 */
+void HAL_SPI_MspInit(SPI_HandleTypeDef* hspi)
+{
+  if (hspi->Instance == SPI1)
+  {
+    GPIO_InitTypeDef GPIO_InitStruct = {0};
+
+    __HAL_RCC_GPIOA_CLK_ENABLE();
+
+    GPIO_InitStruct.Pin = ICM42688P_SCK_PIN | ICM42688P_MISO_PIN | ICM42688P_MOSI_PIN;
+    GPIO_InitStruct.Mode = GPIO_MODE_AF_PP;
+    GPIO_InitStruct.Pull = GPIO_NOPULL;
+    GPIO_InitStruct.Speed = GPIO_SPEED_FREQ_VERY_HIGH;
+    GPIO_InitStruct.Alternate = GPIO_AF5_SPI1;
+    HAL_GPIO_Init(ICM42688P_SPI1_GPIO_PORT, &GPIO_InitStruct);
+  }
+}
+
+void HAL_SPI_MspDeInit(SPI_HandleTypeDef* hspi)
+{
+  if (hspi->Instance == SPI1)
+  {
+    HAL_GPIO_DeInit(ICM42688P_SPI1_GPIO_PORT, ICM42688P_SCK_PIN | ICM42688P_MISO_PIN | ICM42688P_MOSI_PIN);
+  }
 }
