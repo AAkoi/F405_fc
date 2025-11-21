@@ -43,6 +43,12 @@ void Attitude_Init(void);
 // 利用加速度计静止姿态进行初始化（可选）
 void Attitude_InitFromAccelerometer(uint16_t samples);
 
+// 陀螺仪零偏校准（静止状态下采样多次求平均）
+void Attitude_CalibrateGyro(uint16_t samples);
+
+// 设置陀螺仪零偏（手动设置）
+void Attitude_SetGyroBias(float bias_x, float bias_y, float bias_z);
+
 // 更新姿态（如有新数据自动读取）
 Euler_angles Attitude_Update(int16_t ax, int16_t ay, int16_t az,
                              int16_t gx, int16_t gy, int16_t gz);

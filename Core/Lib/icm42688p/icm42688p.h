@@ -26,6 +26,10 @@ bool icm42688p_update(int16_t *gyro_x, int16_t *gyro_y, int16_t *gyro_z,
                       int16_t *accel_x, int16_t *accel_y, int16_t *accel_z,
                       float *temp_celsius);
 
+// 仅做陀螺刻度转换（raw LSB -> dps）
+bool icm42688p_gyro_dataPreprocess(int16_t *gyro_x, int16_t *gyro_y, int16_t *gyro_z,
+                                    float *gyro_x_norm,float *gyro_y_norm,float *gyro_z_norm);
+
 // 传感器数据预处理：读取原始值并给出规范化数值（gyro: dps, accel: g）
 bool icm42688p_dataPreprocess(int16_t *gyro_x, int16_t *gyro_y, int16_t *gyro_z,
                       int16_t *accel_x, int16_t *accel_y, int16_t *accel_z,

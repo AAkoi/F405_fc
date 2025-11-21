@@ -46,10 +46,10 @@ target_link_directories(${CMAKE_PROJECT_NAME} PRIVATE
 target_sources(${CMAKE_PROJECT_NAME} PRIVATE
     # Add user sources here
     Core/BSP/Bsp_System/bsp_System.c
-    Core/BSP/BSP_IO/bsp_IO.c
-    Core/BSP/BSP_SPI/bsp_spi.c
+    Core/BSP/Bsp_IO/bsp_IO.c
+    Core/BSP/Bsp_SPI/bsp_spi.c
     Core/BSP/Bsp_IIC/bsp_iic.c
-    Core/BSP/Bsp_UART/bsp_uart.c
+    Core/BSP/Bsp_uart/bsp_uart.c
     
     # ICM42688P IMU Library
     Core/Lib/icm42688p/icm42688p.c
@@ -65,33 +65,52 @@ target_sources(${CMAKE_PROJECT_NAME} PRIVATE
     
     # PID Controller
     Core/Control/PID/pid.c
-    
+
     # Attitude Estimator
     "Core/Control/Attitude Control/attitude.c"
+
+    # Filters and maths utilities
+    Core/Control/Filter/filter.c
+    Core/Control/Tools/maths.c
+
+    # Control tasks
+    Core/Control/Tasks/imu_task.c
+
+    # Test modules
+    Core/Test/test_icm42688p.c
+    Core/Test/test_bmp280.c
+    Core/Test/test_spi_hardware.c
+    Core/Test/test_dma.c
 )
 
 # Add include paths
 target_include_directories(${CMAKE_PROJECT_NAME} PRIVATE
     # Add user defined include paths
     Core/BSP/Bsp_System
-    Core/BSP/BSP_IO
-    Core/BSP/BSP_SPI
+    Core/BSP/Bsp_IO
+    Core/BSP/Bsp_SPI
     Core/BSP/Bsp_IIC            # I2C BSP
-    Core/BSP/Bsp_UART           # UART BSP
+    Core/BSP/Bsp_uart           # UART BSP
     Core/Src                    # bsp_pins.h
     Core/Lib/icm42688p          # ICM42688P library
     Core/Lib/bmp280             # BMP280 library
     Core/Lib/esrl               # ELRS/CRSF helper
     Core/Control/PID            # PID controller
+    Core/Control/Filter         # Filters
+    Core/Control/Tools          # Math helpers
+    Core/Control/Tasks          # Control tasks
     "Core/Control/Attitude Control"  # Attitude module
+    Core/Test                   # Test modules
 )
 
 # Add project symbols (macros)
 target_compile_definitions(${CMAKE_PROJECT_NAME} PRIVATE
     # Add user defined symbols
     USE_HAL_DRIVER
-    ICM_USE_DMA             # Enable DMA for ICM42688P
+    ICM_USE_DMA             # Enable DMA for ICM42688P (启用后使用DMA模式)
     USE_UART1               # Enable UART1 BSP
+    
+    # 注意：如果遇到DMA问题，可以注释掉ICM_USE_DMA，回退到轮询模式
 )
 
 # Remove wrong libob.a library dependency when using cpp files
@@ -102,4 +121,11 @@ target_link_libraries(${CMAKE_PROJECT_NAME}
     stm32cubemx
 
     # Add user defined libraries
+)
+
+# Create .bin and .hex after linking and print size
+add_custom_command(TARGET ${CMAKE_PROJECT_NAME} POST_BUILD
+    COMMAND ${CMAKE_OBJCOPY} -O binary $<TARGET_FILE:${CMAKE_PROJECT_NAME}> ${CMAKE_PROJECT_NAME}.bin
+    COMMAND ${CMAKE_OBJCOPY} -O ihex   $<TARGET_FILE:${CMAKE_PROJECT_NAME}> ${CMAKE_PROJECT_NAME}.hex
+    COMMAND ${CMAKE_SIZE} $<TARGET_FILE:${CMAKE_PROJECT_NAME}>
 )

@@ -29,18 +29,36 @@
 #include <time.h>
 #include <sys/time.h>
 #include <sys/times.h>
+#include "stm32f4xx.h"
+#include "bsp_uart.h"
 
 
 /* Variables */
-extern int __io_putchar(int ch) __attribute__((weak));
-extern int __io_getchar(void) __attribute__((weak));
-
-
 char *__env[1] = { 0 };
 char **environ = __env;
 
 
 /* Functions */
+int __io_putchar(int ch)
+{
+#if defined(USE_UART1)
+  uint8_t c = (uint8_t)ch;
+  if (HAL_UART_Transmit(&huart1, &c, 1, HAL_MAX_DELAY) == HAL_OK)
+  {
+    return ch;
+  }
+  return -1;
+#else
+  ITM_SendChar((uint32_t)ch);
+  return ch;
+#endif
+}
+
+__attribute__((weak)) int __io_getchar(void)
+{
+  return -1;
+}
+
 void initialise_monitor_handles()
 {
 }

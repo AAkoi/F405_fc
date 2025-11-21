@@ -34,7 +34,7 @@
 #define ICM42688P_CS_PIN                GPIO_PIN_2
 #define ICM42688P_SPI1_GPIO_PORT        GPIOA
 #define ICM42688P_SCK_PIN               GPIO_PIN_5 //PA5
-#define ICM42688P_MISO_PIN              GPIO_PIN_6 //PA6
+#define ICM42688P_MISO_PIN              GPIO_PIN_6 //PA6 
 #define ICM42688P_MOSI_PIN              GPIO_PIN_7 //PA7
 
 // 中断引脚 (INT1)

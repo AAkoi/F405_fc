@@ -31,6 +31,8 @@ void bmp_delay_ms(uint32_t ms)
 /* === 初始化 === */
 void bmp280_init_driver(void)
 {
+    printf("========== BMP280 初始化 ==========\r\n");
+    
     // 绑定 I2C 与延时函数
     bmp.i2c_read_reg  = bmp_i2c_read_reg;
     bmp.i2c_write_reg = bmp_i2c_write_reg;
@@ -40,25 +42,62 @@ void bmp280_init_driver(void)
     // 默认配置（高精度强制模式）
     bmp.config = bmp280_get_high_precision_config();
 
+    printf("[步骤1] I2C通信测试...\r\n");
+    printf("  尝试地址 0x76...\r\n");
+    
     // 依次尝试 0x76 与 0x77 地址
     bool ok = false;
     if (bmp280_detect_i2c(&bmp, BMP280_I2C_ADDR_PRIMARY)) {
+        printf("  ✓ 在地址 0x76 检测到设备\r\n");
         ok = true;
-    } else if (bmp280_detect_i2c(&bmp, BMP280_I2C_ADDR_SECONDARY)) {
-        ok = true;
+    } else {
+        printf("  ✗ 地址 0x76 无响应\r\n");
+        printf("  尝试地址 0x77...\r\n");
+        
+        if (bmp280_detect_i2c(&bmp, BMP280_I2C_ADDR_SECONDARY)) {
+            printf("  ✓ 在地址 0x77 检测到设备\r\n");
+            ok = true;
+        } else {
+            printf("  ✗ 地址 0x77 无响应\r\n");
+        }
     }
 
     if (!ok) {
-        printf("BMP280 not found on I2C (0x76/0x77)!\r\n");
+        printf("\r\n[错误] BMP280 未找到！\r\n");
+        printf("可能原因:\r\n");
+        printf("  1. I2C接线错误 (SDA/SCL)\r\n");
+        printf("  2. 传感器未上电\r\n");
+        printf("  3. I2C地址不是 0x76 或 0x77\r\n");
+        printf("  4. I2C上拉电阻缺失\r\n");
+        printf("  5. I2C时钟频率过高\r\n");
+        printf("=====================================\r\n\r\n");
         return;
     }
 
+    printf("\r\n[步骤2] 初始化传感器...\r\n");
+    
     // 初始化设备并应用配置
     if (bmp280_init(&bmp)) {
-        printf("BMP280 detected (chip_id=0x%02X) at 0x%02X\r\n", bmp.chip_id, bmp.i2c_addr);
+        printf("  ✓ BMP280 初始化成功!\r\n");
+        printf("    - Chip ID: 0x%02X", bmp.chip_id);
+        
+        if (bmp.chip_id == 0x58) {
+            printf(" (BMP280)\r\n");
+        } else if (bmp.chip_id == 0x60) {
+            printf(" (BME280)\r\n");
+        } else {
+            printf(" (未知型号)\r\n");
+        }
+        
+        printf("    - I2C地址: 0x%02X\r\n", bmp.i2c_addr);
+        printf("    - 工作模式: 高精度强制模式\r\n");
+        printf("    - 过采样: 温度x2, 气压x16\r\n");
     } else {
-        printf("BMP280 init failed!\r\n");
+        printf("  ✗ BMP280 初始化失败!\r\n");
+        printf("    传感器检测到但配置失败\r\n");
     }
+    
+    printf("=====================================\r\n\r\n");
 }
 
 /* === 读取接口 === */

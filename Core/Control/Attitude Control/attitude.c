@@ -4,6 +4,10 @@
 #include <math.h>
 #include "stm32f4xx_hal.h"
 #include "attitude.h"
+#include "icm42688p_lib.h"
+
+// 外部IMU设备句柄
+extern icm42688p_dev_t icm;
 
 Euler_angles euler_angles;
 Quaternion attitude_q;
@@ -12,10 +16,16 @@ Quaternion attitude_q;
 static float exInt = 0.0f, eyInt = 0.0f, ezInt = 0.0f;
 static uint32_t lastTick = 0;
 
+// 陀螺仪零偏（单位：dps，在校准后会被设置）
+static float gyro_bias_x = 0.0f;
+static float gyro_bias_y = 0.0f;
+static float gyro_bias_z = 0.0f;
+
 // Mahony滤波器增益（可按响应/抑噪要求调整）。
 // 实际使用的是 2*Kp 与 2*Ki，便于少一次乘法。
-static const float twoKp = 2.0f * 0.5f;   // 比例增益 2*Kp（Kp≈0.5）
-static const float twoKi = 2.0f * 0.05f;  // 积分增益 2*Ki（Ki≈0.05）
+// 降低Kp值以减少对加速度计噪声的敏感度
+static const float twoKp = 2.0f * 0.2f;   // 比例增益 2*Kp（Kp≈0.2，降低以减少噪声影响）
+static const float twoKi = 2.0f * 0.01f;  // 积分增益 2*Ki（Ki≈0.01，降低以提高稳定性）
 
 // 快速平方根倒数（1/sqrt(x)）
 float fast_inv_sqrt(float x)
@@ -56,6 +66,52 @@ void Attitude_Init(void)
 
     exInt = eyInt = ezInt = 0.0f;
     lastTick = HAL_GetTick();
+}
+
+void Attitude_CalibrateGyro(uint16_t samples)
+{
+    if (samples == 0) samples = 100;
+    
+    printf("开始陀螺仪校准，请保持传感器静止...\r\n");
+    
+    float gxSum = 0.0f, gySum = 0.0f, gzSum = 0.0f;
+    uint16_t valid_count = 0;
+    
+    for (uint16_t i = 0; i < samples; ++i) {
+        int16_t gx_r, gy_r, gz_r, ax_r, ay_r, az_r;
+        float gx_dps, gy_dps, gz_dps, ax_g, ay_g, az_g, temp;
+        if (icm42688p_dataPreprocess(&gx_r, &gy_r, &gz_r,
+                                     &ax_r, &ay_r, &az_r,
+                                     &gx_dps, &gy_dps, &gz_dps,
+                                     &ax_g, &ay_g, &az_g,
+                                     &temp)) {
+            gxSum += gx_dps;
+            gySum += gy_dps;
+            gzSum += gz_dps;
+            valid_count++;
+        }
+        HAL_Delay(5);
+    }
+    
+    if (valid_count > 0) {
+        gyro_bias_x = gxSum / valid_count;
+        gyro_bias_y = gySum / valid_count;
+        gyro_bias_z = gzSum / valid_count;
+        
+        printf("陀螺仪校准完成！零偏: X=%d.%d Y=%d.%d Z=%d.%d dps\r\n",
+               (int)gyro_bias_x, (int)(fabsf(gyro_bias_x) * 10) % 10,
+               (int)gyro_bias_y, (int)(fabsf(gyro_bias_y) * 10) % 10,
+               (int)gyro_bias_z, (int)(fabsf(gyro_bias_z) * 10) % 10);
+    } else {
+        printf("陀螺仪校准失败：未获取到有效数据\r\n");
+    }
+}
+
+void Attitude_SetGyroBias(float bias_x, float bias_y, float bias_z)
+{
+    gyro_bias_x = bias_x;
+    gyro_bias_y = bias_y;
+    gyro_bias_z = bias_z;
 }
 
 void Attitude_InitFromAccelerometer(uint16_t samples)
@@ -127,19 +183,24 @@ void Attitude_InitFromAccelerometer(uint16_t samples)
 Euler_angles Attitude_Update(int16_t ax_in, int16_t ay_in, int16_t az_in,
                              int16_t gx_in, int16_t gy_in, int16_t gz_in)
 {
-    (void)ax_in; (void)ay_in; (void)az_in; (void)gx_in; (void)gy_in; (void)gz_in;
-
-    // 读取IMU数据（原始与归一化后的物理量）：
-    //   gyro_dps: 陀螺（°/s）  accel_g: 加速度（g）
-    int16_t gx_r, gy_r, gz_r, ax_r, ay_r, az_r;
-    float gx_dps, gy_dps, gz_dps, ax_g, ay_g, az_g, temp;
-    if (!icm42688p_dataPreprocess(&gx_r, &gy_r, &gz_r,
-                                  &ax_r, &ay_r, &az_r,
-                                  &gx_dps, &gy_dps, &gz_dps,
-                                  &ax_g, &ay_g, &az_g,
-                                  &temp)) {
-        return euler_angles; // 无新数据
+    // 使用传入的原始传感器数据，不再重复读取
+    int16_t gx_r = gx_in, gy_r = gy_in, gz_r = gz_in;
+    int16_t ax_r = ax_in, ay_r = ay_in, az_r = az_in;
+    
+    // 将原始数据转换为物理单位
+    float gx_dps, gy_dps, gz_dps;
+    float ax_g, ay_g, az_g;
+    
+    if (!icm42688p_gyro_dataPreprocess(&gx_r, &gy_r, &gz_r,
+                                       &gx_dps, &gy_dps, &gz_dps)) {
+        return euler_angles; // 转换失败
     }
+    
+    // 手动转换加速度
+    float ascale = (icm.accel_scale > 0.0f) ? icm.accel_scale : 1.0f;
+    ax_g = (float)ax_r / ascale;
+    ay_g = (float)ay_r / ascale;
+    az_g = (float)az_r / ascale;
 
     // 时间步长 dt（s）并限制范围，避免突发抖动
     uint32_t now = HAL_GetTick();
@@ -148,10 +209,10 @@ Euler_angles Attitude_Update(int16_t ax_in, int16_t ay_in, int16_t az_in,
     if (dt < 1e-4f) dt = 1e-4f;
     if (dt > 0.05f) dt = 0.05f;
 
-    // 陀螺从 °/s 转为 rad/s： rad/s = dps * pi/180
-    float gx = gx_dps * DEG2RAD;
-    float gy = gy_dps * DEG2RAD;
-    float gz = gz_dps * DEG2RAD;
+    // 陀螺零偏补偿并从 °/s 转为 rad/s： rad/s = dps * pi/180
+    float gx = (gx_dps - gyro_bias_x) * DEG2RAD;
+    float gy = (gy_dps - gyro_bias_y) * DEG2RAD;
+    float gz = (gz_dps - gyro_bias_z) * DEG2RAD;
 
     // 加速度向量归一化（当处于近自由落体或强机动时可能无效）
     float n2 = ax_g*ax_g + ay_g*ay_g + az_g*az_g;
