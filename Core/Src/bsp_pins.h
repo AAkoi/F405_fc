@@ -46,6 +46,13 @@
 #define BMP280_IIC1_SCL                GPIO_PIN_6
 #define BMP280_IIC1_SDA                GPIO_PIN_7
 
+//IIC2
+#define HMC5883l_IIC2_GPIO_PORT          GPIOB
+#define HMC5883l_IIC2_SCL                GPIO_PIN_10
+#define HMC5883l_IIC2_SDA                GPIO_PIN_11
+// 中断引脚 (INT1)
+#define HMC5883l_INT_GPIO_PORT         GPIOB
+#define HMC5883l_INT_PIN               GPIO_PIN_2
 /* ============================================================================
  * UART 引脚定义（使用 ifdef 选择性启用）
  * 建议在编译选项或全局宏中定义 USE_UARTx 以启用对应串口。

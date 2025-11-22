@@ -345,23 +345,24 @@ bool icm42688p_read_all(icm42688p_dev_t *dev,
         return false;
     }
     
-    // Read all data in one burst: ACCEL(6) + GYRO(6) + TEMP(2) = 14 bytes
+    // Read all data in one burst starting from TEMP_DATA1:
+    // TEMP(2) + ACCEL(6) + GYRO(6) = 14 bytes
     uint8_t buffer[14];
-    dev->spi_read_burst(ICM42688P_REG_ACCEL_DATA_X1, buffer, 14);
+    dev->spi_read_burst(ICM42688P_REG_TEMP_DATA1, buffer, 14);
     
+    // Parse temperature
+    temp->raw = (int16_t)((buffer[0] << 8) | buffer[1]);
+    temp->celsius = (temp->raw / 132.48f) + 25.0f;
+
     // Parse accelerometer data
-    accel->x = (int16_t)((buffer[0] << 8) | buffer[1]) - dev->accel_offset[0];
-    accel->y = (int16_t)((buffer[2] << 8) | buffer[3]) - dev->accel_offset[1];
-    accel->z = (int16_t)((buffer[4] << 8) | buffer[5]) - dev->accel_offset[2];
+    accel->x = (int16_t)((buffer[2] << 8) | buffer[3]) - dev->accel_offset[0];
+    accel->y = (int16_t)((buffer[4] << 8) | buffer[5]) - dev->accel_offset[1];
+    accel->z = (int16_t)((buffer[6] << 8) | buffer[7]) - dev->accel_offset[2];
     
     // Parse gyroscope data
-    gyro->x = (int16_t)((buffer[6] << 8) | buffer[7]) - dev->gyro_offset[0];
-    gyro->y = (int16_t)((buffer[8] << 8) | buffer[9]) - dev->gyro_offset[1];
-    gyro->z = (int16_t)((buffer[10] << 8) | buffer[11]) - dev->gyro_offset[2];
-    
-    // Parse temperature data
-    temp->raw = (int16_t)((buffer[12] << 8) | buffer[13]);
-    temp->celsius = (temp->raw / 132.48f) + 25.0f;
+    gyro->x = (int16_t)((buffer[8] << 8) | buffer[9]) - dev->gyro_offset[0];
+    gyro->y = (int16_t)((buffer[10] << 8) | buffer[11]) - dev->gyro_offset[1];
+    gyro->z = (int16_t)((buffer[12] << 8) | buffer[13]) - dev->gyro_offset[2];
     
     return true;
 }

@@ -2,6 +2,7 @@
 #include "bsp_pins.h"
 
 I2C_HandleTypeDef hi2c1;
+I2C_HandleTypeDef hi2c2;
 extern void Error_Handler(void);
 
 // I2C IT完成标志位
@@ -35,6 +36,34 @@ void MX_I2C1_Init(void)
     HAL_NVIC_EnableIRQ(I2C1_ER_IRQn);
 }
 
+/**
+ * @brief I2C2初始化函数
+ */
+void MX_I2C2_Init(void)
+{
+    hi2c2.Instance = I2C2;
+    hi2c2.Init.ClockSpeed = 400000;  // 400kHz
+    hi2c2.Init.DutyCycle = I2C_DUTYCYCLE_2;
+    hi2c2.Init.OwnAddress1 = 0;
+    hi2c2.Init.AddressingMode = I2C_ADDRESSINGMODE_7BIT;
+    hi2c2.Init.DualAddressMode = I2C_DUALADDRESS_DISABLE;
+    hi2c2.Init.OwnAddress2 = 0;
+    hi2c2.Init.GeneralCallMode = I2C_GENERALCALL_DISABLE;
+    hi2c2.Init.NoStretchMode = I2C_NOSTRETCH_DISABLE;
+    
+    if (HAL_I2C_Init(&hi2c2) != HAL_OK)
+    {
+        // 初始化错误处理
+        Error_Handler();
+    }
+
+    // 使能I2C2中断（事件与错误）
+    HAL_NVIC_SetPriority(I2C2_EV_IRQn, 5, 0);
+    HAL_NVIC_EnableIRQ(I2C2_EV_IRQn);
+    HAL_NVIC_SetPriority(I2C2_ER_IRQn, 5, 0);
+    HAL_NVIC_EnableIRQ(I2C2_ER_IRQn);
+}
+
 /* MSP GPIO 配置迁移至 BSP：配置 I2C1 引脚 PB6/PB7 */
 void HAL_I2C_MspInit(I2C_HandleTypeDef* hi2c)
 {
@@ -51,6 +80,20 @@ void HAL_I2C_MspInit(I2C_HandleTypeDef* hi2c)
         GPIO_InitStruct.Speed = GPIO_SPEED_FREQ_VERY_HIGH;
         GPIO_InitStruct.Alternate = GPIO_AF4_I2C1;
         HAL_GPIO_Init(BMP280_IIC1_GPIO_PORT, &GPIO_InitStruct);
+    }
+    else if (hi2c->Instance == I2C2)
+    {
+        GPIO_InitTypeDef GPIO_InitStruct = {0};
+
+        __HAL_RCC_GPIOB_CLK_ENABLE();
+        __HAL_RCC_I2C2_CLK_ENABLE();
+
+        GPIO_InitStruct.Pin = HMC5883l_IIC2_SCL | HMC5883l_IIC2_SDA;
+        GPIO_InitStruct.Mode = GPIO_MODE_AF_OD;
+        GPIO_InitStruct.Pull = GPIO_PULLUP;
+        GPIO_InitStruct.Speed = GPIO_SPEED_FREQ_VERY_HIGH;
+        GPIO_InitStruct.Alternate = GPIO_AF4_I2C2;
+        HAL_GPIO_Init(HMC5883l_IIC2_GPIO_PORT, &GPIO_InitStruct);
     }
 }
 

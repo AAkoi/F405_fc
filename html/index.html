@@ -1,0 +1,519 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Pro Drone Visualizer</title>
+    <style>
+        :root {
+            --bg-grad-start: #eef2f3;
+            --bg-grad-end: #8e9eab;
+            --panel-bg: rgba(20, 20, 20, 0.85);
+            --text-main: #ffffff;
+            --text-sub: #a0a0a0;
+            --accent: #ff9f43; /* 橙色点缀 */
+        }
+
+        body {
+            margin: 0;
+            overflow: hidden;
+            font-family: 'Segoe UI', Roboto, Helvetica, Arial, sans-serif;
+            background: linear-gradient(135deg, var(--bg-grad-start), var(--bg-grad-end));
+            color: #333;
+        }
+
+        /* 顶部栏 */
+        header {
+            position: absolute;
+            top: 0;
+            left: 0;
+            width: 100%;
+            padding: 15px 30px;
+            box-sizing: border-box;
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            z-index: 10;
+            pointer-events: none; /* 让点击穿透到画布 */
+        }
+        
+        header > * { pointer-events: auto; } /* 恢复按钮点击 */
+
+        h1 {
+            font-size: 1.2rem;
+            margin: 0;
+            color: #2c3e50;
+            text-shadow: 0 1px 0 rgba(255,255,255,0.5);
+        }
+
+        .btn {
+            background: #2c3e50;
+            color: white;
+            border: none;
+            padding: 8px 20px;
+            border-radius: 20px;
+            font-weight: 600;
+            cursor: pointer;
+            transition: 0.2s;
+            box-shadow: 0 4px 10px rgba(0,0,0,0.2);
+        }
+        .btn:hover { background: #34495e; transform: translateY(-1px); }
+
+        /* 数据面板 (赛博风格) */
+        .hud-panel {
+            position: absolute;
+            top: 80px;
+            left: 30px;
+            width: 220px;
+            background: var(--panel-bg);
+            backdrop-filter: blur(10px);
+            border-radius: 12px;
+            padding: 20px;
+            color: var(--text-main);
+            border-left: 4px solid var(--accent);
+            box-shadow: 0 10px 30px rgba(0,0,0,0.3);
+            z-index: 5;
+            font-family: 'Consolas', 'Monaco', monospace;
+        }
+
+        .hud-row {
+            display: flex;
+            justify-content: space-between;
+            margin-bottom: 10px;
+            align-items: center;
+        }
+        .hud-label { color: var(--text-sub); font-size: 0.8rem; }
+        .hud-val { font-weight: bold; font-size: 1rem; color: var(--accent); }
+        .hud-divider { height: 1px; background: #444; margin: 15px 0; }
+        .hud-title { font-size: 0.7rem; color: #666; letter-spacing: 2px; text-transform: uppercase; margin-bottom: 5px;}
+
+        /* 视角控制条 */
+        .control-bar {
+            position: absolute;
+            bottom: 30px;
+            left: 50%;
+            transform: translateX(-50%);
+            background: rgba(255,255,255,0.9);
+            padding: 10px 20px;
+            border-radius: 50px;
+            display: flex;
+            gap: 10px;
+            box-shadow: 0 10px 25px rgba(0,0,0,0.1);
+            z-index: 10;
+        }
+
+        .view-btn {
+            border: none;
+            background: transparent;
+            padding: 8px 16px;
+            border-radius: 20px;
+            font-weight: 600;
+            color: #555;
+            cursor: pointer;
+            transition: 0.2s;
+        }
+        .view-btn:hover { background: #eee; }
+        .view-btn.active { background: #2c3e50; color: white; }
+
+        #status-dot {
+            height: 10px; width: 10px; 
+            background-color: #e74c3c; 
+            border-radius: 50%; 
+            display: inline-block; 
+            margin-right: 8px;
+        }
+    </style>
+    
+    <!-- Three.js 核心 -->
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/three.js/r128/three.min.js"></script>
+    <!-- OrbitControls 用于缩放和旋转 -->
+    <script src="https://cdn.jsdelivr.net/npm/three@0.128.0/examples/js/controls/OrbitControls.js"></script>
+</head>
+<body>
+
+    <header>
+        <h1>AERO VISUALIZER</h1>
+        <div style="display:flex; align-items:center;">
+            <span id="status-dot"></span>
+            <span id="status-text" style="margin-right:15px; font-size:0.9rem; color:#555;">Disconnected</span>
+            <button id="connectBtn" class="btn">Connect Serial</button>
+        </div>
+    </header>
+
+    <!-- 左侧 HUD 数据显示 -->
+    <div class="hud-panel">
+        <div class="hud-title">Temperatures</div>
+        <div class="hud-row">
+            <span class="hud-label">IMU</span>
+            <span class="hud-val"><span id="val-imu-temp">--</span>°C</span>
+        </div>
+        <div class="hud-row">
+            <span class="hud-label">BAR</span>
+            <span class="hud-val"><span id="val-btemp">--</span>°C</span>
+        </div>
+        
+        <div class="hud-divider"></div>
+        
+        <div class="hud-title">Accelerometer</div>
+        <div class="hud-row"><span class="hud-label">AX</span> <span id="val-ax">0</span></div>
+        <div class="hud-row"><span class="hud-label">AY</span> <span id="val-ay">0</span></div>
+        <div class="hud-row"><span class="hud-label">AZ</span> <span id="val-az">0</span></div>
+
+        <div class="hud-divider"></div>
+
+        <div class="hud-title">Gyroscope</div>
+        <div class="hud-row"><span class="hud-label">GX</span> <span id="val-gx">0</span></div>
+        <div class="hud-row"><span class="hud-label">GY</span> <span id="val-gy">0</span></div>
+        <div class="hud-row"><span class="hud-label">GZ</span> <span id="val-gz">0</span></div>
+
+        <div class="hud-divider"></div>
+
+        <div class="hud-title">Magnetometer</div>
+        <div class="hud-row"><span class="hud-label">MX</span> <span id="val-mx">0</span></div>
+        <div class="hud-row"><span class="hud-label">MY</span> <span id="val-my">0</span></div>
+        <div class="hud-row"><span class="hud-label">MZ</span> <span id="val-mz">0</span></div>
+
+        <div class="hud-divider"></div>
+
+        <div class="hud-title">Barometer</div>
+        <div class="hud-row"><span class="hud-label">P</span> <span class="hud-val"><span id="val-press">0</span> hPa</span></div>
+        <div class="hud-row"><span class="hud-label">ALT</span> <span class="hud-val"><span id="val-alt">0</span> m</span></div>
+    </div>
+
+    <!-- 3D 容器 -->
+    <div id="canvas-container" style="width:100%; height:100vh;"></div>
+
+    <!-- 视角切换 -->
+    <div class="control-bar">
+        <button class="view-btn active" onclick="setCamera('iso')">ISO</button>
+        <button class="view-btn" onclick="setCamera('top')">TOP</button>
+        <button class="view-btn" onclick="setCamera('front')">FRONT</button>
+        <button class="view-btn" onclick="setCamera('side')">SIDE</button>
+    </div>
+
+    <script>
+        // --- 1. 串口逻辑 ---
+        let port, reader;
+        const ui = {
+            ax: document.getElementById('val-ax'), ay: document.getElementById('val-ay'), az: document.getElementById('val-az'),
+            gx: document.getElementById('val-gx'), gy: document.getElementById('val-gy'), gz: document.getElementById('val-gz'),
+            mx: document.getElementById('val-mx'), my: document.getElementById('val-my'), mz: document.getElementById('val-mz'),
+            barTemp: document.getElementById('val-btemp'), barPress: document.getElementById('val-press'), barAlt: document.getElementById('val-alt'),
+            imuTemp: document.getElementById('val-imu-temp'),
+            statusText: document.getElementById('status-text'), statusDot: document.getElementById('status-dot')
+        };
+        const sensorData = {
+            acc: {x:0,y:0,z:0},
+            gyr: {x:0,y:0,z:0},
+            mag: {x:0,y:0,z:0},
+            bar: {tempDeci:0, pressurePa:0, altDeci:0},
+            imuTempDeci: 0
+        };
+
+        document.getElementById('connectBtn').addEventListener('click', async () => {
+            if (!navigator.serial) return alert("Browser not supported (Use Chrome/Edge)");
+            try {
+                port = await navigator.serial.requestPort();
+                await port.open({ baudRate: 115200 });
+                ui.statusText.innerText = "Connected";
+                ui.statusDot.style.backgroundColor = "#2ecc71"; // Green
+                document.getElementById('connectBtn').style.display = 'none';
+                readLoop();
+            } catch (e) { console.log(e); }
+        });
+
+        async function readLoop() {
+            const decoder = new TextDecoderStream();
+            port.readable.pipeTo(decoder.writable);
+            reader = decoder.readable.getReader();
+            let buffer = "";
+            while (true) {
+                const { value, done } = await reader.read();
+                if (done) break;
+                if (value) { buffer += value; buffer = processBuffer(buffer); }
+            }
+        }
+
+        function processBuffer(buffer) {
+            let lines = buffer.split('\n');
+            const leftover = lines.pop();
+            for (let line of lines) {
+                parseLine(line.trim());
+            }
+            return leftover;
+        }
+
+        function parseLine(line) {
+            if (!line) return;
+            const parts = line.split('|').map(s => s.trim());
+            parts.forEach(p => {
+                if (p.startsWith('ACC:')) {
+                    const nums = p.slice(4).trim().split(/\s+/).map(n => parseInt(n));
+                    if (nums.length === 3 && nums.every(n => !Number.isNaN(n))) {
+                        [sensorData.acc.x, sensorData.acc.y, sensorData.acc.z] = nums;
+                    }
+                } else if (p.startsWith('GYR:')) {
+                    const nums = p.slice(4).trim().split(/\s+/).map(n => parseInt(n));
+                    if (nums.length === 3 && nums.every(n => !Number.isNaN(n))) {
+                        [sensorData.gyr.x, sensorData.gyr.y, sensorData.gyr.z] = nums;
+                    }
+                } else if (p.startsWith('MAG:')) {
+                    const nums = p.slice(4).trim().split(/\s+/).map(n => parseInt(n));
+                    if (nums.length === 3 && nums.every(n => !Number.isNaN(n))) {
+                        [sensorData.mag.x, sensorData.mag.y, sensorData.mag.z] = nums;
+                    }
+                } else if (p.startsWith('BAR:')) {
+                    const nums = p.slice(4).trim().split(/\s+/).map(n => parseInt(n));
+                    if (nums.length === 3 && nums.every(n => !Number.isNaN(n))) {
+                        [sensorData.bar.tempDeci, sensorData.bar.pressurePa, sensorData.bar.altDeci] = nums;
+                    }
+                } else if (p.startsWith('T:')) {
+                    const val = parseInt(p.slice(2).trim());
+                    if (!Number.isNaN(val)) sensorData.imuTempDeci = val;
+                }
+            });
+            requestAnimationFrame(updateUI); // Sync with render
+        }
+
+        function updateUI() {
+            ui.ax.innerText = sensorData.acc.x; ui.ay.innerText = sensorData.acc.y; ui.az.innerText = sensorData.acc.z;
+            ui.gx.innerText = sensorData.gyr.x; ui.gy.innerText = sensorData.gyr.y; ui.gz.innerText = sensorData.gyr.z;
+            ui.mx.innerText = sensorData.mag.x; ui.my.innerText = sensorData.mag.y; ui.mz.innerText = sensorData.mag.z;
+            ui.barTemp.innerText = (sensorData.bar.tempDeci / 10).toFixed(1);
+            ui.barPress.innerText = (sensorData.bar.pressurePa / 100).toFixed(1);
+            ui.barAlt.innerText = (sensorData.bar.altDeci / 10).toFixed(1);
+            ui.imuTemp.innerText  = (sensorData.imuTempDeci / 10).toFixed(1);
+        }
+
+        // --- 2. 3D 场景 (PRO VERSION) ---
+        const container = document.getElementById('canvas-container');
+        const scene = new THREE.Scene();
+        
+        // 增加雾效，让远处背景融合，显得更真实
+        scene.fog = new THREE.FogExp2(0xeef2f3, 0.02); 
+
+        const camera = new THREE.PerspectiveCamera(45, container.clientWidth/container.clientHeight, 0.1, 1000);
+        const renderer = new THREE.WebGLRenderer({ antialias: true, alpha: true });
+        renderer.setSize(container.clientWidth, container.clientHeight);
+        renderer.shadowMap.enabled = true;
+        renderer.shadowMap.type = THREE.PCFSoftShadowMap;
+        renderer.toneMapping = THREE.ACESFilmicToneMapping; // 电影级色调
+        container.appendChild(renderer.domElement);
+
+        // 启用 OrbitControls (缩放、旋转)
+        const controls = new THREE.OrbitControls(camera, renderer.domElement);
+        controls.enableDamping = true; // 阻尼惯性
+        controls.dampingFactor = 0.05;
+
+        // 灯光
+        const ambiLight = new THREE.AmbientLight(0xffffff, 0.7);
+        scene.add(ambiLight);
+        
+        const mainLight = new THREE.DirectionalLight(0xffffff, 0.8);
+        mainLight.position.set(10, 20, 10);
+        mainLight.castShadow = true;
+        mainLight.shadow.mapSize.width = 2048;
+        mainLight.shadow.mapSize.height = 2048;
+        scene.add(mainLight);
+
+        // 补光，让暗部有颜色
+        const fillLight = new THREE.DirectionalLight(0x8e9eab, 0.5);
+        fillLight.position.set(-10, 0, -10);
+        scene.add(fillLight);
+
+        // --- 坐标轴 (粗壮版) ---
+        function createAxis(color, label) {
+            const g = new THREE.Group();
+            const rod = new THREE.Mesh(new THREE.CylinderGeometry(0.04, 0.04, 6, 16), new THREE.MeshStandardMaterial({color:color, metalness:0.2, roughness:0.4}));
+            rod.position.y = 3;
+            rod.castShadow = true;
+            
+            const cone = new THREE.Mesh(new THREE.ConeGeometry(0.15, 0.4, 32), new THREE.MeshStandardMaterial({color:color}));
+            cone.position.y = 6;
+            
+            // 文字
+            const canvas = document.createElement('canvas');
+            canvas.width = 128; canvas.height = 128;
+            const ctx = canvas.getContext('2d');
+            ctx.fillStyle = "#" + color.toString(16).padStart(6, '0');
+            ctx.font = "bold 100px Arial";
+            ctx.textAlign = "center";
+            ctx.fillText(label, 64, 100);
+            const sprite = new THREE.Sprite(new THREE.SpriteMaterial({map: new THREE.CanvasTexture(canvas)}));
+            sprite.position.y = 6.8;
+            sprite.scale.set(1.5, 1.5, 1.5);
+
+            g.add(rod, cone, sprite);
+            return g;
+        }
+
+        const axX = createAxis(0xe74c3c, "X"); axX.rotation.z = -Math.PI/2; scene.add(axX);
+        const axY = createAxis(0x2ecc71, "Y"); scene.add(axY);
+        const axZ = createAxis(0x3498db, "Z"); axZ.rotation.x = Math.PI/2; scene.add(axZ);
+        
+        // 网格
+        const grid = new THREE.GridHelper(30, 30, 0xbdc3c7, 0xdfe4ea);
+        scene.add(grid);
+
+        // --- 无人机模型 (Procedural Pro Model) ---
+        const drone = new THREE.Group();
+        scene.add(drone);
+
+        // 材质
+        const matBody = new THREE.MeshStandardMaterial({ color: 0x34495e, roughness: 0.3, metalness: 0.5 }); // 深灰碳纤感
+        const matAccent = new THREE.MeshStandardMaterial({ color: 0xff9f43 }); // 橙色装饰
+        const matProp = new THREE.MeshStandardMaterial({ color: 0xff9f43, transparent: true, opacity: 0.6, side: THREE.DoubleSide });
+        const matLedRed = new THREE.MeshBasicMaterial({ color: 0xff0000 });
+        const matLedGreen = new THREE.MeshBasicMaterial({ color: 0x00ff00 });
+
+        // 1. 机身 (流线型)
+        const bodyGeo = new THREE.BoxGeometry(1.0, 0.25, 2.0);
+        // 简单的修改顶点让它变圆润有点麻烦，我们用多个几何体堆叠
+        // 核心
+        const core = new THREE.Mesh(new THREE.BoxGeometry(0.8, 0.3, 1.2), matBody);
+        core.castShadow = true;
+        drone.add(core);
+        // 顶盖 (模拟隆起)
+        const topCover = new THREE.Mesh(new THREE.CylinderGeometry(0.3, 0.4, 0.8, 16), matBody);
+        topCover.rotation.x = Math.PI / 2;
+        topCover.scale.set(1, 1, 0.4);
+        topCover.position.y = 0.15;
+        drone.add(topCover);
+
+        // 2. 相机云台 (指示前方)
+        const camGimbal = new THREE.Mesh(new THREE.SphereGeometry(0.25, 32, 32), new THREE.MeshStandardMaterial({color: 0x111111, metalness:0.9, roughness:0.1}));
+        camGimbal.position.set(0, -0.15, 0.6); // 假设 +Z 是前方
+        drone.add(camGimbal);
+        // 镜头
+        const lens = new THREE.Mesh(new THREE.CylinderGeometry(0.1, 0.1, 0.1), new THREE.MeshBasicMaterial({color:0x00a8ff}));
+        lens.rotation.x = Math.PI/2;
+        lens.position.set(0, -0.15, 0.82);
+        drone.add(lens);
+
+        // 3. 机臂 (流线型支架)
+        const props = [];
+        const armLength = 1.8;
+        const armPositions = [
+            {x: -1, z: 1, led: matLedRed},   // 左前
+            {x: 1, z: 1, led: matLedRed},    // 右前
+            {x: -1, z: -1, led: matLedGreen},// 左后
+            {x: 1, z: -1, led: matLedGreen}  // 右后
+        ];
+
+        armPositions.forEach(pos => {
+            // 机臂杆
+            const arm = new THREE.Mesh(new THREE.BoxGeometry(0.15, 0.1, armLength), matBody);
+            // 旋转机臂指向角落
+            const angle = Math.atan2(pos.x, pos.z);
+            arm.rotation.y = angle;
+            arm.position.y = 0;
+            // 计算中心偏移让机臂连在机身上
+            arm.position.x = pos.x * 0.6;
+            arm.position.z = pos.z * 0.6;
+            arm.castShadow = true;
+            drone.add(arm);
+
+            // 电机座
+            const motorBase = new THREE.Mesh(new THREE.CylinderGeometry(0.2, 0.2, 0.25, 16), matBody);
+            motorBase.position.set(pos.x * 1.2, 0.1, pos.z * 1.2);
+            motorBase.castShadow = true;
+            drone.add(motorBase);
+
+            // 螺旋桨 (双叶)
+            const propGeo = new THREE.BoxGeometry(0.15, 0.01, 1.6);
+            const prop = new THREE.Mesh(propGeo, matProp);
+            prop.position.set(pos.x * 1.2, 0.25, pos.z * 1.2);
+            drone.add(prop);
+            props.push(prop);
+
+            // 桨帽 (尖头)
+            const cap = new THREE.Mesh(new THREE.ConeGeometry(0.08, 0.15, 16), matAccent);
+            cap.position.set(pos.x * 1.2, 0.3, pos.z * 1.2);
+            drone.add(cap);
+
+            // LED 灯 (机臂末端下侧)
+            const led = new THREE.Mesh(new THREE.SphereGeometry(0.08), pos.led);
+            led.position.set(pos.x * 1.1, -0.1, pos.z * 1.1);
+            drone.add(led);
+        });
+
+        // 修正一下：让 Z 轴正方向对应前方 (红灯)
+        // 这里的代码生成是 Z 为前，符合 Front 视图逻辑
+
+        // --- 渲染循环 ---
+        function animate() {
+            requestAnimationFrame(animate);
+            controls.update(); // 必须更新控件
+
+            // 螺旋桨动画
+            props.forEach((p, i) => {
+                const dir = i % 2 === 0 ? 1 : -1;
+                p.rotation.y += 0.8 * dir; // 转快点
+            });
+
+            updateOrientation();
+            renderer.render(scene, camera);
+        }
+        animate();
+
+        function updateOrientation() {
+            // 简单互补滤波或直接映射
+            const ax = sensorData.acc.x;
+            const ay = sensorData.acc.y;
+            const az = sensorData.acc.z;
+            
+            // 计算 Pitch/Roll (根据实际安装方向，可能需要交换XYZ)
+            // 假设板子平放：Z轴向下(或上)，X/Y为水平
+            // 此处根据通常 IMU: Pitch 绕 Y (或 X), Roll 绕 X (或 Y)
+            
+            const pitch = Math.atan2(ay, Math.sqrt(ax*ax + az*az));
+            const roll = Math.atan2(-ax, Math.sqrt(ay*ay + az*az));
+
+            // 线性插值平滑
+            drone.rotation.x += (pitch - drone.rotation.x) * 0.1;
+            drone.rotation.z += (roll - drone.rotation.z) * 0.1;
+        }
+
+        // --- 视角控制 (修复版) ---
+        window.setCamera = function(mode) {
+            // 按钮高亮
+            document.querySelectorAll('.view-btn').forEach(btn => {
+                btn.classList.remove('active');
+                if(btn.getAttribute('onclick').includes(`'${mode}'`)) btn.classList.add('active');
+            });
+
+            let pos = {x:0,y:0,z:0};
+            const dist = 12; // 拉远距离
+
+            switch(mode) {
+                case 'iso':   pos = {x:8, y:6, z:10}; break;
+                case 'top':   pos = {x:0, y:dist, z:0}; break;
+                case 'front': pos = {x:0, y:0, z:dist}; break; // Z是前方
+                case 'side':  pos = {x:dist, y:0, z:0}; break;
+            }
+
+            // 简单动画移动相机
+            // 如果想平滑过渡可以使用 Tween.js，这里为了单文件简洁直接设置
+            camera.position.set(pos.x, pos.y, pos.z);
+            
+            // 重要：重置 OrbitControls 的中心点，防止旋转乱飞
+            controls.target.set(0,0,0); 
+            
+            // 修正 Up 向量
+            if(mode === 'top') camera.up.set(0, 0, -1); // 调整顶部视角方向
+            else camera.up.set(0, 1, 0);
+
+            camera.lookAt(0,0,0);
+        }
+        
+        // 初始化视角
+        setCamera('iso');
+
+        window.addEventListener('resize', () => {
+            camera.aspect = container.clientWidth / container.clientHeight;
+            camera.updateProjectionMatrix();
+            renderer.setSize(container.clientWidth, container.clientHeight);
+        });
+    </script>
+</body>
+</html>

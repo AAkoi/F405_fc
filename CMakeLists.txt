@@ -59,6 +59,10 @@ target_sources(${CMAKE_PROJECT_NAME} PRIVATE
     Core/Lib/bmp280/bmp280.c
     Core/Lib/bmp280/bmp280_lib.c
     
+    # HMC5883L Magnetometer Library
+    Core/Lib/hmc5883l/hmc5883l.c
+    Core/Lib/hmc5883l/hmc5883l_lib.c
+    
     # ELRS/CRSF UART helper
     Core/Lib/esrl/elrs_crsf_uart.c
     Core/Lib/esrl/elrs_crsf_port.c
@@ -79,6 +83,8 @@ target_sources(${CMAKE_PROJECT_NAME} PRIVATE
     # Test modules
     Core/Test/test_icm42688p.c
     Core/Test/test_bmp280.c
+    Core/Test/test_hmc5883l.c
+    Core/Test/test_attitude_mag.c
     Core/Test/test_spi_hardware.c
     Core/Test/test_dma.c
 )
@@ -94,6 +100,7 @@ target_include_directories(${CMAKE_PROJECT_NAME} PRIVATE
     Core/Src                    # bsp_pins.h
     Core/Lib/icm42688p          # ICM42688P library
     Core/Lib/bmp280             # BMP280 library
+    Core/Lib/hmc5883l           # HMC5883L library
     Core/Lib/esrl               # ELRS/CRSF helper
     Core/Control/PID            # PID controller
     Core/Control/Filter         # Filters

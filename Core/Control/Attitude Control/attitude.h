@@ -53,5 +53,11 @@ void Attitude_SetGyroBias(float bias_x, float bias_y, float bias_z);
 Euler_angles Attitude_Update(int16_t ax, int16_t ay, int16_t az,
                              int16_t gx, int16_t gy, int16_t gz);
 
+// 获取当前姿态角
+float Attitude_Get_Roll(void);
+float Attitude_Get_Pitch(void);
+float Attitude_Get_Yaw(void);
+Euler_angles Attitude_Get_Angles(void);
+
 #endif // ATTITUDE_H
 

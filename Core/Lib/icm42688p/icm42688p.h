@@ -1,8 +1,11 @@
 #include "bsp_spi.h"
+#include "icm42688p_lib.h"
 #include <stdbool.h>
 #include <stdio.h>
 #include <stdint.h>
 
+// ICM42688P 设备实例
+extern icm42688p_dev_t icm;
 
 // SPI底层函数
 void icm_spi_write_reg(uint8_t reg, uint8_t value);

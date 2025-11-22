@@ -278,3 +278,35 @@ Euler_angles Attitude_Update(int16_t ax_in, int16_t ay_in, int16_t az_in,
 
     return euler_angles;
 }
+
+/**
+ * @brief 获取当前横滚角
+ */
+float Attitude_Get_Roll(void)
+{
+    return euler_angles.roll;
+}
+
+/**
+ * @brief 获取当前俯仰角
+ */
+float Attitude_Get_Pitch(void)
+{
+    return euler_angles.pitch;
+}
+
+/**
+ * @brief 获取当前航向角
+ */
+float Attitude_Get_Yaw(void)
+{
+    return euler_angles.yaw;
+}
+
+/**
+ * @brief 获取当前完整姿态角
+ */
+Euler_angles Attitude_Get_Angles(void)
+{
+    return euler_angles;
+}
