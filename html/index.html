@@ -137,6 +137,7 @@
             <span id="status-dot"></span>
             <span id="status-text" style="margin-right:15px; font-size:0.9rem; color:#555;">Disconnected</span>
             <button id="connectBtn" class="btn">Connect Serial</button>
+            <button class="btn" style="margin-left:10px;" onclick="window.open('api_documentation.html', '_blank')">📚 API Docs</button>
         </div>
     </header>
 
@@ -165,6 +166,13 @@
         <div class="hud-row"><span class="hud-label">GX</span> <span id="val-gx">0</span></div>
         <div class="hud-row"><span class="hud-label">GY</span> <span id="val-gy">0</span></div>
         <div class="hud-row"><span class="hud-label">GZ</span> <span id="val-gz">0</span></div>
+
+        <div class="hud-divider"></div>
+
+        <div class="hud-title">Euler Angles</div>
+        <div class="hud-row"><span class="hud-label">ROLL</span> <span id="val-roll">0</span>°</div>
+        <div class="hud-row"><span class="hud-label">PITCH</span> <span id="val-pitch">0</span>°</div>
+        <div class="hud-row"><span class="hud-label">YAW</span> <span id="val-yaw">0</span>°</div>
 
         <div class="hud-divider"></div>
 
@@ -200,6 +208,9 @@
             mx: document.getElementById('val-mx'), my: document.getElementById('val-my'), mz: document.getElementById('val-mz'),
             barTemp: document.getElementById('val-btemp'), barPress: document.getElementById('val-press'), barAlt: document.getElementById('val-alt'),
             imuTemp: document.getElementById('val-imu-temp'),
+            roll: document.getElementById('val-roll'),
+            pitch: document.getElementById('val-pitch'),
+            yaw: document.getElementById('val-yaw'),
             statusText: document.getElementById('status-text'), statusDot: document.getElementById('status-dot')
         };
         const sensorData = {
@@ -209,6 +220,12 @@
             bar: {tempDeci:0, pressurePa:0, altDeci:0},
             imuTempDeci: 0
         };
+        let yawIntegratedDeg = 0;
+        let lastYawTs = null;
+
+        function wrap180(deg) {
+            return ((deg + 180) % 360) - 180;
+        }
 
         document.getElementById('connectBtn').addEventListener('click', async () => {
             if (!navigator.serial) return alert("Browser not supported (Use Chrome/Edge)");
@@ -283,6 +300,12 @@
             ui.barPress.innerText = (sensorData.bar.pressurePa / 100).toFixed(1);
             ui.barAlt.innerText = (sensorData.bar.altDeci / 10).toFixed(1);
             ui.imuTemp.innerText  = (sensorData.imuTempDeci / 10).toFixed(1);
+            const rollDeg = wrap180(THREE.MathUtils.radToDeg(drone.rotation.z));
+            const pitchDeg = wrap180(THREE.MathUtils.radToDeg(drone.rotation.x));
+            const yawDeg = wrap180(THREE.MathUtils.radToDeg(drone.rotation.y));
+            ui.roll.innerText = rollDeg.toFixed(1);
+            ui.pitch.innerText = pitchDeg.toFixed(1);
+            ui.yaw.innerText = yawDeg.toFixed(1);
         }
 
         // --- 2. 3D 场景 (PRO VERSION) ---
@@ -457,21 +480,27 @@
         animate();
 
         function updateOrientation() {
-            // 简单互补滤波或直接映射
+            // 简单姿态估计：Pitch/Roll 用加速度，Yaw 用陀螺积分（无磁力计时会漂移）
             const ax = sensorData.acc.x;
             const ay = sensorData.acc.y;
             const az = sensorData.acc.z;
-            
-            // 计算 Pitch/Roll (根据实际安装方向，可能需要交换XYZ)
-            // 假设板子平放：Z轴向下(或上)，X/Y为水平
-            // 此处根据通常 IMU: Pitch 绕 Y (或 X), Roll 绕 X (或 Y)
-            
-            const pitch = Math.atan2(ay, Math.sqrt(ax*ax + az*az));
-            const roll = Math.atan2(-ax, Math.sqrt(ay*ay + az*az));
+            const gz_dps = sensorData.gyr.z; // dps
+
+            const pitch = Math.atan2(ay, Math.sqrt(ax * ax + az * az));
+            const roll  = Math.atan2(-ax, Math.sqrt(ay * ay + az * az));
+
+            const now = performance.now();
+            if (lastYawTs === null) lastYawTs = now;
+            const dtSec = (now - lastYawTs) / 1000.0;
+            lastYawTs = now;
+            yawIntegratedDeg += gz_dps * dtSec;
+            yawIntegratedDeg = ((yawIntegratedDeg + 180) % 360) - 180; // wrap [-180,180]
+            const yaw = yawIntegratedDeg * Math.PI / 180;
 
             // 线性插值平滑
             drone.rotation.x += (pitch - drone.rotation.x) * 0.1;
             drone.rotation.z += (roll - drone.rotation.z) * 0.1;
+            drone.rotation.y += (yaw - drone.rotation.y) * 0.1;
         }
 
         // --- 视角控制 (修复版) ---
