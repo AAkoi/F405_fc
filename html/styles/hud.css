@@ -1,0 +1,49 @@
+/* HUD 数据面板样式 */
+.hud-panel {
+    position: absolute;
+    top: 80px;
+    left: 30px;
+    width: 220px;
+    background: var(--panel-bg);
+    backdrop-filter: blur(10px);
+    border-radius: 12px;
+    padding: 20px;
+    color: var(--text-main);
+    border-left: 4px solid var(--accent);
+    box-shadow: 0 10px 30px rgba(0,0,0,0.3);
+    z-index: 5;
+    font-family: 'Consolas', 'Monaco', monospace;
+}
+
+.hud-row {
+    display: flex;
+    justify-content: space-between;
+    margin-bottom: 10px;
+    align-items: center;
+}
+
+.hud-label {
+    color: var(--text-sub);
+    font-size: 0.8rem;
+}
+
+.hud-val {
+    font-weight: bold;
+    font-size: 1rem;
+    color: var(--accent);
+}
+
+.hud-divider {
+    height: 1px;
+    background: #444;
+    margin: 15px 0;
+}
+
+.hud-title {
+    font-size: 0.7rem;
+    color: #666;
+    letter-spacing: 2px;
+    text-transform: uppercase;
+    margin-bottom: 5px;
+}
+

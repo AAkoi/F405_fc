@@ -1,0 +1,519 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Betaflight API 文档</title>
+    
+    <!-- 样式文件 -->
+    <link rel="stylesheet" href="styles/docs.css">
+</head>
+<body>
+    <!-- 导航栏 -->
+    <nav class="navbar">
+        <div class="container">
+            <h1>🚁 Betaflight API 文档</h1>
+            <span class="version">v1.0 | STM32F405</span>
+        </div>
+    </nav>
+    
+    <!-- 侧边栏 -->
+    <aside class="sidebar">
+        <h3>目录</h3>
+        <ul>
+            <li><a href="#overview">项目概述</a></li>
+            <li><a href="#bsp">BSP层</a>
+                <ul>
+                    <li><a href="#bsp-i2c">I2C通信</a></li>
+                    <li><a href="#bsp-spi">SPI通信</a></li>
+                    <li><a href="#bsp-uart">UART通信</a></li>
+                    <li><a href="#bsp-system">系统功能</a></li>
+                </ul>
+            </li>
+            <li><a href="#sensors">传感器驱动</a>
+                <ul>
+                    <li><a href="#sensor-imu">ICM42688P IMU</a></li>
+                    <li><a href="#sensor-mag">HMC5883L 磁力计</a></li>
+                    <li><a href="#sensor-baro">BMP280 气压计</a></li>
+                </ul>
+            </li>
+            <li><a href="#control">控制算法</a>
+                <ul>
+                    <li><a href="#control-attitude">姿态解算</a></li>
+                    <li><a href="#control-pid">PID控制器</a></li>
+                    <li><a href="#control-filter">滤波器</a></li>
+                </ul>
+            </li>
+            <li><a href="#comm">通信协议</a>
+                <ul>
+                    <li><a href="#comm-elrs">ELRS/CRSF</a></li>
+                </ul>
+            </li>
+            <li><a href="#examples">使用示例</a></li>
+            <li><a href="#log-replay">数据录制</a></li>
+            <li><a href="#performance">性能指标</a></li>
+        </ul>
+    </aside>
+    
+    <!-- 主内容 -->
+    <main class="main-content">
+        <section id="overview" class="section">
+            <h1>项目概述</h1>
+            <p>本项目是一个基于 <span class="badge badge-info">STM32F405</span> 的飞行控制器固件，采用模块化设计，包含完整的传感器驱动、姿态解算、PID控制和通信协议支持。</p>
+            
+            <h3>主要特性</h3>
+            <ul>
+                <li><strong>硬件平台</strong>: STM32F405 (Cortex-M4, 168MHz)</li>
+                <li><strong>传感器支持</strong>:
+                    <ul>
+                        <li>ICM42688P (6轴IMU: 加速度计 + 陀螺仪)</li>
+                        <li>HMC5883L (3轴磁力计)</li>
+                        <li>BMP280 (气压计 + 温度计)</li>
+                    </ul>
+                </li>
+                <li><strong>姿态解算</strong>: Mahony 互补滤波算法</li>
+                <li><strong>控制算法</strong>: 基于 Betaflight 的三轴 PID 控制器</li>
+                <li><strong>通信协议</strong>: ELRS/CRSF 接收机协议</li>
+                <li><strong>滤波器</strong>: 二阶 Butterworth 滤波器 (LPF/Notch/BPF)</li>
+            </ul>
+            
+            <div class="note">
+                <strong>💡 提示：</strong> 本文档提供完整的 API 接口说明，包括所有函数、数据结构和使用示例。
+            </div>
+        </section>
+        
+        <section id="bsp" class="section">
+            <h1>BSP层 - 板级支持包</h1>
+            
+            <h2 id="bsp-i2c">I2C通信</h2>
+            <p><span class="badge badge-info">文件</span> <code>Core/BSP/Bsp_IIC/bsp_iic.h</code></p>
+            
+            <h3>初始化函数</h3>
+            <pre><code>void MX_I2C1_Init(void);
+void MX_I2C2_Init(void);</code></pre>
+            <p>初始化 I2C1 或 I2C2 外设。</p>
+            
+            <h3>阻塞模式读写</h3>
+            <pre><code>uint8_t bsp_i2c_read_reg(uint8_t dev_addr, uint8_t reg);
+void bsp_i2c_write_reg(uint8_t dev_addr, uint8_t reg, uint8_t value);
+void bsp_i2c_read_burst(uint8_t dev_addr, uint8_t reg, uint8_t *buffer, uint16_t len);</code></pre>
+            
+            <h4>参数说明</h4>
+            <ul>
+                <li><code>dev_addr</code>: 设备 I2C 地址</li>
+                <li><code>reg</code>: 寄存器地址</li>
+                <li><code>value</code>: 要写入的值</li>
+                <li><code>buffer</code>: 数据缓冲区</li>
+                <li><code>len</code>: 读取长度</li>
+            </ul>
+            
+            <h3>非阻塞模式</h3>
+            <pre><code>bool bsp_i2c_write_reg_start(uint8_t dev_addr, uint8_t reg, uint8_t value);
+bool bsp_i2c_read_burst_start(uint8_t dev_addr, uint8_t reg, uint8_t *buffer, uint16_t len);
+bool bsp_i2c_is_busy(void);</code></pre>
+            <p><strong>返回值</strong>: <code>true</code>=成功启动, <code>false</code>=I2C忙碌</p>
+            
+            <h2 id="bsp-uart">UART通信</h2>
+            <p><span class="badge badge-info">文件</span> <code>Core/BSP/Bsp_uart/bsp_uart.h</code></p>
+            
+            <h3>初始化</h3>
+            <pre><code>void BSP_UART_Init(void);  // 默认波特率115200
+void BSP_UART_Open(uint8_t uart_id, uint32_t baudrate);</code></pre>
+            
+            <h3>数据发送</h3>
+            <pre><code>int BSP_UART_Write(uint8_t uart_id, const uint8_t *data, uint16_t len);</code></pre>
+            <p><strong>返回值</strong>: 实际发送的字节数</p>
+            
+            <h2 id="bsp-system">系统功能</h2>
+            <p><span class="badge badge-info">文件</span> <code>Core/BSP/Bsp_System/bsp_System.h</code></p>
+            
+            <h3>DWT周期计数器</h3>
+            <pre><code>void cycleCounterInit(void);  // 初始化DWT
+uint32_t DWT_GetTick(void);   // 获取当前周期数
+uint32_t clockMicrosToCycles(uint32_t micros);  // 微秒转周期</code></pre>
+            
+            <div class="note">
+                <strong>⚡ 性能</strong>: DWT 提供 CPU 周期级精度的计时功能，适用于性能分析和精确延时。
+            </div>
+        </section>
+        
+        <section id="sensors" class="section">
+            <h1>传感器驱动库</h1>
+            
+            <h2 id="sensor-imu">ICM42688P - 六轴IMU</h2>
+            <p><span class="badge badge-info">文件</span> <code>Core/Lib/icm42688p/icm42688p.h</code></p>
+            <p><span class="badge badge-success">接口</span> SPI | <span class="badge badge-warning">采样率</span> 1-8 kHz</p>
+            
+            <h3>初始化</h3>
+            <pre><code>void icm42688p_init_driver(void);</code></pre>
+            <p>初始化 ICM42688P 传感器（陀螺仪量程: ±2000 dps, 加速度计量程: ±16g）</p>
+            
+            <h3>数据读取</h3>
+            <pre><code>bool icm42688p_get_gyro_data(int16_t *gyro_x, int16_t *gyro_y, int16_t *gyro_z);
+bool icm42688p_get_accel_data(int16_t *accel_x, int16_t *accel_y, int16_t *accel_z);
+bool icm42688p_get_temperature(float *temp_celsius);
+bool icm42688p_get_all_data(int16_t *gx, int16_t *gy, int16_t *gz,
+                            int16_t *ax, int16_t *ay, int16_t *az, float *temp);</code></pre>
+            
+            <h3>数据预处理</h3>
+            <pre><code>bool icm42688p_dataPreprocess(int16_t *gyro_x, int16_t *gyro_y, int16_t *gyro_z,
+                                  int16_t *accel_x, int16_t *accel_y, int16_t *accel_z,
+                                  float *gyro_x_norm, float *gyro_y_norm, float *gyro_z_norm,
+                                  float *accel_x_norm, float *accel_y_norm, float *accel_z_norm,
+                                  float *temp_celsius);</code></pre>
+            <p>读取原始数据并转换为物理单位：</p>
+            <ul>
+                <li>陀螺仪: <strong>dps</strong> (度/秒)</li>
+                <li>加速度计: <strong>g</strong> (重力加速度)</li>
+            </ul>
+            
+            <h2 id="sensor-mag">HMC5883L - 三轴磁力计</h2>
+            <p><span class="badge badge-info">文件</span> <code>Core/Lib/hmc5883l/hmc5883l.h</code></p>
+            <p><span class="badge badge-success">接口</span> I2C | <span class="badge badge-warning">采样率</span> 75 Hz</p>
+            
+            <h3>初始化</h3>
+            <pre><code>bool hmc5883l_init_driver(void);</code></pre>
+            
+            <h3>数据读取</h3>
+            <pre><code>bool hmc5883l_read_raw_data(int16_t *mag_x, int16_t *mag_y, int16_t *mag_z);
+bool hmc5883l_read_gauss(float *mag_x, float *mag_y, float *mag_z);</code></pre>
+            
+            <h3>航向角计算</h3>
+            <pre><code>float hmc5883l_get_heading(void);  // 基本航向角 (0-360°)
+float hmc5883l_get_tilt_compensated_heading(float roll, float pitch);  // 倾斜补偿</code></pre>
+            
+            <div class="warning">
+                <strong>⚠️ 注意</strong>: 磁力计需要定期校准，请使用 <code>hmc5883l_calibrate_compass(200)</code> 进行校准。校准时需旋转飞行器。
+            </div>
+            
+            <h2 id="sensor-baro">BMP280 - 气压计</h2>
+            <p><span class="badge badge-info">文件</span> <code>Core/Lib/bmp280/bmp280.h</code></p>
+            <p><span class="badge badge-success">接口</span> I2C | <span class="badge badge-warning">采样率</span> 182 Hz</p>
+            
+            <h3>初始化</h3>
+            <pre><code>void bmp280_init_driver(void);</code></pre>
+            
+            <h3>数据读取</h3>
+            <pre><code>bool bmp280_get_temperature(float *temp_celsius);
+bool bmp280_get_pressure(int32_t *pressure_pa);
+bool bmp280_get_altitude(float *altitude_m);
+bool bmp280_get_all(float *temp, int32_t *pressure, float *altitude);</code></pre>
+            
+            <h3>参数设置</h3>
+            <pre><code>void bmp280_set_sea_level_pressure_pa(float sea_level_pressure_pa);</code></pre>
+            <p>默认值: <strong>101325 Pa</strong> (标准海平面气压)</p>
+        </section>
+        
+        <section id="control" class="section">
+            <h1>控制算法</h1>
+            
+            <h2 id="control-attitude">姿态解算</h2>
+            <p><span class="badge badge-info">文件</span> <code>Core/Control/Attitude Control/attitude.h</code></p>
+            <p><span class="badge badge-danger">算法</span> Mahony 互补滤波</p>
+            
+            <h3>数据结构</h3>
+            <pre><code>// 欧拉角 (度)
+typedef struct {
+    float pitch;  // 俯仰角
+    float roll;   // 横滚角
+    float yaw;    // 航向角
+} Euler_angles;
+
+// 四元数
+typedef struct {
+    float p0, p1, p2, p3;  // w, x, y, z
+} Quaternion;</code></pre>
+            
+            <h3>初始化</h3>
+            <pre><code>void Attitude_Init(void);  // 基本初始化
+void Attitude_InitFromAccelerometer(uint16_t samples);  // 加速度计辅助初始化
+void Attitude_CalibrateGyro(uint16_t samples);  // 陀螺仪零偏校准（建议2000+采样）</code></pre>
+            
+            <h3>姿态更新</h3>
+            <pre><code>Euler_angles Attitude_Update(int16_t ax, int16_t ay, int16_t az,
+                                     int16_t gx, int16_t gy, int16_t gz);</code></pre>
+            <p><strong>调用频率</strong>: 建议 <span class="badge badge-warning">1 kHz</span></p>
+            
+            <h3>姿态获取</h3>
+            <pre><code>float Attitude_Get_Roll(void);
+float Attitude_Get_Pitch(void);
+float Attitude_Get_Yaw(void);
+Euler_angles Attitude_Get_Angles(void);</code></pre>
+            
+            <h2 id="control-pid">PID控制器</h2>
+            <p><span class="badge badge-info">文件</span> <code>Core/Control/PID/pid.h</code></p>
+            <p><span class="badge badge-success">特性</span> 前馈 | 积分抗饱和 | D项滤波</p>
+            
+            <h3>数据结构</h3>
+            <pre><code>typedef struct {
+    uint8_t P, I, D;  // 0-250
+    uint16_t F;       // 0-1000
+} pid_gains_t;
+
+typedef struct {
+    pid_gains_t gains;
+    float output_limit;
+    float iterm_limit;
+    uint8_t iterm_windup;
+    float dterm_lpf_hz;
+    bool enable_feedforward;
+    bool enable_dterm_filter;
+} pid_config_t;</code></pre>
+            
+            <h3>单轴PID</h3>
+            <pre><code>void pid_init(pid_controller_t *pid, const pid_config_t *config, float sample_rate_hz);
+float pid_update(pid_controller_t *pid, float setpoint, float measurement);
+void pid_reset(pid_controller_t *pid);</code></pre>
+            
+            <h3>多轴PID</h3>
+            <pre><code>void pid_multi_init(pid_multi_axis_t *multi_pid, uint8_t axis_count, float sample_rate_hz);
+void pid_multi_update(pid_multi_axis_t *multi_pid, 
+                      const float *setpoints, const float *measurements, float *outputs);</code></pre>
+            
+            <div class="note">
+                <strong>📊 默认增益</strong>: P=45, I=80, D=30, F=120 (适用于大多数飞行器)
+            </div>
+            
+            <h2 id="control-filter">滤波器</h2>
+            <p><span class="badge badge-info">文件</span> <code>Core/Control/Filter/filter.h</code></p>
+            <p><span class="badge badge-danger">类型</span> 二阶 Butterworth Biquad</p>
+            
+            <h3>滤波器类型</h3>
+            <pre><code>typedef enum {
+    FILTER_LPF,    // 低通滤波器
+    FILTER_NOTCH,  // 陷波滤波器
+    FILTER_BPF,    // 带通滤波器
+} biquadFilterType_e;</code></pre>
+            
+            <h3>初始化</h3>
+            <pre><code>void biquadFilterInitLPF(biquadFilter_t *filter, float filterFreq, uint32_t refreshRate);
+void biquadFilterInit(biquadFilter_t *filter, float filterFreq, uint32_t refreshRate,
+                      float Q, biquadFilterType_e filterType, float weight);</code></pre>
+            
+            <h3>应用滤波</h3>
+            <pre><code>float biquadFilterApply(biquadFilter_t *filter, float input);</code></pre>
+        </section>
+        
+        <section id="comm" class="section">
+            <h1>通信协议</h1>
+            
+            <h2 id="comm-elrs">ELRS/CRSF协议</h2>
+            <p><span class="badge badge-info">文件</span> <code>Core/Lib/esrl/elrs_crsf_port.h</code></p>
+            <p><span class="badge badge-warning">波特率</span> 420000 bps | <span class="badge badge-success">更新率</span> 50-250 Hz</p>
+            
+            <h3>数据结构</h3>
+            <pre><code>typedef struct {
+    uint16_t raw[16];        // 原始 CRSF 11bit 值 (0-2047)
+    uint8_t count;           // 有效通道数
+    uint32_t last_update_us; // 时间戳
+    
+    // 归一化指令
+    float roll;              // -1.0 ~ +1.0
+    float pitch;             // -1.0 ~ +1.0
+    float yaw;               // -1.0 ~ +1.0
+    float throttle;          // 0.0 ~ 1.0
+    
+    uint16_t aux_bits;       // AUX开关位图
+} elrs_rc_state_t;</code></pre>
+            
+            <h3>初始化</h3>
+            <pre><code>void ELRS_CRSF_InitOnUART1(void);</code></pre>
+            
+            <h3>RC状态获取</h3>
+            <pre><code>void ELRS_CRSF_CopyRCState(elrs_rc_state_t *out);  // 获取RC状态快照
+bool ELRS_CRSF_IsActive(uint32_t timeout_ms);       // 检查链路是否活跃</code></pre>
+            
+            <h3>通道映射 (默认AETR)</h3>
+            <table>
+                <tr>
+                    <th>通道</th>
+                    <th>功能</th>
+                    <th>索引</th>
+                </tr>
+                <tr>
+                    <td>CH1</td>
+                    <td>Roll (横滚)</td>
+                    <td>0</td>
+                </tr>
+                <tr>
+                    <td>CH2</td>
+                    <td>Pitch (俯仰)</td>
+                    <td>1</td>
+                </tr>
+                <tr>
+                    <td>CH3</td>
+                    <td>Throttle (油门)</td>
+                    <td>2</td>
+                </tr>
+                <tr>
+                    <td>CH4</td>
+                    <td>Yaw (偏航)</td>
+                    <td>3</td>
+                </tr>
+            </table>
+        </section>
+        
+        <section id="examples" class="section">
+            <h1>使用示例</h1>
+            
+            <h2>示例1: 传感器初始化与读取</h2>
+            <pre><code>#include "icm42688p.h"
+#include "hmc5883l.h"
+#include "bmp280.h"
+
+void sensor_init(void) {
+    icm42688p_init_driver();
+    hmc5883l_init_driver();
+    bmp280_init_driver();
+}
+
+void sensor_read(void) {
+    int16_t gx, gy, gz, ax, ay, az;
+    float temp;
+    
+    if (icm42688p_get_all_data(&gx, &gy, &gz, &ax, &ay, &az, &temp)) {
+        // 数据处理...
+    }
+}</code></pre>
+            
+            <h2>示例2: 姿态解算</h2>
+            <pre><code>#include "attitude.h"
+
+void attitude_example(void) {
+    Attitude_Init();
+    Attitude_CalibrateGyro(2000);
+    
+    while (1) {
+        int16_t ax, ay, az, gx, gy, gz;
+        icm42688p_get_accel_data(&ax, &ay, &az);
+        icm42688p_get_gyro_data(&gx, &gy, &gz);
+        
+        Euler_angles angles = Attitude_Update(ax, ay, az, gx, gy, gz);
+        
+        printf("Roll: %.2f, Pitch: %.2f, Yaw: %.2f\n", 
+               angles.roll, angles.pitch, angles.yaw);
+        
+        HAL_Delay(1);  // 1kHz
+    }
+}</code></pre>
+            
+            <h2>示例3: PID控制</h2>
+            <pre><code>#include "pid.h"
+
+void pid_example(void) {
+    pid_multi_axis_t flight_pid;
+    pid_multi_init(&flight_pid, 3, 1000.0f);
+    
+    // 配置Roll轴
+    pid_config_t config;
+    pid_get_default_config(&config);
+    pid_multi_config_axis(&flight_pid, 0, &config);
+    
+    // 控制循环
+    while (1) {
+        float setpoints[3] = {0, 0, 0};
+        float measurements[3] = {
+            Attitude_Get_Roll(),
+            Attitude_Get_Pitch(),
+            Attitude_Get_Yaw()
+        };
+        float outputs[3];
+        
+        pid_multi_update(&flight_pid, setpoints, measurements, outputs);
+        HAL_Delay(1);
+    }
+}</code></pre>
+        </section>
+
+        <section id="log-replay" class="section">
+            <h1>IMU 数据录制</h1>
+            <p>用于录制陀螺仪数据，保存为 CSV 文件进行离线分析。</p>
+            
+            <h3>📹 录制步骤</h3>
+            <ol>
+                <li>在主界面连接串口后，点击 <strong>"⏺ 开始录制"</strong> 按钮</li>
+                <li>保持飞控运行 3-10 秒（可以进行手动晃动测试）</li>
+                <li>点击 <strong>"⏹ 停止录制"</strong>，自动下载 CSV 文件</li>
+            </ol>
+            
+            <h3>📊 数据分析</h3>
+            <p>录制完成后，使用提供的 <code>analyze_imu_data.py</code> Python 脚本进行离线分析：</p>
+            <pre><code>python analyze_imu_data.py imu_recording_2025-11-23.csv</code></pre>
+            
+            <div class="note">
+                <strong>💡 CSV 格式</strong>: <code>IMU_CSV,t_ms,raw_gx,raw_gy,raw_gz,filt_gx,filt_gy,filt_gz</code><br>
+                时间单位：毫秒 | 角速度单位：dps（度每秒）
+            </div>
+        </section>
+        
+        <section id="performance" class="section">
+            <h1>性能指标</h1>
+            
+            <h2>传感器规格</h2>
+            <table>
+                <tr>
+                    <th>传感器</th>
+                    <th>量程</th>
+                    <th>分辨率</th>
+                    <th>采样率</th>
+                    <th>接口</th>
+                </tr>
+                <tr>
+                    <td>ICM42688P Gyro</td>
+                    <td>±2000 dps</td>
+                    <td>16-bit</td>
+                    <td>1-8 kHz</td>
+                    <td>SPI</td>
+                </tr>
+                <tr>
+                    <td>ICM42688P Accel</td>
+                    <td>±16g</td>
+                    <td>16-bit</td>
+                    <td>1-8 kHz</td>
+                    <td>SPI</td>
+                </tr>
+                <tr>
+                    <td>HMC5883L</td>
+                    <td>±8 Gauss</td>
+                    <td>12-bit</td>
+                    <td>75 Hz</td>
+                    <td>I2C</td>
+                </tr>
+                <tr>
+                    <td>BMP280</td>
+                    <td>300-1100 hPa</td>
+                    <td>20-bit</td>
+                    <td>182 Hz</td>
+                    <td>I2C</td>
+                </tr>
+            </table>
+            
+            <h2>控制性能</h2>
+            <ul>
+                <li><strong>姿态更新频率</strong>: 1 kHz</li>
+                <li><strong>PID控制频率</strong>: 1 kHz</li>
+                <li><strong>RC数据更新</strong>: 50-250 Hz</li>
+                <li><strong>滤波器延迟</strong>: &lt; 1ms</li>
+            </ul>
+            
+            <h2>计算性能</h2>
+            <ul>
+                <li><strong>Mahony姿态解算</strong>: ~0.2ms / 更新</li>
+                <li><strong>三轴PID计算</strong>: ~0.1ms / 更新</li>
+                <li><strong>双二次滤波</strong>: ~0.01ms / 通道</li>
+            </ul>
+        </section>
+        
+        <section class="section">
+            <h2>许可证</h2>
+            <p>本项目部分代码源自 <strong>Betaflight</strong> 开源项目，遵循 <span class="badge badge-info">GPL-3.0</span> 许可证。</p>
+        </section>
+    </main>
+    
+    <!-- 返回顶部按钮 -->
+    <button class="back-to-top" onclick="window.scrollTo({top: 0, behavior: 'smooth'})">↑</button>
+    
+    <!-- JavaScript 文件 -->
+    <script src="js/docs.js"></script>
+</body>
+</html>

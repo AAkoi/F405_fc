@@ -15,6 +15,7 @@
 #include "test_bmp280.h"
 #include "test_hmc5883l.h"
 #include "test_attitude_mag.h"
+#include "test_imu.h"
 
 int main(void)
 {
@@ -40,9 +41,14 @@ int main(void)
     printf("[init] IMU ready\r\n");
     printf("[init] BMP280 %s\r\n", bmp_ok ? "ready" : "not detected");
     printf("[init] HMC5883L %s\r\n", hmc_ok ? "ready" : "not detected");
-    printf("[mode] streaming ACC/GYR/MAG/BAR to serial\r\n");
 
-    test_attitude_mag_stream();
+    // 如果需要上位机(html)可视化，发送统一数据格式
+    printf("[mode] streaming ACC/GYR/MAG/BAR to serial\r\n");
+    //test_attitude_mag_stream();
+
+    // IMU 滤波/降采样测试，输出 IMU_CSV 便于 html 回放作图
+    printf("[mode] gyro filtered/decimated test with IMU_CSV playback\r\n");
+    test_imu_gyro_attitude();
 
     while (1) {
     }

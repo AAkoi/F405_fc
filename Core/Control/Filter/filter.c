@@ -1,6 +1,43 @@
 #include "filter.h"
 #define BIQUAD_Q 1.0f / sqrtf(2.0f)     /* quality factor - 2nd order butterworth*/
 
+// PT1 Low Pass filter
+
+float pt1FilterGain(float f_cut, float dT)
+{
+    float omega = 2.0f * M_PIf * f_cut * dT;
+    return omega / (omega + 1.0f);
+}
+
+// Calculates filter gain based on delay (time constant of filter) - time it takes for filter response to reach 63.2% of a step input.
+float pt1FilterGainFromDelay(float delay, float dT)
+{
+    if (delay <= 0) {
+        return 1.0f; // gain = 1 means no filtering
+    }
+
+    // cutoffHz = 1.0f / (2.0f * M_PIf * delay)
+
+    return dT / (dT + delay);
+}
+
+void pt1FilterInit(pt1Filter_t *filter, float k)
+{
+    filter->state = 0.0f;
+    filter->k = k;
+}
+
+void pt1FilterUpdateCutoff(pt1Filter_t *filter, float k)
+{
+    filter->k = k;
+}
+
+float pt1FilterApply(pt1Filter_t *filter, float input)
+{
+    filter->state = filter->state + filter->k * (input - filter->state);
+    return filter->state;
+}
+
 
 // get notch filter Q given center frequency (f0) and lower cutoff frequency (f1)
 // Q = f0 / (f2 - f1) ; f2 = f0^2 / f1

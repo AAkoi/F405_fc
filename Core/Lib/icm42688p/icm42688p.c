@@ -3,6 +3,7 @@
 #include "bsp_pins.h"
 #include "attitude.h"
 #include <stdlib.h>
+#include <limits.h>
 
 extern SPI_HandleTypeDef hspi1;
 icm42688p_dev_t icm;
@@ -69,6 +70,7 @@ void icm_spi_read_burst(uint8_t reg, uint8_t *buffer, uint16_t len)
     // 启动DMA接收
     HAL_StatusTypeDef dma_status = HAL_SPI_Receive_DMA(&hspi1, buffer, len);
     if (dma_status != HAL_OK) {  // 简单失败处理
+        printf("[read_burst] DMA start failed, status=%d\r\n", dma_status);
         ICM42688P_CS_HIGH();
         return;
     }
@@ -77,6 +79,7 @@ void icm_spi_read_burst(uint8_t reg, uint8_t *buffer, uint16_t len)
     uint32_t timeout_start = HAL_GetTick();
     while (spi1_dma_flag == 0) {
         if ((HAL_GetTick() - timeout_start) > 50) { // 最多等待50ms
+            printf("[read_burst] DMA timeout! reg=0x%02X len=%d\r\n", reg & 0x7F, len);
             HAL_SPI_DMAStop(&hspi1);
             ICM42688P_CS_HIGH();
             hspi1.State = HAL_SPI_STATE_READY;
@@ -117,7 +120,22 @@ void icm42688p_init_driver(void)
 
     if (!icm42688p_init(&icm)) {
         printf("ICM42688P init failed\r\n");
+    } else {
+        printf("ICM42688P init success\r\n");
     }
+    
+    // 验证传感器数据是否可读
+    printf("Testing sensor data read...\r\n");
+    int16_t test_gx = 0, test_gy = 0, test_gz = 0;
+    if (icm42688p_get_gyro_data(&test_gx, &test_gy, &test_gz)) {
+        printf("Gyro test read OK: %d %d %d\r\n", test_gx, test_gy, test_gz);
+    } else {
+        printf("Gyro test read FAILED!\r\n");
+    }
+}
+
+bool icm42688p_calibrate(uint16_t samples){
+    return icm42688p_calibrate_gyro(&icm,samples);
 }
 
 // Simple raw read helpers
@@ -231,18 +249,62 @@ bool icm42688p_dataPreprocess(int16_t *gyro_x, int16_t *gyro_y, int16_t *gyro_z,
 
     return true;
 }
+bool icm42688p_gyro_rawPreprocess(int16_t *gyro_x, int16_t *gyro_y, int16_t *gyro_z)
+{
+    // Raw版本：仅做零偏补偿，不做刻度转换
+    bool wrote = false;
+    if (gyro_x) {
+        int32_t v = (int32_t)(*gyro_x) - (int32_t)icm.gyro_offset[0];
+        if (v > INT16_MAX) v = INT16_MAX;
+        if (v < INT16_MIN) v = INT16_MIN;
+        *gyro_x = (int16_t)v;
+        wrote = true;
+    }
+    if (gyro_y) {
+        int32_t v = (int32_t)(*gyro_y) - (int32_t)icm.gyro_offset[1];
+        if (v > INT16_MAX) v = INT16_MAX;
+        if (v < INT16_MIN) v = INT16_MIN;
+        *gyro_y = (int16_t)v;
+        wrote = true;
+    }
+    if (gyro_z) {
+        int32_t v = (int32_t)(*gyro_z) - (int32_t)icm.gyro_offset[2];
+        if (v > INT16_MAX) v = INT16_MAX;
+        if (v < INT16_MIN) v = INT16_MIN;
+        *gyro_z = (int16_t)v;
+        wrote = true;
+    }
+
+    return wrote;
+}
 
 bool icm42688p_gyro_dataPreprocess(int16_t *gyro_x, int16_t *gyro_y, int16_t *gyro_z,
                                    float *gyro_x_norm, float *gyro_y_norm, float *gyro_z_norm)
 {
-    float gscale = (icm.gyro_scale > 0.0f) ? icm.gyro_scale : 1.0f;
-
-    if (gyro_x && gyro_x_norm) *gyro_x_norm = (float)(*gyro_x) / gscale;
-    if (gyro_y && gyro_y_norm) *gyro_y_norm = (float)(*gyro_y) / gscale;
-    if (gyro_z && gyro_z_norm) *gyro_z_norm = (float)(*gyro_z) / gscale;
-
-    // At least one output written?
-    return (gyro_x && gyro_x_norm) || (gyro_y && gyro_y_norm) || (gyro_z && gyro_z_norm);
+    const float gscale = (icm.gyro_scale > 0.0f) ? icm.gyro_scale : 1.0f;
+    bool wrote = false;
+        if (gyro_x) {
+        *gyro_x -= icm.gyro_offset[0];
+        if (gyro_x_norm) {
+            *gyro_x_norm = (float)(*gyro_x) / gscale;
+            wrote = true;
+        }
+    }
+    if (gyro_y) {
+        *gyro_y -= icm.gyro_offset[1];
+        if (gyro_y_norm) {
+            *gyro_y_norm = (float)(*gyro_y) / gscale;
+            wrote = true;
+        }
+    }
+    if (gyro_z) {
+        *gyro_z -= icm.gyro_offset[2];
+        if (gyro_z_norm) {
+            *gyro_z_norm = (float)(*gyro_z) / gscale;
+            wrote = true;
+        }
+    }
+    return wrote;
 }
 
 // SPI1 RX DMA complete callback

@@ -2,6 +2,11 @@
 #include <stdint.h>
 #include "maths.h"
 
+typedef struct pt1Filter_s {
+    float state;
+    float k;
+} pt1Filter_t;
+
 typedef enum {
     FILTER_LPF,    // 2nd order Butterworth section
     FILTER_NOTCH,
@@ -16,7 +21,11 @@ typedef struct biquadFilter_s {
     float weight;
 } biquadFilter_t;
 
-
+float pt1FilterGain(float f_cut, float dT);
+float pt1FilterGainFromDelay(float delay, float dT);
+void pt1FilterInit(pt1Filter_t *filter, float k);
+void pt1FilterUpdateCutoff(pt1Filter_t *filter, float k);
+float pt1FilterApply(pt1Filter_t *filter, float input);
 
 float filterGetNotchQ(float centerFreq, float cutoffFreq);
 

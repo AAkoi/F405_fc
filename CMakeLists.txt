@@ -87,6 +87,7 @@ target_sources(${CMAKE_PROJECT_NAME} PRIVATE
     Core/Test/test_attitude_mag.c
     Core/Test/test_spi_hardware.c
     Core/Test/test_dma.c
+    Core/Test/test_imu.c
 )
 
 # Add include paths

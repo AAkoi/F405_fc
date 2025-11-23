@@ -15,6 +15,8 @@ void icm_delay_ms(uint32_t ms);
 
 // 初始化函数
 void icm42688p_init_driver(void);
+//校准函数
+bool icm42688p_calibrate(uint16_t samples);
 
 // 数据读取函数
 bool icm42688p_get_gyro_data(int16_t *gyro_x, int16_t *gyro_y, int16_t *gyro_z);
@@ -28,6 +30,9 @@ bool icm42688p_get_all_data(int16_t *gyro_x, int16_t *gyro_y, int16_t *gyro_z,
 bool icm42688p_update(int16_t *gyro_x, int16_t *gyro_y, int16_t *gyro_z,
                       int16_t *accel_x, int16_t *accel_y, int16_t *accel_z,
                       float *temp_celsius);
+
+// 仅做陀螺零偏补偿（不做scale转换）
+bool icm42688p_gyro_rawPreprocess(int16_t *gyro_x, int16_t *gyro_y, int16_t *gyro_z);
 
 // 仅做陀螺刻度转换（raw LSB -> dps）
 bool icm42688p_gyro_dataPreprocess(int16_t *gyro_x, int16_t *gyro_y, int16_t *gyro_z,
