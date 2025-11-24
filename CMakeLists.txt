@@ -78,7 +78,10 @@ target_sources(${CMAKE_PROJECT_NAME} PRIVATE
     Core/Control/Tools/maths.c
 
     # Control tasks
+    Core/Control/Tasks/task_register.c
+    Core/Control/Tasks/task_scheduler.c
     Core/Control/Tasks/imu_task.c
+    Core/Control/Tasks/task_scheduler_fc.c
 
     # Test modules
     Core/Test/test_icm42688p.c
