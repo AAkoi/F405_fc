@@ -1,0 +1,145 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>传感器驱动 - Betaflight 文档</title>
+    <link rel="stylesheet" href="../styles/docs.css">
+    <script src="https://unpkg.com/lucide@latest"></script>
+</head>
+<body>
+    <div class="reading-progress" id="reading-progress"></div>
+    
+    <aside class="sidebar">
+        <div class="sidebar-header">
+            <h1><i data-lucide="plane" class="icon-inline"></i> Betaflight <span class="version-tag">v1.0</span></h1>
+        </div>
+        <nav class="sidebar-nav">
+            <ul>
+                <li><a href="index.html"><i data-lucide="home" class="icon-inline"></i> 文档首页</a></li>
+                <li><a href="bsp.html"><i data-lucide="cpu" class="icon-inline"></i> BSP层</a></li>
+                <li>
+                    <a href="sensors.html" class="parent-active"><i data-lucide="radio" class="icon-inline"></i> 传感器驱动</a>
+                    <ul>
+                        <li><a href="#sensor-imu">ICM42688P IMU</a></li>
+                        <li><a href="#sensor-mag">HMC5883L 磁力计</a></li>
+                        <li><a href="#sensor-baro">BMP280 气压计</a></li>
+                    </ul>
+                </li>
+                <li><a href="control.html"><i data-lucide="settings" class="icon-inline"></i> 控制算法</a></li>
+                <li><a href="comm.html"><i data-lucide="wifi" class="icon-inline"></i> 通信协议</a></li>
+                <li><a href="examples.html"><i data-lucide="code" class="icon-inline"></i> 使用示例</a></li>
+                <li><a href="performance.html"><i data-lucide="activity" class="icon-inline"></i> 性能指标</a></li>
+            </ul>
+        </nav>
+    </aside>
+    
+    <main class="main-content">
+        <div class="content-wrapper">
+            <nav class="breadcrumb">
+                <a href="index.html">首页</a>
+                <span class="separator">/</span>
+                <span class="current">传感器驱动</span>
+            </nav>
+            
+            <section id="sensors">
+                <h1>传感器驱动库</h1>
+                <p>本章节介绍飞控系统中使用的各种传感器驱动，包括 IMU、磁力计和气压计。</p>
+                
+                <h2 id="sensor-imu">ICM42688P - 六轴IMU</h2>
+                <p><span class="badge badge-info">文件</span> <code>Core/Lib/icm42688p/icm42688p.h</code></p>
+                <p><span class="badge badge-success">接口</span> SPI | <span class="badge badge-warning">采样率</span> 1-8 kHz</p>
+                
+                <h3>初始化</h3>
+                <pre><code>void icm42688p_init_driver(void);</code></pre>
+                <p>初始化 ICM42688P 传感器（陀螺仪量程: ±2000 dps, 加速度计量程: ±16g）</p>
+                
+                <h3>数据读取</h3>
+                <pre><code>bool icm42688p_get_gyro_data(int16_t *gyro_x, int16_t *gyro_y, int16_t *gyro_z);
+bool icm42688p_get_accel_data(int16_t *accel_x, int16_t *accel_y, int16_t *accel_z);
+bool icm42688p_get_temperature(float *temp_celsius);
+bool icm42688p_get_all_data(int16_t *gx, int16_t *gy, int16_t *gz,
+                            int16_t *ax, int16_t *ay, int16_t *az, float *temp);</code></pre>
+                
+                <h3>数据预处理</h3>
+                <pre><code>bool icm42688p_dataPreprocess(int16_t *gyro_x, int16_t *gyro_y, int16_t *gyro_z,
+                                  int16_t *accel_x, int16_t *accel_y, int16_t *accel_z,
+                                  float *gyro_x_norm, float *gyro_y_norm, float *gyro_z_norm,
+                                  float *accel_x_norm, float *accel_y_norm, float *accel_z_norm,
+                                  float *temp_celsius);</code></pre>
+                <p>读取原始数据并转换为物理单位：</p>
+                <ul>
+                    <li>陀螺仪: <strong>dps</strong> (度/秒)</li>
+                    <li>加速度计: <strong>g</strong> (重力加速度)</li>
+                </ul>
+                
+                <h2 id="sensor-mag">HMC5883L - 三轴磁力计</h2>
+                <p><span class="badge badge-info">文件</span> <code>Core/Lib/hmc5883l/hmc5883l.h</code></p>
+                <p><span class="badge badge-success">接口</span> I2C | <span class="badge badge-warning">采样率</span> 75 Hz</p>
+                
+                <h3>初始化</h3>
+                <pre><code>bool hmc5883l_init_driver(void);</code></pre>
+                
+                <h3>数据读取</h3>
+                <pre><code>bool hmc5883l_read_raw_data(int16_t *mag_x, int16_t *mag_y, int16_t *mag_z);
+bool hmc5883l_read_gauss(float *mag_x, float *mag_y, float *mag_z);</code></pre>
+                
+                <h3>航向角计算</h3>
+                <pre><code>float hmc5883l_get_heading(void);  // 基本航向角 (0-360°)
+float hmc5883l_get_tilt_compensated_heading(float roll, float pitch);  // 倾斜补偿</code></pre>
+                
+                <div class="warning">
+                    <i data-lucide="alert-triangle" class="icon-inline"></i>
+                    <div>
+                        <strong>注意</strong>: 磁力计需要定期校准，请使用 <code>hmc5883l_calibrate_compass(200)</code> 进行校准。校准时需旋转飞行器。
+                    </div>
+                </div>
+                
+                <h2 id="sensor-baro">BMP280 - 气压计</h2>
+                <p><span class="badge badge-info">文件</span> <code>Core/Lib/bmp280/bmp280.h</code></p>
+                <p><span class="badge badge-success">接口</span> I2C | <span class="badge badge-warning">采样率</span> 182 Hz</p>
+                
+                <h3>初始化</h3>
+                <pre><code>void bmp280_init_driver(void);</code></pre>
+                
+                <h3>数据读取</h3>
+                <pre><code>bool bmp280_get_temperature(float *temp_celsius);
+bool bmp280_get_pressure(int32_t *pressure_pa);
+bool bmp280_get_altitude(float *altitude_m);
+bool bmp280_get_all(float *temp, int32_t *pressure, float *altitude);</code></pre>
+                
+                <h3>参数设置</h3>
+                <pre><code>void bmp280_set_sea_level_pressure_pa(float sea_level_pressure_pa);</code></pre>
+                <p>默认值: <strong>101325 Pa</strong> (标准海平面气压)</p>
+            </section>
+            
+            <nav class="page-nav">
+                <a href="bsp.html" class="page-nav-prev">
+                    <i data-lucide="arrow-left"></i>
+                    <div>
+                        <span class="page-nav-label">上一页</span>
+                        <span class="page-nav-title">BSP层</span>
+                    </div>
+                </a>
+                <a href="control.html" class="page-nav-next">
+                    <div>
+                        <span class="page-nav-label">下一页</span>
+                        <span class="page-nav-title">控制算法</span>
+                    </div>
+                    <i data-lucide="arrow-right"></i>
+                </a>
+            </nav>
+        </div>
+    </main>
+    
+    <button class="back-to-top" id="back-to-top" title="返回顶部">
+        <i data-lucide="arrow-up"></i>
+    </button>
+    
+    <script src="../js/docs.js"></script>
+    <script>
+        lucide.createIcons();
+    </script>
+</body>
+</html>
+

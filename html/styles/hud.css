@@ -2,48 +2,77 @@
 .hud-panel {
     position: absolute;
     top: 80px;
-    left: 30px;
-    width: 220px;
+    left: 20px;
+    width: 260px;
     background: var(--panel-bg);
-    backdrop-filter: blur(10px);
-    border-radius: 12px;
-    padding: 20px;
-    color: var(--text-main);
-    border-left: 4px solid var(--accent);
-    box-shadow: 0 10px 30px rgba(0,0,0,0.3);
+    border-radius: var(--border-radius);
+    box-shadow: var(--shadow);
     z-index: 5;
-    font-family: 'Consolas', 'Monaco', monospace;
+    font-family: 'Segoe UI Mono', 'Consolas', monospace;
+    overflow: hidden; /* Ensure header doesn't overflow */
+    border: 1px solid #E5E7EB;
+    display: flex;
+    flex-direction: column;
+    gap: 0;
 }
 
+/* Group Header style */
+.hud-title {
+    background: #F3F4F6;
+    color: var(--text-sub);
+    font-size: 0.75rem;
+    font-weight: 700;
+    text-transform: uppercase;
+    letter-spacing: 1px;
+    padding: 8px 16px;
+    border-bottom: 1px solid #E5E7EB;
+    border-top: 1px solid #E5E7EB;
+    margin-top: 0;
+}
+
+.hud-title:first-child {
+    border-top: none;
+    background: var(--primary);
+    color: white;
+}
+
+/* Rows */
 .hud-row {
     display: flex;
     justify-content: space-between;
-    margin-bottom: 10px;
     align-items: center;
+    padding: 6px 16px;
+    border-bottom: 1px solid #F9FAFB;
+}
+
+.hud-row:last-child {
+    border-bottom: none;
 }
 
 .hud-label {
     color: var(--text-sub);
     font-size: 0.8rem;
+    font-weight: 600;
 }
 
 .hud-val {
     font-weight: bold;
-    font-size: 1rem;
+    font-size: 0.95rem;
+    color: var(--text-main);
+    font-family: 'Consolas', monospace;
+}
+
+/* Specific Value Colors */
+#val-roll, #val-pitch, #val-yaw {
+    color: var(--primary);
+}
+
+#val-imu-temp, #val-btemp {
     color: var(--accent);
 }
 
 .hud-divider {
-    height: 1px;
-    background: #444;
-    margin: 15px 0;
+    display: none; /* We use headers/borders now */
 }
 
-.hud-title {
-    font-size: 0.7rem;
-    color: #666;
-    letter-spacing: 2px;
-    text-transform: uppercase;
-    margin-bottom: 5px;
-}
-
+/* Make the panel slightly transparent? No, solid is requested. */

@@ -1,0 +1,121 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Betaflight 文档中心</title>
+    <link rel="stylesheet" href="../styles/docs.css">
+    <script src="https://unpkg.com/lucide@latest"></script>
+</head>
+<body>
+    <div class="reading-progress" id="reading-progress"></div>
+    
+    <aside class="sidebar">
+        <div class="sidebar-header">
+            <h1><i data-lucide="plane" class="icon-inline"></i> Betaflight <span class="version-tag">v1.0</span></h1>
+        </div>
+        <nav class="sidebar-nav">
+            <ul>
+                <li><a href="index.html" class="active"><i data-lucide="home" class="icon-inline"></i> 文档首页</a></li>
+                <li><a href="bsp.html"><i data-lucide="cpu" class="icon-inline"></i> BSP层</a></li>
+                <li><a href="sensors.html"><i data-lucide="radio" class="icon-inline"></i> 传感器驱动</a></li>
+                <li><a href="control.html"><i data-lucide="settings" class="icon-inline"></i> 控制算法</a></li>
+                <li><a href="comm.html"><i data-lucide="wifi" class="icon-inline"></i> 通信协议</a></li>
+                <li><a href="examples.html"><i data-lucide="code" class="icon-inline"></i> 使用示例</a></li>
+                <li><a href="performance.html"><i data-lucide="activity" class="icon-inline"></i> 性能指标</a></li>
+            </ul>
+        </nav>
+    </aside>
+    
+    <main class="main-content">
+        <div class="content-wrapper">
+            <section id="overview">
+                <h1>Betaflight 飞控固件文档</h1>
+                <p class="lead">本项目是一个基于 <span class="badge badge-info">STM32F405</span> 的飞行控制器固件，采用模块化设计，包含完整的传感器驱动、姿态解算、PID控制和通信协议支持。</p>
+                
+                <div class="note">
+                    <i data-lucide="lightbulb" class="icon-inline"></i>
+                    <div>
+                        <strong>快速开始：</strong> 选择左侧导航中的章节开始阅读详细的 API 文档。每个章节都包含完整的函数说明和使用示例。
+                    </div>
+                </div>
+
+                <h2>文档章节</h2>
+                
+                <div class="doc-cards">
+                    <a href="bsp.html" class="doc-card">
+                        <div class="doc-card-icon"><i data-lucide="cpu"></i></div>
+                        <h3>BSP层</h3>
+                        <p>板级支持包，包含 I2C、SPI、UART 通信接口和系统级功能。</p>
+                        <span class="doc-card-arrow"><i data-lucide="arrow-right"></i></span>
+                    </a>
+                    
+                    <a href="sensors.html" class="doc-card">
+                        <div class="doc-card-icon"><i data-lucide="radio"></i></div>
+                        <h3>传感器驱动</h3>
+                        <p>ICM42688P IMU、HMC5883L 磁力计、BMP280 气压计完整驱动。</p>
+                        <span class="doc-card-arrow"><i data-lucide="arrow-right"></i></span>
+                    </a>
+                    
+                    <a href="control.html" class="doc-card">
+                        <div class="doc-card-icon"><i data-lucide="settings"></i></div>
+                        <h3>控制算法</h3>
+                        <p>Mahony 姿态解算、PID 控制器、二阶 Butterworth 滤波器。</p>
+                        <span class="doc-card-arrow"><i data-lucide="arrow-right"></i></span>
+                    </a>
+                    
+                    <a href="comm.html" class="doc-card">
+                        <div class="doc-card-icon"><i data-lucide="wifi"></i></div>
+                        <h3>通信协议</h3>
+                        <p>ELRS/CRSF 接收机协议支持，支持 50-250Hz 更新率。</p>
+                        <span class="doc-card-arrow"><i data-lucide="arrow-right"></i></span>
+                    </a>
+                    
+                    <a href="examples.html" class="doc-card">
+                        <div class="doc-card-icon"><i data-lucide="code"></i></div>
+                        <h3>使用示例</h3>
+                        <p>完整的代码示例，包含传感器读取、姿态解算、PID控制等。</p>
+                        <span class="doc-card-arrow"><i data-lucide="arrow-right"></i></span>
+                    </a>
+                    
+                    <a href="performance.html" class="doc-card">
+                        <div class="doc-card-icon"><i data-lucide="activity"></i></div>
+                        <h3>性能指标</h3>
+                        <p>传感器规格、控制性能、计算性能等详细指标。</p>
+                        <span class="doc-card-arrow"><i data-lucide="arrow-right"></i></span>
+                    </a>
+                </div>
+
+                <h2>主要特性</h2>
+                <ul>
+                    <li><strong>硬件平台</strong>: STM32F405 (Cortex-M4, 168MHz)</li>
+                    <li><strong>传感器支持</strong>:
+                        <ul>
+                            <li>ICM42688P (6轴IMU: 加速度计 + 陀螺仪)</li>
+                            <li>HMC5883L (3轴磁力计)</li>
+                            <li>BMP280 (气压计 + 温度计)</li>
+                        </ul>
+                    </li>
+                    <li><strong>姿态解算</strong>: Mahony 互补滤波算法</li>
+                    <li><strong>控制算法</strong>: 基于 Betaflight 的三轴 PID 控制器</li>
+                    <li><strong>通信协议</strong>: ELRS/CRSF 接收机协议</li>
+                    <li><strong>滤波器</strong>: 二阶 Butterworth 滤波器 (LPF/Notch/BPF)</li>
+                </ul>
+                
+                <h2>许可证</h2>
+                <p>本项目部分代码源自 <strong>Betaflight</strong> 开源项目，遵循 <span class="badge badge-info">GPL-3.0</span> 许可证。</p>
+            </section>
+        </div>
+    </main>
+    
+    <button class="back-to-top" id="back-to-top" title="返回顶部">
+        <i data-lucide="arrow-up"></i>
+    </button>
+    
+    <script src="../js/docs.js"></script>
+    <script>
+        lucide.createIcons();
+    </script>
+</body>
+</html>
+

@@ -1,0 +1,119 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>通信协议 - Betaflight 文档</title>
+    <link rel="stylesheet" href="../styles/docs.css">
+    <script src="https://unpkg.com/lucide@latest"></script>
+</head>
+<body>
+    <div class="reading-progress" id="reading-progress"></div>
+    
+    <aside class="sidebar">
+        <div class="sidebar-header">
+            <h1><i data-lucide="plane" class="icon-inline"></i> Betaflight <span class="version-tag">v1.0</span></h1>
+        </div>
+        <nav class="sidebar-nav">
+            <ul>
+                <li><a href="index.html"><i data-lucide="home" class="icon-inline"></i> 文档首页</a></li>
+                <li><a href="bsp.html"><i data-lucide="cpu" class="icon-inline"></i> BSP层</a></li>
+                <li><a href="sensors.html"><i data-lucide="radio" class="icon-inline"></i> 传感器驱动</a></li>
+                <li><a href="control.html"><i data-lucide="settings" class="icon-inline"></i> 控制算法</a></li>
+                <li>
+                    <a href="comm.html" class="parent-active"><i data-lucide="wifi" class="icon-inline"></i> 通信协议</a>
+                    <ul>
+                        <li><a href="#comm-elrs">ELRS/CRSF</a></li>
+                    </ul>
+                </li>
+                <li><a href="examples.html"><i data-lucide="code" class="icon-inline"></i> 使用示例</a></li>
+                <li><a href="performance.html"><i data-lucide="activity" class="icon-inline"></i> 性能指标</a></li>
+            </ul>
+        </nav>
+    </aside>
+    
+    <main class="main-content">
+        <div class="content-wrapper">
+            <nav class="breadcrumb">
+                <a href="index.html">首页</a>
+                <span class="separator">/</span>
+                <span class="current">通信协议</span>
+            </nav>
+            
+            <section id="comm">
+                <h1>通信协议</h1>
+                
+                <h2 id="comm-elrs">ELRS/CRSF协议</h2>
+                <p><span class="badge badge-info">文件</span> <code>Core/Lib/esrl/elrs_crsf_port.h</code></p>
+                <p><span class="badge badge-warning">波特率</span> 420000 bps | <span class="badge badge-success">更新率</span> 50-250 Hz</p>
+                
+                <h3>数据结构</h3>
+                <pre><code>typedef struct {
+    uint16_t raw[16];        // 原始 CRSF 11bit 值 (0-2047)
+    uint8_t count;           // 有效通道数
+    uint32_t last_update_us; // 时间戳
+    
+    // 归一化指令
+    float roll;              // -1.0 ~ +1.0
+    float pitch;             // -1.0 ~ +1.0
+    float yaw;               // -1.0 ~ +1.0
+    float throttle;          // 0.0 ~ 1.0
+    
+    uint16_t aux_bits;       // AUX开关位图
+} elrs_rc_state_t;</code></pre>
+                
+                <h3>初始化</h3>
+                <pre><code>void ELRS_CRSF_InitOnUART1(void);</code></pre>
+                
+                <h3>RC状态获取</h3>
+                <pre><code>void ELRS_CRSF_CopyRCState(elrs_rc_state_t *out);  // 获取RC状态快照
+bool ELRS_CRSF_IsActive(uint32_t timeout_ms);       // 检查链路是否活跃</code></pre>
+                
+                <h3>通道映射 (默认AETR)</h3>
+                <table>
+                    <thead>
+                        <tr>
+                            <th>通道</th>
+                            <th>功能</th>
+                            <th>索引</th>
+                        </tr>
+                    </thead>
+                    <tbody>
+                        <tr><td>CH1</td><td>Roll (横滚)</td><td>0</td></tr>
+                        <tr><td>CH2</td><td>Pitch (俯仰)</td><td>1</td></tr>
+                        <tr><td>CH3</td><td>Throttle (油门)</td><td>2</td></tr>
+                        <tr><td>CH4</td><td>Yaw (偏航)</td><td>3</td></tr>
+                    </tbody>
+                </table>
+            </section>
+            
+            <nav class="page-nav">
+                <a href="control.html" class="page-nav-prev">
+                    <i data-lucide="arrow-left"></i>
+                    <div>
+                        <span class="page-nav-label">上一页</span>
+                        <span class="page-nav-title">控制算法</span>
+                    </div>
+                </a>
+                <a href="examples.html" class="page-nav-next">
+                    <div>
+                        <span class="page-nav-label">下一页</span>
+                        <span class="page-nav-title">使用示例</span>
+                    </div>
+                    <i data-lucide="arrow-right"></i>
+                </a>
+            </nav>
+        </div>
+    </main>
+    
+    <button class="back-to-top" id="back-to-top" title="返回顶部">
+        <i data-lucide="arrow-up"></i>
+    </button>
+    
+    <script src="../js/docs.js"></script>
+    <script>
+        lucide.createIcons();
+    </script>
+</body>
+</html>
+

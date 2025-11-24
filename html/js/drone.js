@@ -1,11 +1,18 @@
 // 无人机模型模块
 class DroneModel {
     constructor(scene) {
+        console.log('[DroneModel] Creating drone model');
+        
+        if (!scene) {
+            throw new Error('Scene is required for DroneModel');
+        }
+        
         this.scene = scene;
         this.droneGroup = new THREE.Group();
         this.propellers = [];
         
         this.init();
+        console.log('[DroneModel] Drone model created, propellers:', this.propellers.length);
     }
 
     init() {
@@ -146,4 +153,3 @@ class DroneModel {
         return this.droneGroup;
     }
 }
-

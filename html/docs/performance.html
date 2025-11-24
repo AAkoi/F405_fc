@@ -1,0 +1,105 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>性能指标 - Betaflight 文档</title>
+    <link rel="stylesheet" href="../styles/docs.css">
+    <script src="https://unpkg.com/lucide@latest"></script>
+</head>
+<body>
+    <div class="reading-progress" id="reading-progress"></div>
+    
+    <aside class="sidebar">
+        <div class="sidebar-header">
+            <h1><i data-lucide="plane" class="icon-inline"></i> Betaflight <span class="version-tag">v1.0</span></h1>
+        </div>
+        <nav class="sidebar-nav">
+            <ul>
+                <li><a href="index.html"><i data-lucide="home" class="icon-inline"></i> 文档首页</a></li>
+                <li><a href="bsp.html"><i data-lucide="cpu" class="icon-inline"></i> BSP层</a></li>
+                <li><a href="sensors.html"><i data-lucide="radio" class="icon-inline"></i> 传感器驱动</a></li>
+                <li><a href="control.html"><i data-lucide="settings" class="icon-inline"></i> 控制算法</a></li>
+                <li><a href="comm.html"><i data-lucide="wifi" class="icon-inline"></i> 通信协议</a></li>
+                <li><a href="examples.html"><i data-lucide="code" class="icon-inline"></i> 使用示例</a></li>
+                <li><a href="performance.html" class="active"><i data-lucide="activity" class="icon-inline"></i> 性能指标</a></li>
+            </ul>
+        </nav>
+    </aside>
+    
+    <main class="main-content">
+        <div class="content-wrapper">
+            <nav class="breadcrumb">
+                <a href="index.html">首页</a>
+                <span class="separator">/</span>
+                <span class="current">性能指标</span>
+            </nav>
+            
+            <section id="performance">
+                <h1>性能指标</h1>
+                
+                <h2>传感器规格</h2>
+                <table>
+                    <thead>
+                        <tr>
+                            <th>传感器</th>
+                            <th>量程</th>
+                            <th>分辨率</th>
+                            <th>采样率</th>
+                            <th>接口</th>
+                        </tr>
+                    </thead>
+                    <tbody>
+                        <tr><td>ICM42688P Gyro</td><td>±2000 dps</td><td>16-bit</td><td>1-8 kHz</td><td>SPI</td></tr>
+                        <tr><td>ICM42688P Accel</td><td>±16g</td><td>16-bit</td><td>1-8 kHz</td><td>SPI</td></tr>
+                        <tr><td>HMC5883L</td><td>±8 Gauss</td><td>12-bit</td><td>75 Hz</td><td>I2C</td></tr>
+                        <tr><td>BMP280</td><td>300-1100 hPa</td><td>20-bit</td><td>182 Hz</td><td>I2C</td></tr>
+                    </tbody>
+                </table>
+                
+                <h2>控制性能</h2>
+                <ul>
+                    <li><strong>姿态更新频率</strong>: 1 kHz</li>
+                    <li><strong>PID控制频率</strong>: 1 kHz</li>
+                    <li><strong>RC数据更新</strong>: 50-250 Hz</li>
+                    <li><strong>滤波器延迟</strong>: &lt; 1ms</li>
+                </ul>
+                
+                <h2>计算性能</h2>
+                <ul>
+                    <li><strong>Mahony姿态解算</strong>: ~0.2ms / 更新</li>
+                    <li><strong>三轴PID计算</strong>: ~0.1ms / 更新</li>
+                    <li><strong>双二次滤波</strong>: ~0.01ms / 通道</li>
+                </ul>
+            </section>
+            
+            <nav class="page-nav">
+                <a href="examples.html" class="page-nav-prev">
+                    <i data-lucide="arrow-left"></i>
+                    <div>
+                        <span class="page-nav-label">上一页</span>
+                        <span class="page-nav-title">使用示例</span>
+                    </div>
+                </a>
+                <a href="index.html" class="page-nav-next">
+                    <div>
+                        <span class="page-nav-label">返回</span>
+                        <span class="page-nav-title">文档首页</span>
+                    </div>
+                    <i data-lucide="arrow-right"></i>
+                </a>
+            </nav>
+        </div>
+    </main>
+    
+    <button class="back-to-top" id="back-to-top" title="返回顶部">
+        <i data-lucide="arrow-up"></i>
+    </button>
+    
+    <script src="../js/docs.js"></script>
+    <script>
+        lucide.createIcons();
+    </script>
+</body>
+</html>
+

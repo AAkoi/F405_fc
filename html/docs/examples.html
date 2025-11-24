@@ -1,0 +1,161 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>使用示例 - Betaflight 文档</title>
+    <link rel="stylesheet" href="../styles/docs.css">
+    <script src="https://unpkg.com/lucide@latest"></script>
+</head>
+<body>
+    <div class="reading-progress" id="reading-progress"></div>
+    
+    <aside class="sidebar">
+        <div class="sidebar-header">
+            <h1><i data-lucide="plane" class="icon-inline"></i> Betaflight <span class="version-tag">v1.0</span></h1>
+        </div>
+        <nav class="sidebar-nav">
+            <ul>
+                <li><a href="index.html"><i data-lucide="home" class="icon-inline"></i> 文档首页</a></li>
+                <li><a href="bsp.html"><i data-lucide="cpu" class="icon-inline"></i> BSP层</a></li>
+                <li><a href="sensors.html"><i data-lucide="radio" class="icon-inline"></i> 传感器驱动</a></li>
+                <li><a href="control.html"><i data-lucide="settings" class="icon-inline"></i> 控制算法</a></li>
+                <li><a href="comm.html"><i data-lucide="wifi" class="icon-inline"></i> 通信协议</a></li>
+                <li><a href="examples.html" class="active"><i data-lucide="code" class="icon-inline"></i> 使用示例</a></li>
+                <li><a href="performance.html"><i data-lucide="activity" class="icon-inline"></i> 性能指标</a></li>
+            </ul>
+        </nav>
+    </aside>
+    
+    <main class="main-content">
+        <div class="content-wrapper">
+            <nav class="breadcrumb">
+                <a href="index.html">首页</a>
+                <span class="separator">/</span>
+                <span class="current">使用示例</span>
+            </nav>
+            
+            <section id="examples">
+                <h1>使用示例</h1>
+                
+                <h2>示例1: 传感器初始化与读取</h2>
+                <pre><code>#include "icm42688p.h"
+#include "hmc5883l.h"
+#include "bmp280.h"
+
+void sensor_init(void) {
+    icm42688p_init_driver();
+    hmc5883l_init_driver();
+    bmp280_init_driver();
+}
+
+void sensor_read(void) {
+    int16_t gx, gy, gz, ax, ay, az;
+    float temp;
+    
+    if (icm42688p_get_all_data(&gx, &gy, &gz, &ax, &ay, &az, &temp)) {
+        // 数据处理...
+    }
+}</code></pre>
+                
+                <h2>示例2: 姿态解算</h2>
+                <pre><code>#include "attitude.h"
+
+void attitude_example(void) {
+    Attitude_Init();
+    Attitude_CalibrateGyro(2000);
+    
+    while (1) {
+        int16_t ax, ay, az, gx, gy, gz;
+        icm42688p_get_accel_data(&ax, &ay, &az);
+        icm42688p_get_gyro_data(&gx, &gy, &gz);
+        
+        Euler_angles angles = Attitude_Update(ax, ay, az, gx, gy, gz);
+        
+        printf("Roll: %.2f, Pitch: %.2f, Yaw: %.2f\n", 
+               angles.roll, angles.pitch, angles.yaw);
+        
+        HAL_Delay(1);  // 1kHz
+    }
+}</code></pre>
+                
+                <h2>示例3: PID控制</h2>
+                <pre><code>#include "pid.h"
+
+void pid_example(void) {
+    pid_multi_axis_t flight_pid;
+    pid_multi_init(&flight_pid, 3, 1000.0f);
+    
+    // 配置Roll轴
+    pid_config_t config;
+    pid_get_default_config(&config);
+    pid_multi_config_axis(&flight_pid, 0, &config);
+    
+    // 控制循环
+    while (1) {
+        float setpoints[3] = {0, 0, 0};
+        float measurements[3] = {
+            Attitude_Get_Roll(),
+            Attitude_Get_Pitch(),
+            Attitude_Get_Yaw()
+        };
+        float outputs[3];
+        
+        pid_multi_update(&flight_pid, setpoints, measurements, outputs);
+        HAL_Delay(1);
+    }
+}</code></pre>
+            
+                <h2>IMU 数据录制</h2>
+                <p>用于录制陀螺仪数据，保存为 CSV 文件进行离线分析。</p>
+                
+                <h3><i data-lucide="video" class="icon-inline"></i> 录制步骤</h3>
+                <ol>
+                    <li>在主界面连接串口后，点击 <strong>"开始录制"</strong> 按钮</li>
+                    <li>保持飞控运行 3-10 秒（可以进行手动晃动测试）</li>
+                    <li>点击 <strong>"停止录制"</strong>，自动下载 CSV 文件</li>
+                </ol>
+                
+                <h3><i data-lucide="bar-chart" class="icon-inline"></i> 数据分析</h3>
+                <p>录制完成后，使用提供的 <code>analyze_imu_data.py</code> Python 脚本进行离线分析：</p>
+                <pre><code>python analyze_imu_data.py imu_recording_2025-11-23.csv</code></pre>
+                
+                <div class="note">
+                    <i data-lucide="lightbulb" class="icon-inline"></i>
+                    <div>
+                        <strong>CSV 格式</strong>: <code>IMU_CSV,t_ms,raw_gx,raw_gy,raw_gz,filt_gx,filt_gy,filt_gz</code><br>
+                        时间单位：毫秒 | 角速度单位：dps（度每秒）
+                    </div>
+                </div>
+            </section>
+            
+            <nav class="page-nav">
+                <a href="comm.html" class="page-nav-prev">
+                    <i data-lucide="arrow-left"></i>
+                    <div>
+                        <span class="page-nav-label">上一页</span>
+                        <span class="page-nav-title">通信协议</span>
+                    </div>
+                </a>
+                <a href="performance.html" class="page-nav-next">
+                    <div>
+                        <span class="page-nav-label">下一页</span>
+                        <span class="page-nav-title">性能指标</span>
+                    </div>
+                    <i data-lucide="arrow-right"></i>
+                </a>
+            </nav>
+        </div>
+    </main>
+    
+    <button class="back-to-top" id="back-to-top" title="返回顶部">
+        <i data-lucide="arrow-up"></i>
+    </button>
+    
+    <script src="../js/docs.js"></script>
+    <script>
+        lucide.createIcons();
+    </script>
+</body>
+</html>
+

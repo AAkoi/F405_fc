@@ -79,9 +79,9 @@ target_sources(${CMAKE_PROJECT_NAME} PRIVATE
 
     # Control tasks
     Core/Control/Tasks/task_register.c
-    Core/Control/Tasks/task_scheduler.c
-    Core/Control/Tasks/imu_task.c
-    Core/Control/Tasks/task_scheduler_fc.c
+    Core/Control/Tasks/scheduler.c
+    Core/Control/Tasks/task_gyro.c
+    Core/Control/Tasks/task_filter.c
 
     # Test modules
     Core/Test/test_icm42688p.c

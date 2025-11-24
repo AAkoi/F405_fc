@@ -1,14 +1,32 @@
 // 主应用程序
 class DroneVisualizerApp {
     constructor() {
-        this.serialManager = new SerialManager();
-        this.uiManager = new UIManager();
-        this.recordingManager = new RecordingManager();
-        this.orientationCalc = new OrientationCalculator();
-        this.sceneManager = new SceneManager('canvas-container');
-        this.droneModel = new DroneModel(this.sceneManager.getScene());
+        console.log('[App] Starting initialization...');
         
-        this.init();
+        try {
+            this.serialManager = new SerialManager();
+            console.log('[App] SerialManager created');
+            
+            this.uiManager = new UIManager();
+            console.log('[App] UIManager created');
+            
+            this.recordingManager = new RecordingManager();
+            console.log('[App] RecordingManager created');
+            
+            this.orientationCalc = new OrientationCalculator();
+            console.log('[App] OrientationCalculator created');
+            
+            this.sceneManager = new SceneManager('canvas-container');
+            console.log('[App] SceneManager created');
+            
+            this.droneModel = new DroneModel(this.sceneManager.getScene());
+            console.log('[App] DroneModel created');
+            
+            this.init();
+        } catch (error) {
+            console.error('[App] Initialization error:', error);
+            alert('应用初始化失败: ' + error.message);
+        }
     }
 
     init() {
@@ -44,7 +62,7 @@ class DroneVisualizerApp {
         const viewButtons = document.querySelectorAll('.view-btn');
         viewButtons.forEach(btn => {
             btn.addEventListener('click', (e) => {
-                const mode = e.target.dataset.mode;
+                const mode = e.currentTarget.dataset.mode;
                 if (mode) this.setCamera(mode);
             });
         });
@@ -59,7 +77,7 @@ class DroneVisualizerApp {
             if (connectBtn) connectBtn.style.display = 'none';
             
             const recordBtn = document.getElementById('recordBtn');
-            if (recordBtn) recordBtn.style.display = 'inline-block';
+            if (recordBtn) recordBtn.style.display = 'inline-flex';
             
             this.serialManager.startReading();
         } catch (e) {
@@ -75,16 +93,24 @@ class DroneVisualizerApp {
             // 开始录制
             this.recordingManager.start();
             if (recordBtn) {
-                recordBtn.innerText = '⏹ 停止录制';
-                recordBtn.style.background = '#27ae60';
+                recordBtn.innerHTML = '<i data-lucide="square"></i> 停止录制';
+                recordBtn.style.background = '#059669';
+                // Re-initialize icons after DOM change
+                if (typeof lucide !== 'undefined') {
+                    lucide.createIcons();
+                }
             }
             this.uiManager.setRecordingStatus(true);
         } else {
             // 停止录制
             this.recordingManager.stop();
             if (recordBtn) {
-                recordBtn.innerText = '⏺ 开始录制';
-                recordBtn.style.background = '#e74c3c';
+                recordBtn.innerHTML = '<i data-lucide="circle-dot"></i> 开始录制';
+                recordBtn.style.background = '#DC2626';
+                // Re-initialize icons after DOM change
+                if (typeof lucide !== 'undefined') {
+                    lucide.createIcons();
+                }
             }
             this.uiManager.setRecordingStatus(false);
             this.recordingManager.export();
@@ -132,6 +158,15 @@ class DroneVisualizerApp {
 
 // 页面加载完成后启动应用
 document.addEventListener('DOMContentLoaded', () => {
-    window.app = new DroneVisualizerApp();
+    console.log('[App] DOM Content Loaded');
+    console.log('[App] THREE available:', typeof THREE !== 'undefined');
+    console.log('[App] OrbitControls available:', typeof THREE.OrbitControls !== 'undefined');
+    
+    try {
+        window.app = new DroneVisualizerApp();
+        console.log('[App] Application started successfully');
+    } catch (error) {
+        console.error('[App] Failed to start application:', error);
+    }
 });
 

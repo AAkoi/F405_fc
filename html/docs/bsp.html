@@ -1,0 +1,142 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>BSP层 - Betaflight 文档</title>
+    <link rel="stylesheet" href="../styles/docs.css">
+    <script src="https://unpkg.com/lucide@latest"></script>
+</head>
+<body>
+    <div class="reading-progress" id="reading-progress"></div>
+    
+    <aside class="sidebar">
+        <div class="sidebar-header">
+            <h1><i data-lucide="plane" class="icon-inline"></i> Betaflight <span class="version-tag">v1.0</span></h1>
+        </div>
+        <nav class="sidebar-nav">
+            <ul>
+                <li><a href="index.html"><i data-lucide="home" class="icon-inline"></i> 文档首页</a></li>
+                <li>
+                    <a href="bsp.html" class="parent-active"><i data-lucide="cpu" class="icon-inline"></i> BSP层</a>
+                    <ul>
+                        <li><a href="#bsp-i2c">I2C通信</a></li>
+                        <li><a href="#bsp-spi">SPI通信</a></li>
+                        <li><a href="#bsp-uart">UART通信</a></li>
+                        <li><a href="#bsp-system">系统功能</a></li>
+                    </ul>
+                </li>
+                <li><a href="sensors.html"><i data-lucide="radio" class="icon-inline"></i> 传感器驱动</a></li>
+                <li><a href="control.html"><i data-lucide="settings" class="icon-inline"></i> 控制算法</a></li>
+                <li><a href="comm.html"><i data-lucide="wifi" class="icon-inline"></i> 通信协议</a></li>
+                <li><a href="examples.html"><i data-lucide="code" class="icon-inline"></i> 使用示例</a></li>
+                <li><a href="performance.html"><i data-lucide="activity" class="icon-inline"></i> 性能指标</a></li>
+            </ul>
+        </nav>
+    </aside>
+    
+    <main class="main-content">
+        <div class="content-wrapper">
+            <nav class="breadcrumb">
+                <a href="index.html">首页</a>
+                <span class="separator">/</span>
+                <span class="current">BSP层</span>
+            </nav>
+            
+            <section id="bsp">
+                <h1>BSP层 - 板级支持包</h1>
+                <p>板级支持包（Board Support Package）提供了硬件抽象层接口，封装了 STM32F405 的各种外设功能。</p>
+                
+                <h2 id="bsp-i2c">I2C通信</h2>
+                <p><span class="badge badge-info">文件</span> <code>Core/BSP/Bsp_IIC/bsp_iic.h</code></p>
+                
+                <h3>初始化函数</h3>
+                <pre><code>void MX_I2C1_Init(void);
+void MX_I2C2_Init(void);</code></pre>
+                <p>初始化 I2C1 或 I2C2 外设。</p>
+                
+                <h3>阻塞模式读写</h3>
+                <pre><code>uint8_t bsp_i2c_read_reg(uint8_t dev_addr, uint8_t reg);
+void bsp_i2c_write_reg(uint8_t dev_addr, uint8_t reg, uint8_t value);
+void bsp_i2c_read_burst(uint8_t dev_addr, uint8_t reg, uint8_t *buffer, uint16_t len);</code></pre>
+                
+                <h4>参数说明</h4>
+                <table>
+                    <thead>
+                        <tr>
+                            <th>参数</th>
+                            <th>说明</th>
+                        </tr>
+                    </thead>
+                    <tbody>
+                        <tr><td><code>dev_addr</code></td><td>设备 I2C 地址</td></tr>
+                        <tr><td><code>reg</code></td><td>寄存器地址</td></tr>
+                        <tr><td><code>value</code></td><td>要写入的值</td></tr>
+                        <tr><td><code>buffer</code></td><td>数据缓冲区</td></tr>
+                        <tr><td><code>len</code></td><td>读取长度</td></tr>
+                    </tbody>
+                </table>
+                
+                <h3>非阻塞模式</h3>
+                <pre><code>bool bsp_i2c_write_reg_start(uint8_t dev_addr, uint8_t reg, uint8_t value);
+bool bsp_i2c_read_burst_start(uint8_t dev_addr, uint8_t reg, uint8_t *buffer, uint16_t len);
+bool bsp_i2c_is_busy(void);</code></pre>
+                <p><strong>返回值</strong>: <code>true</code>=成功启动, <code>false</code>=I2C忙碌</p>
+                
+                <h2 id="bsp-uart">UART通信</h2>
+                <p><span class="badge badge-info">文件</span> <code>Core/BSP/Bsp_uart/bsp_uart.h</code></p>
+                
+                <h3>初始化</h3>
+                <pre><code>void BSP_UART_Init(void);  // 默认波特率115200
+void BSP_UART_Open(uint8_t uart_id, uint32_t baudrate);</code></pre>
+                
+                <h3>数据发送</h3>
+                <pre><code>int BSP_UART_Write(uint8_t uart_id, const uint8_t *data, uint16_t len);</code></pre>
+                <p><strong>返回值</strong>: 实际发送的字节数</p>
+                
+                <h2 id="bsp-system">系统功能</h2>
+                <p><span class="badge badge-info">文件</span> <code>Core/BSP/Bsp_System/bsp_System.h</code></p>
+                
+                <h3>DWT周期计数器</h3>
+                <pre><code>void cycleCounterInit(void);  // 初始化DWT
+uint32_t DWT_GetTick(void);   // 获取当前周期数
+uint32_t clockMicrosToCycles(uint32_t micros);  // 微秒转周期</code></pre>
+                
+                <div class="note">
+                    <i data-lucide="zap" class="icon-inline"></i>
+                    <div>
+                        <strong>性能</strong>: DWT 提供 CPU 周期级精度的计时功能，适用于性能分析和精确延时。
+                    </div>
+                </div>
+            </section>
+            
+            <nav class="page-nav">
+                <a href="index.html" class="page-nav-prev">
+                    <i data-lucide="arrow-left"></i>
+                    <div>
+                        <span class="page-nav-label">上一页</span>
+                        <span class="page-nav-title">文档首页</span>
+                    </div>
+                </a>
+                <a href="sensors.html" class="page-nav-next">
+                    <div>
+                        <span class="page-nav-label">下一页</span>
+                        <span class="page-nav-title">传感器驱动</span>
+                    </div>
+                    <i data-lucide="arrow-right"></i>
+                </a>
+            </nav>
+        </div>
+    </main>
+    
+    <button class="back-to-top" id="back-to-top" title="返回顶部">
+        <i data-lucide="arrow-up"></i>
+    </button>
+    
+    <script src="../js/docs.js"></script>
+    <script>
+        lucide.createIcons();
+    </script>
+</body>
+</html>
+

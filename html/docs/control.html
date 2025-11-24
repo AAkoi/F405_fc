@@ -1,0 +1,168 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>控制算法 - Betaflight 文档</title>
+    <link rel="stylesheet" href="../styles/docs.css">
+    <script src="https://unpkg.com/lucide@latest"></script>
+</head>
+<body>
+    <div class="reading-progress" id="reading-progress"></div>
+    
+    <aside class="sidebar">
+        <div class="sidebar-header">
+            <h1><i data-lucide="plane" class="icon-inline"></i> Betaflight <span class="version-tag">v1.0</span></h1>
+        </div>
+        <nav class="sidebar-nav">
+            <ul>
+                <li><a href="index.html"><i data-lucide="home" class="icon-inline"></i> 文档首页</a></li>
+                <li><a href="bsp.html"><i data-lucide="cpu" class="icon-inline"></i> BSP层</a></li>
+                <li><a href="sensors.html"><i data-lucide="radio" class="icon-inline"></i> 传感器驱动</a></li>
+                <li>
+                    <a href="control.html" class="parent-active"><i data-lucide="settings" class="icon-inline"></i> 控制算法</a>
+                    <ul>
+                        <li><a href="#control-attitude">姿态解算</a></li>
+                        <li><a href="#control-pid">PID控制器</a></li>
+                        <li><a href="#control-filter">滤波器</a></li>
+                    </ul>
+                </li>
+                <li><a href="comm.html"><i data-lucide="wifi" class="icon-inline"></i> 通信协议</a></li>
+                <li><a href="examples.html"><i data-lucide="code" class="icon-inline"></i> 使用示例</a></li>
+                <li><a href="performance.html"><i data-lucide="activity" class="icon-inline"></i> 性能指标</a></li>
+            </ul>
+        </nav>
+    </aside>
+    
+    <main class="main-content">
+        <div class="content-wrapper">
+            <nav class="breadcrumb">
+                <a href="index.html">首页</a>
+                <span class="separator">/</span>
+                <span class="current">控制算法</span>
+            </nav>
+            
+            <section id="control">
+                <h1>控制算法</h1>
+                <p>飞控核心算法，包括姿态解算、PID控制和滤波器实现。</p>
+                
+                <h2 id="control-attitude">姿态解算</h2>
+                <p><span class="badge badge-info">文件</span> <code>Core/Control/Attitude Control/attitude.h</code></p>
+                <p><span class="badge badge-danger">算法</span> Mahony 互补滤波</p>
+                
+                <h3>数据结构</h3>
+                <pre><code>// 欧拉角 (度)
+typedef struct {
+    float pitch;  // 俯仰角
+    float roll;   // 横滚角
+    float yaw;    // 航向角
+} Euler_angles;
+
+// 四元数
+typedef struct {
+    float p0, p1, p2, p3;  // w, x, y, z
+} Quaternion;</code></pre>
+                
+                <h3>初始化</h3>
+                <pre><code>void Attitude_Init(void);  // 基本初始化
+void Attitude_InitFromAccelerometer(uint16_t samples);  // 加速度计辅助初始化
+void Attitude_CalibrateGyro(uint16_t samples);  // 陀螺仪零偏校准（建议2000+采样）</code></pre>
+                
+                <h3>姿态更新</h3>
+                <pre><code>Euler_angles Attitude_Update(int16_t ax, int16_t ay, int16_t az,
+                                     int16_t gx, int16_t gy, int16_t gz);</code></pre>
+                <p><strong>调用频率</strong>: 建议 <span class="badge badge-warning">1 kHz</span></p>
+                
+                <h3>姿态获取</h3>
+                <pre><code>float Attitude_Get_Roll(void);
+float Attitude_Get_Pitch(void);
+float Attitude_Get_Yaw(void);
+Euler_angles Attitude_Get_Angles(void);</code></pre>
+                
+                <h2 id="control-pid">PID控制器</h2>
+                <p><span class="badge badge-info">文件</span> <code>Core/Control/PID/pid.h</code></p>
+                <p><span class="badge badge-success">特性</span> 前馈 | 积分抗饱和 | D项滤波</p>
+                
+                <h3>数据结构</h3>
+                <pre><code>typedef struct {
+    uint8_t P, I, D;  // 0-250
+    uint16_t F;       // 0-1000
+} pid_gains_t;
+
+typedef struct {
+    pid_gains_t gains;
+    float output_limit;
+    float iterm_limit;
+    uint8_t iterm_windup;
+    float dterm_lpf_hz;
+    bool enable_feedforward;
+    bool enable_dterm_filter;
+} pid_config_t;</code></pre>
+                
+                <h3>单轴PID</h3>
+                <pre><code>void pid_init(pid_controller_t *pid, const pid_config_t *config, float sample_rate_hz);
+float pid_update(pid_controller_t *pid, float setpoint, float measurement);
+void pid_reset(pid_controller_t *pid);</code></pre>
+                
+                <h3>多轴PID</h3>
+                <pre><code>void pid_multi_init(pid_multi_axis_t *multi_pid, uint8_t axis_count, float sample_rate_hz);
+void pid_multi_update(pid_multi_axis_t *multi_pid, 
+                      const float *setpoints, const float *measurements, float *outputs);</code></pre>
+                
+                <div class="note">
+                    <i data-lucide="bar-chart-2" class="icon-inline"></i>
+                    <div>
+                        <strong>默认增益</strong>: P=45, I=80, D=30, F=120 (适用于大多数飞行器)
+                    </div>
+                </div>
+                
+                <h2 id="control-filter">滤波器</h2>
+                <p><span class="badge badge-info">文件</span> <code>Core/Control/Filter/filter.h</code></p>
+                <p><span class="badge badge-danger">类型</span> 二阶 Butterworth Biquad</p>
+                
+                <h3>滤波器类型</h3>
+                <pre><code>typedef enum {
+    FILTER_LPF,    // 低通滤波器
+    FILTER_NOTCH,  // 陷波滤波器
+    FILTER_BPF,    // 带通滤波器
+} biquadFilterType_e;</code></pre>
+                
+                <h3>初始化</h3>
+                <pre><code>void biquadFilterInitLPF(biquadFilter_t *filter, float filterFreq, uint32_t refreshRate);
+void biquadFilterInit(biquadFilter_t *filter, float filterFreq, uint32_t refreshRate,
+                      float Q, biquadFilterType_e filterType, float weight);</code></pre>
+                
+                <h3>应用滤波</h3>
+                <pre><code>float biquadFilterApply(biquadFilter_t *filter, float input);</code></pre>
+            </section>
+            
+            <nav class="page-nav">
+                <a href="sensors.html" class="page-nav-prev">
+                    <i data-lucide="arrow-left"></i>
+                    <div>
+                        <span class="page-nav-label">上一页</span>
+                        <span class="page-nav-title">传感器驱动</span>
+                    </div>
+                </a>
+                <a href="comm.html" class="page-nav-next">
+                    <div>
+                        <span class="page-nav-label">下一页</span>
+                        <span class="page-nav-title">通信协议</span>
+                    </div>
+                    <i data-lucide="arrow-right"></i>
+                </a>
+            </nav>
+        </div>
+    </main>
+    
+    <button class="back-to-top" id="back-to-top" title="返回顶部">
+        <i data-lucide="arrow-up"></i>
+    </button>
+    
+    <script src="../js/docs.js"></script>
+    <script>
+        lucide.createIcons();
+    </script>
+</body>
+</html>
+

@@ -1,50 +1,75 @@
 /**
- * @file    imu_task.h
- * @brief   Gyro raw -> filter -> decimation pipeline.
+ * @file    task_gyro.h
+ * @brief   陀螺仪原始数据处理模块（零偏补偿 + 降采样）
  */
 
-#ifndef IMU_TASK_H
-#define IMU_TASK_H
+#ifndef TASK_GYRO_H
+#define TASK_GYRO_H
 
-#include "icm42688p.h"
+#include <stdint.h>
 #include <stdbool.h>
-#include "filter.h"
 
-// Gyro raw -> PT1 -> anti-alias LPF -> decimation
-typedef struct pt1raw_s {
-    float pt1_gyro_x;
-    float pt1_gyro_y;
-    float pt1_gyro_z;
-} pt1raw;
 
-typedef struct gyro_antialias_s {
-    float x;
-    float y;
-    float z;
-} gyro_antialias_t;
+/**
+ * @brief 零偏补偿后的陀螺仪数据（原始值）
+ */
+typedef struct gyro_compensated_s {
+    int16_t x;
+    int16_t y;
+    int16_t z;
+} gyro_compensated_t;
 
-typedef struct gyro_decim_s {
-    float dps_x;
-    float dps_y;
-    float dps_z;
-    bool  ready;
-} gyro_decim_t; // decimated and scaled to dps
+/**
+ * @brief 刻度转换后的陀螺仪数据（°/s）
+ */
+typedef struct gyro_scaled_s {
+    float dps_x;    // X轴角速度（度/秒）
+    float dps_y;    // Y轴角速度（度/秒）
+    float dps_z;    // Z轴角速度（度/秒）
+} gyro_scaled_t;
 
-typedef struct gyro_trace_s {
-    float raw_dps_x; // averaged raw window, scaled to dps
-    float raw_dps_y;
-    float raw_dps_z;
-} gyro_trace_t;
+/**
+ * @brief 降采样后的陀螺仪数据（°/s，未滤波）
+ */
+typedef struct gyro_decimated_s {
+    float dps_x;    // X轴平均角速度（度/秒）
+    float dps_y;    // Y轴平均角速度（度/秒）
+    float dps_z;    // Z轴平均角速度（度/秒）
+    bool  ready;    // 数据就绪标志
+} gyro_decimated_t;
 
-// Init filters: sample Hz, PT1 cut Hz, anti-alias LPF cut Hz, decimation factor
-void gyro_filter_init(float sample_hz, float pt1_cut_hz, float aa_cut_hz, uint8_t decim_factor);
-bool gyro_raw_Flitter(int16_t *gyro_x, int16_t *gyro_y, int16_t *gyro_z);
-// Feed already-read gyro raw data into filter/decimator
-bool gyro_filter_feed_sample(int16_t gyro_x, int16_t gyro_y, int16_t gyro_z);
 
-extern pt1raw pt1_raw;
-extern gyro_antialias_t gyro_aa;
-extern gyro_decim_t gyro_decim;
-extern gyro_trace_t gyro_trace;
+extern gyro_compensated_t gyro_compensated;   // 零偏补偿后的数据（原始值）
+extern gyro_scaled_t gyro_scaled;             // 刻度转换后的数据（°/s）
+extern gyro_decimated_t gyro_decimated;       // 降采样后的数据（°/s）
 
-#endif // IMU_TASK_H
+
+
+/**
+ * @brief 初始化陀螺仪处理模块
+ * @param decim_factor 降采样因子（例如8表示8:1降采样）
+ * @note 必须在使用前调用
+ * 
+ * @example
+ * // 8:1降采样（8KHz -> 1KHz）
+ * gyro_processing_init(8);
+ */
+void gyro_processing_init(uint8_t decim_factor);
+
+/**
+ * @brief 处理一个陀螺仪原始样本（零偏补偿 + 刻度转换 + 降采样）
+ * @param raw_x X轴原始数据（ADC值）
+ * @param raw_y Y轴原始数据（ADC值）
+ * @param raw_z Z轴原始数据（ADC值）
+ * @return true=成功，false=未初始化
+ * @note 
+ * - 处理流程：原始值 → 零偏补偿 → 刻度转换(°/s) → 降采样
+ * - 每次IMU中断时调用
+ * - 零偏补偿后的数据在 gyro_compensated 中（原始值）
+ * - 刻度转换后的数据在 gyro_scaled 中（°/s）
+ * - 降采样后的数据在 gyro_decimated 中（°/s，当 ready=true 时）
+ * - 降采样后的数据可以喂给滤波器
+ */
+bool gyro_process_sample(int16_t raw_x, int16_t raw_y, int16_t raw_z);
+
+#endif // TASK_GYRO_H
