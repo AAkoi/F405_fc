@@ -119,16 +119,16 @@ extern "C" {
  * ============================================================================ */
 
 // Full Scale Range (FSR) - Gyro
-#define ICM42688P_GYRO_FSR_2000DPS      (0 << 5)    // ±2000 dps
-#define ICM42688P_GYRO_FSR_1000DPS      (1 << 5)    // ±1000 dps
-#define ICM42688P_GYRO_FSR_500DPS       (2 << 5)    // ±500 dps
-#define ICM42688P_GYRO_FSR_250DPS       (3 << 5)    // ±250 dps
+#define ICM42688P_GYRO_FSR_2000DPS      0    // ±2000 dps
+#define ICM42688P_GYRO_FSR_1000DPS      1    // ±1000 dps
+#define ICM42688P_GYRO_FSR_500DPS       2    // ±500 dps
+#define ICM42688P_GYRO_FSR_250DPS       3    // ±250 dps
 
 // Full Scale Range (FSR) - Accel
-#define ICM42688P_ACCEL_FSR_16G         (0 << 5)    // ±16g
-#define ICM42688P_ACCEL_FSR_8G          (1 << 5)    // ±8g
-#define ICM42688P_ACCEL_FSR_4G          (2 << 5)    // ±4g
-#define ICM42688P_ACCEL_FSR_2G          (3 << 5)    // ±2g
+#define ICM42688P_ACCEL_FSR_16G         0    // ±16g
+#define ICM42688P_ACCEL_FSR_8G          1    // ±8g
+#define ICM42688P_ACCEL_FSR_4G          2    // ±4g
+#define ICM42688P_ACCEL_FSR_2G          3    // ±2g
 
 // Output Data Rate (ODR)
 #define ICM42688P_ODR_32KHZ             1

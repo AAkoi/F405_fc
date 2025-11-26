@@ -132,7 +132,7 @@ void icm42688p_config_accel_aaf(icm42688p_dev_t *dev, icm42688p_aaf_config_t aaf
  */
 void icm42688p_config_gyro(icm42688p_dev_t *dev, uint8_t fsr, uint8_t odr)
 {
-    dev->spi_write_reg(ICM42688P_REG_GYRO_CONFIG0, (fsr << 5) | (odr & 0x0F));
+    dev->spi_write_reg(ICM42688P_REG_GYRO_CONFIG0, ((fsr & 0x03) << 5) | (odr & 0x0F));
     dev->delay_ms(15);
     
     // Update scale factor
@@ -144,7 +144,7 @@ void icm42688p_config_gyro(icm42688p_dev_t *dev, uint8_t fsr, uint8_t odr)
  */
 void icm42688p_config_accel(icm42688p_dev_t *dev, uint8_t fsr, uint8_t odr)
 {
-    dev->spi_write_reg(ICM42688P_REG_ACCEL_CONFIG0, (fsr << 5) | (odr & 0x0F));
+    dev->spi_write_reg(ICM42688P_REG_ACCEL_CONFIG0, ((fsr & 0x03) << 5) | (odr & 0x0F));
     dev->delay_ms(15);
     
     // Update scale factor
@@ -287,9 +287,10 @@ bool icm42688p_read_gyro(icm42688p_dev_t *dev, icm42688p_gyro_data_t *data)
     uint8_t buffer[6];
     dev->spi_read_burst(ICM42688P_REG_GYRO_DATA_X1, buffer, 6);
     
-    data->x = (int16_t)((buffer[0] << 8) | buffer[1]) - dev->gyro_offset[0];
-    data->y = (int16_t)((buffer[2] << 8) | buffer[3]) - dev->gyro_offset[1];
-    data->z = (int16_t)((buffer[4] << 8) | buffer[5]) - dev->gyro_offset[2];
+    // 原始寄存器值（不做零偏补偿），零偏由上层处理
+    data->x = (int16_t)((buffer[0] << 8) | buffer[1]);
+    data->y = (int16_t)((buffer[2] << 8) | buffer[3]);
+    data->z = (int16_t)((buffer[4] << 8) | buffer[5]);
     
     return true;
 }
@@ -306,9 +307,10 @@ bool icm42688p_read_accel(icm42688p_dev_t *dev, icm42688p_accel_data_t *data)
     uint8_t buffer[6];
     dev->spi_read_burst(ICM42688P_REG_ACCEL_DATA_X1, buffer, 6);
     
-    data->x = (int16_t)((buffer[0] << 8) | buffer[1]) - dev->accel_offset[0];
-    data->y = (int16_t)((buffer[2] << 8) | buffer[3]) - dev->accel_offset[1];
-    data->z = (int16_t)((buffer[4] << 8) | buffer[5]) - dev->accel_offset[2];
+    // 原始寄存器值（不做零偏补偿），零偏由上层处理
+    data->x = (int16_t)((buffer[0] << 8) | buffer[1]);
+    data->y = (int16_t)((buffer[2] << 8) | buffer[3]);
+    data->z = (int16_t)((buffer[4] << 8) | buffer[5]);
     
     return true;
 }
@@ -355,14 +357,15 @@ bool icm42688p_read_all(icm42688p_dev_t *dev,
     temp->celsius = (temp->raw / 132.48f) + 25.0f;
 
     // Parse accelerometer data
-    accel->x = (int16_t)((buffer[2] << 8) | buffer[3]) - dev->accel_offset[0];
-    accel->y = (int16_t)((buffer[4] << 8) | buffer[5]) - dev->accel_offset[1];
-    accel->z = (int16_t)((buffer[6] << 8) | buffer[7]) - dev->accel_offset[2];
+    // 原始值，上层再做零偏补偿
+    accel->x = (int16_t)((buffer[2] << 8) | buffer[3]);
+    accel->y = (int16_t)((buffer[4] << 8) | buffer[5]);
+    accel->z = (int16_t)((buffer[6] << 8) | buffer[7]);
     
     // Parse gyroscope data
-    gyro->x = (int16_t)((buffer[8] << 8) | buffer[9]) - dev->gyro_offset[0];
-    gyro->y = (int16_t)((buffer[10] << 8) | buffer[11]) - dev->gyro_offset[1];
-    gyro->z = (int16_t)((buffer[12] << 8) | buffer[13]) - dev->gyro_offset[2];
+    gyro->x = (int16_t)((buffer[8] << 8) | buffer[9]);
+    gyro->y = (int16_t)((buffer[10] << 8) | buffer[11]);
+    gyro->z = (int16_t)((buffer[12] << 8) | buffer[13]);
     
     return true;
 }

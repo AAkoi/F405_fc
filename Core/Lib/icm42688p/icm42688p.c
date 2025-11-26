@@ -52,41 +52,19 @@ void icm_spi_read_burst(uint8_t reg, uint8_t *buffer, uint16_t len)
 {
     reg |= 0x80;  // read command
 
+    // 使用稳定的轮询模式（不用DMA）
     ICM42688P_CS_LOW();
-    spi1_dma_flag = 0;
 
-    // 发出寄存器地址（同步）
-    HAL_SPI_Transmit(&hspi1, &reg, 1, HAL_MAX_DELAY);
+    // 发送寄存器地址并接收数据
+    uint8_t tx_dummy = 0xFF;
+    HAL_SPI_Transmit(&hspi1, &reg, 1, 100);
 
-    // 清空地址阶段产生的残留
-    if (__HAL_SPI_GET_FLAG(&hspi1, SPI_FLAG_RXNE)) {
-        volatile uint8_t dummy = *(__IO uint8_t *)&hspi1.Instance->DR;
-        (void)dummy;
-    }
-    if (__HAL_SPI_GET_FLAG(&hspi1, SPI_FLAG_OVR)) {
-        __HAL_SPI_CLEAR_OVRFLAG(&hspi1);
+    // 接收数据（轮询模式）
+    for (uint16_t i = 0; i < len; i++) {
+        HAL_SPI_TransmitReceive(&hspi1, &tx_dummy, &buffer[i], 1, 100);
     }
     
-    // 启动DMA接收
-    HAL_StatusTypeDef dma_status = HAL_SPI_Receive_DMA(&hspi1, buffer, len);
-    if (dma_status != HAL_OK) {  // 简单失败处理
-        printf("[read_burst] DMA start failed, status=%d\r\n", dma_status);
-        ICM42688P_CS_HIGH();
-        return;
-    }
-    
-    // 等待DMA完成
-    uint32_t timeout_start = HAL_GetTick();
-    while (spi1_dma_flag == 0) {
-        if ((HAL_GetTick() - timeout_start) > 50) { // 最多等待50ms
-            printf("[read_burst] DMA timeout! reg=0x%02X len=%d\r\n", reg & 0x7F, len);
-            HAL_SPI_DMAStop(&hspi1);
             ICM42688P_CS_HIGH();
-            hspi1.State = HAL_SPI_STATE_READY;
-            break;
-        }
-    }
-    __DSB();
 }
 
 void icm_delay_ms(uint32_t ms)
@@ -103,12 +81,23 @@ void icm42688p_init_driver(void)
     icm.spi_read_burst = icm_spi_read_burst;
     icm.delay_ms       = icm_delay_ms;
 
+    // 清零校准数据（防止垃圾值或旧值干扰）
+    icm.gyro_offset[0] = 0;
+    icm.gyro_offset[1] = 0;
+    icm.gyro_offset[2] = 0;
+    icm.accel_offset[0] = 0;
+    icm.accel_offset[1] = 0;
+    icm.accel_offset[2] = 0;
+    icm.gyro_scale = 0.0f;
+    icm.accel_scale = 0.0f;
+
     HAL_Delay(100);  // 等待传感器上电稳定
     uint8_t whoami = icm_spi_read_reg(0x75);
     printf("ICM42688P WHO_AM_I=0x%02X\r\n", whoami);
 
     icm.config.gyro_fsr   = ICM42688P_GYRO_FSR_2000DPS;
-    icm.config.accel_fsr  = ICM42688P_ACCEL_FSR_16G;
+    // 使用 ±2g 量程，静止时加速度应接近 1g，避免 8g 缩放误差
+    icm.config.accel_fsr  = ICM42688P_ACCEL_FSR_2G;
     icm.config.gyro_odr   = ICM42688P_ODR_8KHZ;
     icm.config.accel_odr  = ICM42688P_ODR_1KHZ;
     icm.config.gyro_aaf   = ICM42688P_AAF_536HZ;
@@ -316,9 +305,11 @@ void HAL_SPI_RxCpltCallback(SPI_HandleTypeDef *hspi)
         __DSB();  // 数据同步屏障 - 确保DMA写入完成
         __ISB();  // 指令同步屏障 - 刷新流水线
         
-        // !! 关键2：等待SPI硬件完全空闲
+        // !! 关键2：等待SPI硬件完全空闲（增加超时保护）
         uint32_t timeout = 10000;
         while ((__HAL_SPI_GET_FLAG(hspi, SPI_FLAG_BSY)) && timeout--);
+        
+        // 如果busy超时，标记异常（已在timeout==0时跳出循环）
         
         ICM42688P_CS_HIGH();         // 释放片选
         
@@ -326,6 +317,11 @@ void HAL_SPI_RxCpltCallback(SPI_HandleTypeDef *hspi)
         if (__HAL_SPI_GET_FLAG(hspi, SPI_FLAG_RXNE)) {
             volatile uint8_t dummy = *(__IO uint8_t *)&hspi->Instance->DR;
             (void)dummy;
+        }
+        
+        // 清除溢出标志
+        if (__HAL_SPI_GET_FLAG(hspi, SPI_FLAG_OVR)) {
+            __HAL_SPI_CLEAR_OVRFLAG(hspi);
         }
         
         // 确保状态为READY

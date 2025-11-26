@@ -114,3 +114,469 @@ h1 {
     height: 100vh;
     background-color: #e5e7eb; /* Slightly darker background for 3D space contrast */
 }
+
+/* ========================================
+   磁力计校准样式
+   ======================================== */
+
+/* 模态框 */
+.modal {
+    display: none;
+    position: fixed;
+    z-index: 1000;
+    left: 0;
+    top: 0;
+    width: 100%;
+    height: 100%;
+    background-color: rgba(0, 0, 0, 0.6);
+    align-items: center;
+    justify-content: center;
+    animation: fadeIn 0.3s;
+}
+
+@keyframes fadeIn {
+    from { opacity: 0; }
+    to { opacity: 1; }
+}
+
+.modal-content {
+    background-color: var(--panel-bg);
+    border-radius: 12px;
+    max-width: 700px;
+    width: 90%;
+    max-height: 90vh;
+    overflow-y: auto;
+    box-shadow: 0 20px 25px -5px rgba(0, 0, 0, 0.1), 0 10px 10px -5px rgba(0, 0, 0, 0.04);
+    animation: slideUp 0.3s;
+}
+
+@keyframes slideUp {
+    from { 
+        transform: translateY(50px);
+        opacity: 0;
+    }
+    to { 
+        transform: translateY(0);
+        opacity: 1;
+    }
+}
+
+.modal-header {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    padding: 20px 30px;
+    border-bottom: 1px solid #E5E7EB;
+}
+
+.modal-header h2 {
+    font-size: 1.5rem;
+    color: var(--text-main);
+    display: flex;
+    align-items: center;
+    gap: 10px;
+    margin: 0;
+}
+
+.modal-close {
+    background: none;
+    border: none;
+    font-size: 2rem;
+    color: var(--text-sub);
+    cursor: pointer;
+    line-height: 1;
+    padding: 0;
+    width: 30px;
+    height: 30px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    border-radius: 6px;
+    transition: background-color 0.2s;
+}
+
+.modal-close:hover {
+    background-color: #F3F4F6;
+}
+
+.modal-body {
+    padding: 30px;
+}
+
+.calib-step {
+    animation: fadeIn 0.3s;
+}
+
+.calib-step h3 {
+    font-size: 1.2rem;
+    margin-bottom: 15px;
+    color: var(--text-main);
+}
+
+.calib-instructions {
+    list-style: none;
+    padding: 0;
+    margin: 20px 0;
+}
+
+.calib-instructions li {
+    padding: 10px 0;
+    border-bottom: 1px solid #F3F4F6;
+    font-size: 0.95rem;
+    color: var(--text-sub);
+}
+
+.calib-tip {
+    font-size: 1.1rem;
+    color: var(--accent);
+    font-weight: 500;
+    margin-bottom: 20px;
+    text-align: center;
+}
+
+/* 进度条 */
+.progress-bar {
+    width: 100%;
+    height: 30px;
+    background-color: #F3F4F6;
+    border-radius: var(--border-radius);
+    overflow: hidden;
+    margin: 20px 0;
+}
+
+.progress-fill {
+    height: 100%;
+    background: linear-gradient(90deg, var(--primary), var(--accent));
+    transition: width 0.3s;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    color: white;
+    font-weight: 600;
+}
+
+.progress-text {
+    text-align: center;
+    color: var(--text-sub);
+    font-size: 1rem;
+    margin-bottom: 15px;
+}
+
+/* 磁力计范围显示 */
+.mag-range {
+    background-color: #F9FAFB;
+    border-radius: var(--border-radius);
+    padding: 15px;
+    margin: 15px 0;
+    font-family: 'Courier New', monospace;
+    font-size: 0.9rem;
+}
+
+.mag-range div {
+    padding: 5px 0;
+    color: var(--text-main);
+}
+
+/* 画布 */
+#magPlot {
+    display: block;
+    margin: 20px auto;
+    border-radius: var(--border-radius);
+    box-shadow: var(--shadow);
+    background-color: #1a1a2e;
+}
+
+/* 校准结果 */
+.calib-result {
+    margin-top: 20px;
+}
+
+.calib-result h4 {
+    font-size: 1rem;
+    margin: 20px 0 10px 0;
+    color: var(--text-main);
+}
+
+.param-grid {
+    display: grid;
+    gap: 15px;
+    margin-bottom: 20px;
+}
+
+.param-item {
+    background-color: #F9FAFB;
+    border-radius: var(--border-radius);
+    padding: 15px;
+}
+
+.param-item label {
+    display: block;
+    font-weight: 600;
+    color: var(--text-main);
+    margin-bottom: 10px;
+    font-size: 0.9rem;
+}
+
+.param-values {
+    display: flex;
+    gap: 15px;
+    flex-wrap: wrap;
+}
+
+.param-values span {
+    font-size: 0.9rem;
+    color: var(--text-sub);
+}
+
+.param-values code {
+    background-color: white;
+    padding: 4px 8px;
+    border-radius: 4px;
+    font-family: 'Courier New', monospace;
+    color: var(--primary);
+    font-weight: 600;
+}
+
+/* 代码块 */
+.code-block {
+    background-color: #1a1a2e;
+    color: #f8f8f2;
+    padding: 15px;
+    border-radius: var(--border-radius);
+    overflow-x: auto;
+    font-family: 'Courier New', monospace;
+    font-size: 0.85rem;
+    line-height: 1.5;
+    margin: 10px 0;
+}
+
+/* 按钮样式 */
+.btn-primary {
+    background-color: var(--primary);
+    color: white;
+}
+
+.btn-primary:hover {
+    background-color: #1e3a8a;
+}
+
+.btn-secondary {
+    background-color: #6B7280;
+    color: white;
+    margin-left: 10px;
+}
+
+.btn-secondary:hover {
+    background-color: #4B5563;
+}
+
+.btn-copy {
+    background-color: var(--accent);
+    color: white;
+    width: 100%;
+    justify-content: center;
+}
+
+.btn-copy:hover {
+    background-color: #047857;
+}
+
+.btn-calib {
+    background-color: #7C3AED;
+}
+
+.btn-calib:hover {
+    background-color: #6D28D9;
+}
+
+.btn-reset {
+    background-color: #F59E0B;
+}
+
+.btn-reset:hover {
+    background-color: #D97706;
+}
+
+/* 质量徽章 */
+.quality-badge {
+    display: inline-block;
+    padding: 8px 16px;
+    border-radius: var(--border-radius);
+    font-weight: 600;
+    font-size: 1rem;
+    margin: 10px 0;
+}
+
+.quality-excellent {
+    background-color: #D1FAE5;
+    color: #065F46;
+}
+
+.quality-good {
+    background-color: #FEF3C7;
+    color: #92400E;
+}
+
+.quality-poor {
+    background-color: #FEE2E2;
+    color: #991B1B;
+}
+
+.calib-tips {
+    font-size: 0.9rem;
+    color: var(--text-sub);
+    line-height: 1.6;
+    margin-top: 10px;
+}
+
+.gyro-plot-wrapper {
+    position: relative;
+    width: 100%;
+    max-width: 480px;
+    margin: 10px auto;
+}
+#gyroPlot {
+    width: 100%;
+    height: 420px;
+    background: #0f1116;
+    border: 1px solid #222;
+}
+.legend {
+    margin-top: 0.5rem;
+    display: flex;
+    gap: 1rem;
+    align-items: center;
+    font-size: 0.9rem;
+}
+.legend-dot {
+    width: 12px;
+    height: 12px;
+    display: inline-block;
+    border-radius: 50%;
+}
+
+/* 坐标系调试面板 */
+.debug-panel {
+    position: fixed;
+    bottom: 20px;
+    right: 20px;
+    background: var(--panel-bg);
+    border-radius: 12px;
+    padding: 20px;
+    box-shadow: 0 10px 40px rgba(0,0,0,0.2);
+    max-width: 350px;
+    z-index: 100;
+}
+
+.debug-panel h3 {
+    margin: 0 0 15px 0;
+    font-size: 1.1rem;
+    color: var(--text-main);
+}
+
+.debug-info {
+    font-size: 0.85rem;
+    line-height: 1.6;
+    color: var(--text-sub);
+}
+
+.debug-info ul, .debug-info ol {
+    margin: 10px 0;
+    padding-left: 20px;
+}
+
+.debug-info li {
+    margin: 5px 0;
+}
+
+.debug-info strong {
+    color: var(--text-main);
+}
+
+.coord-adjust {
+    margin: 15px 0;
+    display: flex;
+    flex-direction: column;
+    gap: 8px;
+}
+
+.coord-adjust label {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    cursor: pointer;
+    font-size: 0.9rem;
+}
+
+.coord-adjust input[type="checkbox"] {
+    width: 18px;
+    height: 18px;
+    cursor: pointer;
+}
+
+.coord-debug-btn {
+    position: fixed;
+    bottom: 20px;
+    right: 20px;
+    width: 50px;
+    height: 50px;
+    border-radius: 50%;
+    background: var(--primary);
+    color: white;
+    border: none;
+    cursor: pointer;
+    box-shadow: 0 4px 12px rgba(0,0,0,0.3);
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    z-index: 99;
+    transition: all 0.3s;
+}
+
+.coord-debug-btn:hover {
+    transform: scale(1.1);
+    background: #1e3a8a;
+}
+
+.realtime-debug {
+    margin-top: 15px;
+    padding: 15px;
+    background-color: #F9FAFB;
+    border-radius: var(--border-radius);
+    border-left: 4px solid var(--accent);
+}
+
+.realtime-debug p {
+    margin: 5px 0;
+}
+
+/* Toast提示 */
+.toast {
+    position: fixed;
+    top: 80px;
+    left: 50%;
+    transform: translateX(-50%) translateY(-100px);
+    background-color: #10B981;
+    color: white;
+    padding: 12px 24px;
+    border-radius: var(--border-radius);
+    box-shadow: 0 10px 40px rgba(0,0,0,0.3);
+    font-size: 0.95rem;
+    font-weight: 600;
+    opacity: 0;
+    transition: all 0.3s;
+    z-index: 2000;
+}
+
+.toast.show {
+    transform: translateX(-50%) translateY(0);
+    opacity: 1;
+}
+
+.btn-success {
+    background-color: #10B981 !important;
+}
+
+.btn-success:hover {
+    background-color: #059669 !important;
+}

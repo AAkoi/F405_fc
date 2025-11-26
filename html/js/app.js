@@ -58,6 +58,16 @@ class DroneVisualizerApp {
             recordBtn.addEventListener('click', () => this.toggleRecording());
         }
 
+        // 磁力计校准按钮
+        const magCalibBtn = document.getElementById('magCalibBtn');
+        if (magCalibBtn) {
+            magCalibBtn.addEventListener('click', () => {
+                if (window.openMagCalibModal) {
+                    window.openMagCalibModal();
+                }
+            });
+        }
+
         // 视角按钮
         const viewButtons = document.querySelectorAll('.view-btn');
         viewButtons.forEach(btn => {
@@ -129,6 +139,14 @@ class DroneVisualizerApp {
         // 更新姿态
         const orientation = this.orientationCalc.update(sensorData);
         this.uiManager.updateOrientation(this.orientationCalc.getOrientation());
+        
+        // 调试：每秒打印一次姿态数据
+        if (!this.lastDebugTime || Date.now() - this.lastDebugTime > 1000) {
+            console.log('姿态角(度):', this.orientationCalc.getOrientation());
+            console.log('姿态角(弧度):', orientation);
+            this.lastDebugTime = Date.now();
+        }
+        
         this.droneModel.updateOrientation(orientation.pitch, orientation.roll, orientation.yaw);
     }
 

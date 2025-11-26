@@ -8,7 +8,9 @@ class SerialManager {
             gyr: {x: 0, y: 0, z: 0},
             mag: {x: 0, y: 0, z: 0},
             bar: {tempDeci: 0, pressurePa: 0, altDeci: 0},
-            imuTempDeci: 0
+            imuTempDeci: 0,
+            // 单片机计算的姿态角（从 ATTITUDE_FULL 消息获取）
+            attitude: {roll: 0, pitch: 0, yaw: 0, fromMCU: false}
         };
         this.onDataUpdate = null;
     }
@@ -53,6 +55,50 @@ class SerialManager {
     parseLine(line) {
         if (!line) return;
         
+        // 优先解析 ATTITUDE_FULL 格式（单片机计算的姿态）
+        // 格式: ATTITUDE_FULL,时间戳,Roll,Pitch,Yaw,ax,ay,az,gx,gy,gz,mx,my,mz
+        if (line.startsWith('ATTITUDE_FULL,')) {
+            const parts = line.split(',');
+            if (parts.length >= 14) {
+                const timestamp = parseInt(parts[1]);
+                const roll = parseFloat(parts[2]);
+                const pitch = parseFloat(parts[3]);
+                const yaw = parseFloat(parts[4]);
+                const ax = parseFloat(parts[5]);
+                const ay = parseFloat(parts[6]);
+                const az = parseFloat(parts[7]);
+                const gx = parseFloat(parts[8]);
+                const gy = parseFloat(parts[9]);
+                const gz = parseFloat(parts[10]);
+                const mx = parseInt(parts[11]);
+                const my = parseInt(parts[12]);
+                const mz = parseInt(parts[13]);
+                
+                // 保存单片机计算的姿态角
+                this.sensorData.attitude.roll = roll;
+                this.sensorData.attitude.pitch = pitch;
+                this.sensorData.attitude.yaw = yaw;
+                this.sensorData.attitude.fromMCU = true;  // 标记来自单片机
+                
+                // 保存原始传感器数据（用于显示）
+                this.sensorData.acc.x = ax;
+                this.sensorData.acc.y = ay;
+                this.sensorData.acc.z = az;
+                this.sensorData.gyr.x = gx;
+                this.sensorData.gyr.y = gy;
+                this.sensorData.gyr.z = gz;
+                this.sensorData.mag.x = mx;
+                this.sensorData.mag.y = my;
+                this.sensorData.mag.z = mz;
+                
+                if (this.onDataUpdate) {
+                    this.onDataUpdate(this.sensorData);
+                }
+                return;
+            }
+        }
+        
+        // 兼容旧格式（管道分隔）
         const parts = line.split('|').map(s => s.trim());
         parts.forEach(p => {
             if (p.startsWith('ACC:')) {

@@ -46,10 +46,11 @@
 #define BMP280_IIC1_SCL                GPIO_PIN_6
 #define BMP280_IIC1_SDA                GPIO_PIN_7
 
-//IIC2
-#define HMC5883l_IIC2_GPIO_PORT          GPIOB
-#define HMC5883l_IIC2_SCL                GPIO_PIN_10
-#define HMC5883l_IIC2_SDA                GPIO_PIN_11
+//IIC3
+#define HMC5883l_IIC3_GPIO_PORT          GPIOA
+#define HMC5883l_IIC3_SCL                GPIO_PIN_8 //PA8
+#define HMC5883l_IIC3_SDA_GPIO_PORT      GPIOC
+#define HMC5883l_IIC3_SDA                GPIO_PIN_9 //PC9
 // 中断引脚 (INT1)
 #define HMC5883l_INT_GPIO_PORT         GPIOB
 #define HMC5883l_INT_PIN               GPIO_PIN_2

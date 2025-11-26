@@ -81,16 +81,14 @@ target_sources(${CMAKE_PROJECT_NAME} PRIVATE
     Core/Control/Tasks/task_register.c
     Core/Control/Tasks/scheduler.c
     Core/Control/Tasks/task_gyro.c
+    Core/Control/Tasks/task_acc.c
+    Core/Control/Tasks/task_mag.c
     Core/Control/Tasks/task_filter.c
 
-    # Test modules
-    Core/Test/test_icm42688p.c
-    Core/Test/test_bmp280.c
-    Core/Test/test_hmc5883l.c
-    Core/Test/test_attitude_mag.c
-    Core/Test/test_spi_hardware.c
-    Core/Test/test_dma.c
-    Core/Test/test_imu.c
+    # On-board tests
+    Core/Test/test_gyro.c
+    Core/Test/test_attitude_full.c
+    Core/Test/test_mag.c
 )
 
 # Add include paths
@@ -111,7 +109,7 @@ target_include_directories(${CMAKE_PROJECT_NAME} PRIVATE
     Core/Control/Tools          # Math helpers
     Core/Control/Tasks          # Control tasks
     "Core/Control/Attitude Control"  # Attitude module
-    Core/Test                   # Test modules
+    Core/Test                   # On-board tests
 )
 
 # Add project symbols (macros)
@@ -133,6 +131,9 @@ target_link_libraries(${CMAKE_PROJECT_NAME}
 
     # Add user defined libraries
 )
+
+# Enable float formatting for printf
+target_link_options(${CMAKE_PROJECT_NAME} PRIVATE -u _printf_float)
 
 # Create .bin and .hex after linking and print size
 add_custom_command(TARGET ${CMAKE_PROJECT_NAME} POST_BUILD

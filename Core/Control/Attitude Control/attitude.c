@@ -1,31 +1,36 @@
 /*
- * 姿态解算（Mahony 互补滤波）
+ * 姿态解算（Mahony 互补滤波 + 磁力计融合）
+ * 本模块只负责姿态融合算法，不涉及传感器数据读取
  */
 #include <math.h>
 #include "stm32f4xx_hal.h"
 #include "attitude.h"
-#include "icm42688p_lib.h"
-
-// 外部IMU设备句柄
-extern icm42688p_dev_t icm;
 
 Euler_angles euler_angles;
 Quaternion attitude_q;
+
+// Mahony 标准 9DoF：无需附加限幅或倾角/旋转屏蔽，仅做归一化
+#define MAG_FIELD_MIN_GAUSS      0.05f   // 防止零向量
+#define ACC_FIELD_MIN_G          0.05f
 
 // Mahony算法的积分项（误差积分）
 static float exInt = 0.0f, eyInt = 0.0f, ezInt = 0.0f;
 static uint32_t lastTick = 0;
 
-// 陀螺仪零偏（单位：dps，在校准后会被设置）
-static float gyro_bias_x = 0.0f;
-static float gyro_bias_y = 0.0f;
-static float gyro_bias_z = 0.0f;
+#if USE_MAGNETOMETER
+// 磁力计校准参数（硬铁偏移 + 软铁缩放）
+static float mag_offset_x = 0.0f;
+static float mag_offset_y = 0.0f;
+static float mag_offset_z = 0.0f;
+static float mag_scale_x = 1.0f;
+static float mag_scale_y = 1.0f;
+static float mag_scale_z = 1.0f;
 
-// Mahony滤波器增益（可按响应/抑噪要求调整）。
-// 实际使用的是 2*Kp 与 2*Ki，便于少一次乘法。
-// 降低Kp值以减少对加速度计噪声的敏感度
-static const float twoKp = 2.0f * 0.2f;   // 比例增益 2*Kp（Kp≈0.2，降低以减少噪声影响）
-static const float twoKi = 2.0f * 0.01f;  // 积分增益 2*Ki（Ki≈0.01，降低以提高稳定性）
+#endif
+
+// Mahony标准增益（9DoF）：twoKp=2*Kp, twoKi=2*Ki
+static const float twoKp = 2.0f * 0.5f;   // 比例增益 Kp=0.5
+static const float twoKi = 2.0f * 0.0f;   // 积分增益（默认关闭，可按需开启）
 
 // 快速平方根倒数（1/sqrt(x)）
 float fast_inv_sqrt(float x)
@@ -52,6 +57,9 @@ static void quat_normalize(Quaternion *q)
     }
 }
 
+// 运行诊断
+static AttitudeDiagnostics attitude_diag = {0};
+
 void Attitude_Init(void)
 {
     // 欧拉角清零，四元数置单位元 q=[1,0,0,0]
@@ -66,76 +74,34 @@ void Attitude_Init(void)
 
     exInt = eyInt = ezInt = 0.0f;
     lastTick = HAL_GetTick();
-}
-
-void Attitude_CalibrateGyro(uint16_t samples)
-{
-    if (samples == 0) samples = 100;
-    
-    printf("开始陀螺仪校准，请保持传感器静止...\r\n");
-    
-    float gxSum = 0.0f, gySum = 0.0f, gzSum = 0.0f;
-    uint16_t valid_count = 0;
-    
-    for (uint16_t i = 0; i < samples; ++i) {
-        int16_t gx_r, gy_r, gz_r, ax_r, ay_r, az_r;
-        float gx_dps, gy_dps, gz_dps, ax_g, ay_g, az_g, temp;
-        if (icm42688p_dataPreprocess(&gx_r, &gy_r, &gz_r,
-                                     &ax_r, &ay_r, &az_r,
-                                     &gx_dps, &gy_dps, &gz_dps,
-                                     &ax_g, &ay_g, &az_g,
-                                     &temp)) {
-            gxSum += gx_dps;
-            gySum += gy_dps;
-            gzSum += gz_dps;
-            valid_count++;
-        }
-        HAL_Delay(5);
-    }
-    
-    if (valid_count > 0) {
-        gyro_bias_x = gxSum / valid_count;
-        gyro_bias_y = gySum / valid_count;
-        gyro_bias_z = gzSum / valid_count;
-        
-        printf("陀螺仪校准完成！零偏: X=%d.%d Y=%d.%d Z=%d.%d dps\r\n",
-               (int)gyro_bias_x, (int)(fabsf(gyro_bias_x) * 10) % 10,
-               (int)gyro_bias_y, (int)(fabsf(gyro_bias_y) * 10) % 10,
-               (int)gyro_bias_z, (int)(fabsf(gyro_bias_z) * 10) % 10);
-    } else {
-        printf("陀螺仪校准失败：未获取到有效数据\r\n");
-    }
+#if USE_MAGNETOMETER
+#endif
+    attitude_diag = (AttitudeDiagnostics){0};
 }
 
 void Attitude_SetGyroBias(float bias_x, float bias_y, float bias_z)
 {
-    gyro_bias_x = bias_x;
-    gyro_bias_y = bias_y;
-    gyro_bias_z = bias_z;
+    // 零偏由外部流程处理，这里不再应用
+    (void)bias_x;
+    (void)bias_y;
+    (void)bias_z;
 }
 
-void Attitude_InitFromAccelerometer(uint16_t samples)
+#if USE_MAGNETOMETER
+void Attitude_SetMagCalibration(float offset_x, float offset_y, float offset_z,
+                                float scale_x, float scale_y, float scale_z)
 {
-    if (samples == 0) samples = 50;
+    mag_offset_x = offset_x;
+    mag_offset_y = offset_y;
+    mag_offset_z = offset_z;
+    mag_scale_x = scale_x;
+    mag_scale_y = scale_y;
+    mag_scale_z = scale_z;
+}
+#endif
 
-    float axSum = 0.0f, aySum = 0.0f, azSum = 0.0f;
-    for (uint16_t i = 0; i < samples; ++i) {
-        int16_t gx_r, gy_r, gz_r, ax_r, ay_r, az_r;
-        float gx_dps, gy_dps, gz_dps, ax_g, ay_g, az_g, temp;
-        if (icm42688p_dataPreprocess(&gx_r, &gy_r, &gz_r,
-                                     &ax_r, &ay_r, &az_r,
-                                     &gx_dps, &gy_dps, &gz_dps,
-                                     &ax_g, &ay_g, &az_g,
-                                     &temp)) {
-            axSum += ax_g; aySum += ay_g; azSum += az_g;
-        }
-        HAL_Delay(2);
-    }
-
-    float ax = axSum / samples;
-    float ay = aySum / samples;
-    float az = azSum / samples;
-
+void Attitude_InitFromAccelerometer(float ax, float ay, float az)
+{
     // 加速度向量归一化： a = a / ||a||
     float n2 = ax*ax + ay*ay + az*az;
     if (n2 > 1e-6f) {
@@ -178,29 +144,23 @@ void Attitude_InitFromAccelerometer(uint16_t samples)
 
     exInt = eyInt = ezInt = 0.0f;
     lastTick = HAL_GetTick();
+#if USE_MAGNETOMETER
+#endif
+    attitude_diag = (AttitudeDiagnostics){0};
 }
 
-Euler_angles Attitude_Update(int16_t ax_in, int16_t ay_in, int16_t az_in,
-                             int16_t gx_in, int16_t gy_in, int16_t gz_in)
+#if USE_MAGNETOMETER
+// 内部实现：姿态更新核心算法（带磁力计融合）
+static Euler_angles Attitude_Update_Internal(float ax_g, float ay_g, float az_g,
+                                             float gx_dps, float gy_dps, float gz_dps,
+                                             float mx_gauss, float my_gauss, float mz_gauss, 
+                                             bool use_mag)
+#else
+Euler_angles Attitude_Update(float ax_g, float ay_g, float az_g,
+                             float gx_dps, float gy_dps, float gz_dps)
+#endif
 {
-    // 使用传入的原始传感器数据，不再重复读取
-    int16_t gx_r = gx_in, gy_r = gy_in, gz_r = gz_in;
-    int16_t ax_r = ax_in, ay_r = ay_in, az_r = az_in;
-    
-    // 将原始数据转换为物理单位
-    float gx_dps, gy_dps, gz_dps;
-    float ax_g, ay_g, az_g;
-    
-    if (!icm42688p_gyro_dataPreprocess(&gx_r, &gy_r, &gz_r,
-                                       &gx_dps, &gy_dps, &gz_dps)) {
-        return euler_angles; // 转换失败
-    }
-    
-    // 手动转换加速度
-    float ascale = (icm.accel_scale > 0.0f) ? icm.accel_scale : 1.0f;
-    ax_g = (float)ax_r / ascale;
-    ay_g = (float)ay_r / ascale;
-    az_g = (float)az_r / ascale;
+    const uint32_t cycle_start = DWT->CYCCNT;
 
     // 时间步长 dt（s）并限制范围，避免突发抖动
     uint32_t now = HAL_GetTick();
@@ -209,18 +169,20 @@ Euler_angles Attitude_Update(int16_t ax_in, int16_t ay_in, int16_t az_in,
     if (dt < 1e-4f) dt = 1e-4f;
     if (dt > 0.05f) dt = 0.05f;
 
-    // 陀螺零偏补偿并从 °/s 转为 rad/s： rad/s = dps * pi/180
-    float gx = (gx_dps - gyro_bias_x) * DEG2RAD;
-    float gy = (gy_dps - gyro_bias_y) * DEG2RAD;
-    float gz = (gz_dps - gyro_bias_z) * DEG2RAD;
+    // 陀螺直接使用外部已补偿的数据（不在此处处理零偏）
+    float spin_rate_dps = sqrtf(gx_dps*gx_dps + gy_dps*gy_dps + gz_dps*gz_dps);
+    float gx = gx_dps * DEG2RAD;
+    float gy = gy_dps * DEG2RAD;
+    float gz = gz_dps * DEG2RAD;
 
-    // 加速度向量归一化（当处于近自由落体或强机动时可能无效）
-    float n2 = ax_g*ax_g + ay_g*ay_g + az_g*az_g;
-    bool acc_valid = (n2 > 1e-6f);
-    if (acc_valid) {
-        float inv = fast_inv_sqrt(n2);
-        ax_g *= inv; ay_g *= inv; az_g *= inv;
-    }
+    attitude_diag.mag_used = false;
+    attitude_diag.mag_strength_ok = false;
+
+    // 加速度向量归一化
+    bool acc_valid = true;
+    float acc_norm = sqrtf(ax_g*ax_g + ay_g*ay_g + az_g*az_g);
+    if (acc_norm < ACC_FIELD_MIN_G) acc_norm = ACC_FIELD_MIN_G;
+    ax_g /= acc_norm; ay_g /= acc_norm; az_g /= acc_norm;
 
     // 由当前四元数估计重力方向 v=[vx,vy,vz]
     float qw = attitude_q.p0, qx = attitude_q.p1, qy = attitude_q.p2, qz = attitude_q.p3;
@@ -228,22 +190,58 @@ Euler_angles Attitude_Update(int16_t ax_in, int16_t ay_in, int16_t az_in,
     float vy = 2.0f * (qw*qx + qy*qz);
     float vz = qw*qw - qx*qx - qy*qy + qz*qz;
 
+    // 初始化误差
+    float ex = 0.0f, ey = 0.0f, ez = 0.0f;
+
+    // 加速度计误差修正
     if (acc_valid) {
-        // 误差为向量叉乘： e = a_meas x a_est
-        float ex = (ay_g * vz - az_g * vy);
-        float ey = (az_g * vx - ax_g * vz);
-        float ez = (ax_g * vy - ay_g * vx);
-
-        // 误差积分项（积分抗漂移）
-        exInt += twoKi * ex * dt;
-        eyInt += twoKi * ey * dt;
-        ezInt += twoKi * ez * dt;
-
-        // 比例 + 积分 反馈修正陀螺
-        gx += twoKp * ex + exInt;
-        gy += twoKp * ey + eyInt;
-        gz += twoKp * ez + ezInt;
+        // 误差为向量叉乘： e_acc = a_meas x a_est
+        ex = (ay_g * vz - az_g * vy);
+        ey = (az_g * vx - ax_g * vz);
+        ez = (ax_g * vy - ay_g * vx);
     }
+
+#if USE_MAGNETOMETER
+    // 磁力计误差修正（标准 Mahony 9DoF）
+    if (use_mag) {
+        float mag_norm = sqrtf(mx_gauss*mx_gauss + my_gauss*my_gauss + mz_gauss*mz_gauss);
+        if (mag_norm < MAG_FIELD_MIN_GAUSS) mag_norm = MAG_FIELD_MIN_GAUSS;
+        mx_gauss /= mag_norm; my_gauss /= mag_norm; mz_gauss /= mag_norm;
+
+        // 参考方向计算（MahonyAHRS）
+        float hx = 2.0f * (mx_gauss * (0.5f - qy*qy - qz*qz) + my_gauss * (qx*qy - qw*qz) + mz_gauss * (qx*qz + qw*qy));
+        float hy = 2.0f * (mx_gauss * (qx*qy + qw*qz) + my_gauss * (0.5f - qx*qx - qz*qz) + mz_gauss * (qy*qz - qw*qx));
+        float hz = 2.0f * (mx_gauss * (qx*qz - qw*qy) + my_gauss * (qy*qz + qw*qx) + mz_gauss * (0.5f - qx*qx - qy*qy));
+        float bx = sqrtf(hx*hx + hy*hy);
+        float bz = hz;
+
+        // 估计的磁向量
+        float wx = 2.0f * (bx * (0.5f - qy*qy - qz*qz) + bz * (qx*qz - qw*qy));
+        float wy = 2.0f * (bx * (qx*qy - qw*qz) + bz * (qw*qx + qy*qz));
+        float wz = 2.0f * (bx * (qw*qy + qx*qz) + bz * (0.5f - qx*qx - qy*qy));
+
+        // 磁误差： e_mag = m_meas x m_est
+        float ex_mag = (my_gauss * wz - mz_gauss * wy);
+        float ey_mag = (mz_gauss * wx - mx_gauss * wz);
+        float ez_mag = (mx_gauss * wy - my_gauss * wx);
+
+        ex += ex_mag;
+        ey += ey_mag;
+        ez += ez_mag;
+        attitude_diag.mag_used = true;
+        attitude_diag.mag_strength_ok = true;
+    }
+#endif
+
+    // 误差积分项（积分抗漂移）
+    exInt += twoKi * ex * dt;
+    eyInt += twoKi * ey * dt;
+    ezInt += twoKi * ez * dt;
+
+    // 比例 + 积分 反馈修正陀螺
+    gx += twoKp * ex + exInt;
+    gy += twoKp * ey + eyInt;
+    gz += twoKp * ez + ezInt;
 
     // 四元数微分： q_dot = 0.5 * q otimes [0,gx,gy,gz]
     float qw_dot = 0.5f * (-qx*gx - qy*gy - qz*gz);
@@ -276,8 +274,43 @@ Euler_angles Attitude_Update(int16_t ax_in, int16_t ay_in, int16_t az_in,
     euler_angles.pitch = pitch * RAD2DEG;
     euler_angles.yaw   = yaw   * RAD2DEG;
 
+    const uint32_t cycle_end = DWT->CYCCNT;
+    attitude_diag.dt = dt;
+    attitude_diag.spin_rate_dps = spin_rate_dps;
+    attitude_diag.acc_valid = acc_valid;
+    attitude_diag.cycles = cycle_end - cycle_start;
+    if (attitude_diag.cycles > attitude_diag.cycles_max) {
+        attitude_diag.cycles_max = attitude_diag.cycles;
+    }
+
     return euler_angles;
 }
+
+#if USE_MAGNETOMETER
+// 公开接口：带磁力计的姿态更新
+Euler_angles Attitude_Update(float ax_g, float ay_g, float az_g,
+                             float gx_dps, float gy_dps, float gz_dps,
+                             float mx_gauss, float my_gauss, float mz_gauss)
+{
+    // 应用磁力计校准参数
+    float mx_cal = (mx_gauss - mag_offset_x) * mag_scale_x;
+    float my_cal = (my_gauss - mag_offset_y) * mag_scale_y;
+    float mz_cal = (mz_gauss - mag_offset_z) * mag_scale_z;
+    
+    return Attitude_Update_Internal(ax_g, ay_g, az_g, 
+                                   gx_dps, gy_dps, gz_dps, 
+                                   mx_cal, my_cal, mz_cal, true);
+}
+
+// 公开接口：仅使用IMU的姿态更新
+Euler_angles Attitude_Update_IMU_Only(float ax_g, float ay_g, float az_g,
+                                      float gx_dps, float gy_dps, float gz_dps)
+{
+    return Attitude_Update_Internal(ax_g, ay_g, az_g, 
+                                   gx_dps, gy_dps, gz_dps, 
+                                   0.0f, 0.0f, 0.0f, false);
+}
+#endif
 
 /**
  * @brief 获取当前横滚角
@@ -309,4 +342,9 @@ float Attitude_Get_Yaw(void)
 Euler_angles Attitude_Get_Angles(void)
 {
     return euler_angles;
+}
+
+const AttitudeDiagnostics *Attitude_GetDiagnostics(void)
+{
+    return &attitude_diag;
 }

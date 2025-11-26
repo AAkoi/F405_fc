@@ -149,9 +149,10 @@ bool hmc5883l_read_raw(hmc5883l_dev_t *dev, hmc5883l_mag_data_t *data)
     hmc5883l_read_burst(dev, HMC5883L_REG_DATA_X_MSB, buffer, 6);
     
     // 解析数据（注意：HMC5883L 的数据顺序是 X, Z, Y）
-    data->x = (int16_t)((buffer[0] << 8) | buffer[1]) - dev->offset[0];
-    data->z = (int16_t)((buffer[2] << 8) | buffer[3]) - dev->offset[2];
-    data->y = (int16_t)((buffer[4] << 8) | buffer[5]) - dev->offset[1];
+    // 原始寄存器值（不减偏移，由上层处理）
+    data->x = (int16_t)((buffer[0] << 8) | buffer[1]);
+    data->z = (int16_t)((buffer[2] << 8) | buffer[3]);
+    data->y = (int16_t)((buffer[4] << 8) | buffer[5]);
     
     return true;
 }
@@ -171,10 +172,10 @@ bool hmc5883l_read(hmc5883l_dev_t *dev, hmc5883l_mag_data_float_t *data)
         return false;
     }
     
-    // 转换为 Gauss
-    data->x = (float)raw_data.x / dev->gain_scale;
-    data->y = (float)raw_data.y / dev->gain_scale;
-    data->z = (float)raw_data.z / dev->gain_scale;
+    // 应用偏移后转换为 Gauss
+    data->x = ((float)(raw_data.x - dev->offset[0])) / dev->gain_scale;
+    data->y = ((float)(raw_data.y - dev->offset[1])) / dev->gain_scale;
+    data->z = ((float)(raw_data.z - dev->offset[2])) / dev->gain_scale;
     
     return true;
 }

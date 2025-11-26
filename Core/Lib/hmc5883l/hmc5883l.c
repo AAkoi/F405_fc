@@ -23,32 +23,32 @@ hmc5883l_dev_t hmc_dev;
  * ============================================================================ */
 
 /**
- * @brief I2C 读取单个寄存器（适配 I2C2）
+ * @brief I2C 读取单个寄存器（适配 I2C3）
  */
 static uint8_t hmc5883l_i2c_read_reg(uint8_t addr, uint8_t reg)
 {
     uint8_t data = 0;
-    // 使用 HAL 直接操作 I2C2
-    HAL_I2C_Mem_Read(&hi2c2, addr << 1, reg, I2C_MEMADD_SIZE_8BIT, &data, 1, 100);
+    // 使用 HAL 直接操作 I2C3
+    HAL_I2C_Mem_Read(&hi2c3, addr << 1, reg, I2C_MEMADD_SIZE_8BIT, &data, 1, 100);
     return data;
 }
 
 /**
- * @brief I2C 写入单个寄存器（适配 I2C2）
+ * @brief I2C 写入单个寄存器（适配 I2C3）
  */
 static void hmc5883l_i2c_write_reg(uint8_t addr, uint8_t reg, uint8_t value)
 {
-    // 使用 HAL 直接操作 I2C2
-    HAL_I2C_Mem_Write(&hi2c2, addr << 1, reg, I2C_MEMADD_SIZE_8BIT, &value, 1, 100);
+    // 使用 HAL 直接操作 I2C3
+    HAL_I2C_Mem_Write(&hi2c3, addr << 1, reg, I2C_MEMADD_SIZE_8BIT, &value, 1, 100);
 }
 
 /**
- * @brief I2C 读取多个寄存器（适配 I2C2）
+ * @brief I2C 读取多个寄存器（适配 I2C3）
  */
 static void hmc5883l_i2c_read_burst(uint8_t addr, uint8_t reg, uint8_t *buffer, uint16_t len)
 {
-    // 使用 HAL 直接操作 I2C2
-    HAL_I2C_Mem_Read(&hi2c2, addr << 1, reg, I2C_MEMADD_SIZE_8BIT, buffer, len, 100);
+    // 使用 HAL 直接操作 I2C3
+    HAL_I2C_Mem_Read(&hi2c3, addr << 1, reg, I2C_MEMADD_SIZE_8BIT, buffer, len, 100);
 }
 
 /**

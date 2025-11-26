@@ -26,6 +26,9 @@
             <span id="status-text" class="status-text">Disconnected</span>
             <button id="connectBtn" class="btn">Connect Serial</button>
             <button id="recordBtn" class="btn btn-record hidden"><i data-lucide="circle-dot"></i> 开始录制</button>
+            <button id="gyroCalibBtn" class="btn btn-calib" onclick="openGyroCalibModal()"><i data-lucide="rotate-cw"></i> 陀螺仪校准</button>
+            <button id="magCalibBtn" class="btn btn-calib"><i data-lucide="compass"></i> 磁力计校准</button>
+            <button id="resetAttitudeBtn" class="btn btn-reset" onclick="resetAttitude()"><i data-lucide="rotate-ccw"></i> 复位姿态</button>
             <button class="btn" onclick="window.open('api_documentation.html', '_blank')"><i data-lucide="book-open"></i> API Docs</button>
         </div>
     </header>
@@ -77,6 +80,40 @@
         <div class="hud-row"><span class="hud-label">ALT</span> <span class="hud-val"><span id="val-alt">0</span> m</span></div>
     </div>
 
+    <!-- 陀螺仪校准模态框 -->
+    <div id="gyroCalibModal" class="modal">
+        <div class="modal-content">
+            <div class="modal-header">
+                <h2><i data-lucide="rotate-cw"></i> 陀螺仪校准</h2>
+                <button class="modal-close" onclick="closeGyroCalibModal()">&times;</button>
+            </div>
+            <div class="modal-body">
+                <p class="calib-tip">保持静止，点击开始采集。完成后计算零偏，并查看原始/校准后 3D 点云。</p>
+                <div class="calib-actions">
+                    <button class="btn btn-primary" onclick="startGyroCalibration()"><i data-lucide="play"></i> 开始采集</button>
+                    <button class="btn btn-secondary" onclick="finishGyroCalibration()"><i data-lucide="check"></i> 计算零偏</button>
+                    <button class="btn btn-secondary" onclick="resetGyroCalibration()"><i data-lucide="refresh-ccw"></i> 重置</button>
+                </div>
+                <p>样本数: <span id="gyro-samples">0</span></p>
+                <div class="gyro-plot-wrapper">
+                    <canvas id="gyroPlot" width="420" height="420"></canvas>
+                    <div class="legend">
+                        <span class="legend-dot" style="background:#ff3333"></span> 原始
+                        <span class="legend-dot" style="background:#33ff66"></span> 校准后
+                    </div>
+                </div>
+                <h4>零偏 (dps)</h4>
+                <div class="param-values">
+                    <span>X: <code id="gyro-offset-x">0.0</code></span>
+                    <span>Y: <code id="gyro-offset-y">0.0</code></span>
+                    <span>Z: <code id="gyro-offset-z">0.0</code></span>
+                </div>
+                <h4>复制代码</h4>
+                <pre id="gyro-code" class="code-block">Attitude_SetGyroBias(0.0f, 0.0f, 0.0f);</pre>
+            </div>
+        </div>
+    </div>
+
     <!-- 3D 容器 -->
     <div id="canvas-container"></div>
 
@@ -88,11 +125,139 @@
         <button class="view-btn" data-mode="side">SIDE</button>
     </div>
 
+    <!-- 坐标系调试面板 -->
+    <div id="coordDebugPanel" class="debug-panel hidden">
+        <h3>🔧 坐标系调试</h3>
+        <div class="debug-info">
+            <p><strong>飞控坐标系 (FLU)：</strong></p>
+            <ul>
+                <li>🔵 蓝色箭头 = <strong>X轴</strong>（正面/前）</li>
+                <li>🔴 红色箭头 = <strong>Y轴</strong>（左边）</li>
+                <li>🟢 绿色箭头 = <strong>Z轴</strong>（上）</li>
+            </ul>
+            <p><strong>模型其他标识：</strong></p>
+            <ul>
+                <li>🔵 蓝色镜头 = 机头朝向</li>
+                <li>🔴 红色LED = 前侧螺旋桨</li>
+                <li>🟢 绿色LED = 后侧螺旋桨</li>
+            </ul>
+            <p><strong>测试步骤：</strong></p>
+            <ol>
+                <li><strong>Roll测试：</strong>向右倾斜飞控 → 模型红灯应下沉</li>
+                <li><strong>Pitch测试：</strong>抬起机头 → 绿箭头应向上</li>
+                <li><strong>Yaw测试：</strong>顺时针旋转 → 模型应顺时针转</li>
+            </ol>
+            <div class="coord-adjust">
+                <label><input type="checkbox" id="invertRoll"> 反转Roll</label>
+                <label><input type="checkbox" id="invertPitch"> 反转Pitch</label>
+                <label><input type="checkbox" id="invertYaw" checked> 反转Yaw</label>
+            </div>
+            <div class="realtime-debug">
+                <p><strong>实时姿态角：</strong></p>
+                <div style="font-family: monospace; font-size: 0.85rem;">
+                    Roll:  <span id="debug-roll">0</span>°<br>
+                    Pitch: <span id="debug-pitch">0</span>°<br>
+                    Yaw:   <span id="debug-yaw">0</span>°
+                </div>
+            </div>
+        </div>
+        <button class="btn btn-secondary" onclick="toggleCoordDebug()">关闭</button>
+    </div>
+    
+    <button id="coordDebugBtn" class="coord-debug-btn" onclick="toggleCoordDebug()">
+        <i data-lucide="grid-3x3"></i>
+    </button>
+
+    <!-- 磁力计校准模态框 -->
+    <div id="magCalibModal" class="modal">
+        <div class="modal-content">
+            <div class="modal-header">
+                <h2><i data-lucide="compass"></i> 磁力计校准</h2>
+                <button class="modal-close" onclick="closeMagCalibModal()">&times;</button>
+            </div>
+            <div class="modal-body">
+                <div id="calib-step-1" class="calib-step">
+                    <h3>📋 准备工作</h3>
+                    <ul class="calib-instructions">
+                        <li>✓ 确保串口已连接</li>
+                        <li>✓ 远离电脑、手机、金属桌面等磁场源</li>
+                        <li>✓ 准备在60秒内缓慢旋转设备</li>
+                        <li>✓ 旋转方式：水平360°、前后翻转、左右翻转、8字形</li>
+                    </ul>
+                    <button class="btn btn-primary" onclick="startMagCalibration()">
+                        <i data-lucide="play"></i> 开始校准
+                    </button>
+                </div>
+
+                <div id="calib-step-2" class="calib-step hidden">
+                    <h3>🔄 正在采集数据...</h3>
+                    <p class="calib-tip">请缓慢旋转设备60秒，覆盖所有方向！</p>
+                    <div class="progress-bar">
+                        <div id="calib-progress" class="progress-fill"></div>
+                    </div>
+                    <p class="progress-text">
+                        <span id="calib-time">0</span>s / 60s | 
+                        样本数: <span id="calib-samples">0</span>
+                    </p>
+                    <div class="mag-range">
+                        <div>X: [<span id="mx-min">--</span>, <span id="mx-max">--</span>]</div>
+                        <div>Y: [<span id="my-min">--</span>, <span id="my-max">--</span>]</div>
+                        <div>Z: [<span id="mz-min">--</span>, <span id="mz-max">--</span>]</div>
+                    </div>
+                    <canvas id="magPlot" width="400" height="400"></canvas>
+                </div>
+
+                <div id="calib-step-3" class="calib-step hidden">
+                    <h3>✅ 校准完成</h3>
+                    <div class="calib-result">
+                        <h4>📊 校准参数</h4>
+                        <div class="param-grid">
+                            <div class="param-item">
+                                <label>硬铁偏置 (Offset):</label>
+                                <div class="param-values">
+                                    <span>X: <code id="offset-x">0</code></span>
+                                    <span>Y: <code id="offset-y">0</code></span>
+                                    <span>Z: <code id="offset-z">0</code></span>
+                                </div>
+                            </div>
+                            <div class="param-item">
+                                <label>软铁缩放 (Scale):</label>
+                                <div class="param-values">
+                                    <span>X: <code id="scale-x">1.000</code></span>
+                                    <span>Y: <code id="scale-y">1.000</code></span>
+                                    <span>Z: <code id="scale-z">1.000</code></span>
+                                </div>
+                            </div>
+                        </div>
+                        
+                        <h4>📋 复制代码到单片机</h4>
+                        <pre id="calib-code" class="code-block">mag_set_calibration(
+    0.0f, 0.0f, 0.0f,    // offset_x, offset_y, offset_z
+    1.0f, 1.0f, 1.0f     // scale_x, scale_y, scale_z
+);</pre>
+                        <button class="btn btn-copy" onclick="copyCalibCode()">
+                            <i data-lucide="copy"></i> 复制代码
+                        </button>
+                        
+                        <h4>📈 校准质量</h4>
+                        <div id="calib-quality" class="quality-badge">--</div>
+                        <p id="calib-tips" class="calib-tips"></p>
+                    </div>
+                    <button class="btn btn-primary" onclick="closeMagCalibModal()">完成</button>
+                    <button class="btn btn-secondary" onclick="resetMagCalibration()">重新校准</button>
+                </div>
+            </div>
+        </div>
+    </div>
+
     <!-- JavaScript 模块 -->
     <script src="js/config.js"></script>
     <script src="js/serial.js"></script>
     <script src="js/ui.js"></script>
     <script src="js/recording.js"></script>
+    <script src="js/mag-calibration.js"></script>
+    <script src="js/gyro-calibration.js"></script>
+    <script src="js/attitude-reset.js"></script>
     <script src="js/orientation.js"></script>
     <script src="js/scene.js"></script>
     <script src="js/drone.js"></script>

@@ -2,7 +2,7 @@
 #include "bsp_pins.h"
 
 I2C_HandleTypeDef hi2c1;
-I2C_HandleTypeDef hi2c2;
+I2C_HandleTypeDef hi2c3;
 extern void Error_Handler(void);
 
 // I2C IT完成标志位
@@ -37,31 +37,31 @@ void MX_I2C1_Init(void)
 }
 
 /**
- * @brief I2C2初始化函数
+ * @brief I2C3初始化函数
  */
-void MX_I2C2_Init(void)
+void MX_I2C3_Init(void)
 {
-    hi2c2.Instance = I2C2;
-    hi2c2.Init.ClockSpeed = 400000;  // 400kHz
-    hi2c2.Init.DutyCycle = I2C_DUTYCYCLE_2;
-    hi2c2.Init.OwnAddress1 = 0;
-    hi2c2.Init.AddressingMode = I2C_ADDRESSINGMODE_7BIT;
-    hi2c2.Init.DualAddressMode = I2C_DUALADDRESS_DISABLE;
-    hi2c2.Init.OwnAddress2 = 0;
-    hi2c2.Init.GeneralCallMode = I2C_GENERALCALL_DISABLE;
-    hi2c2.Init.NoStretchMode = I2C_NOSTRETCH_DISABLE;
+    hi2c3.Instance = I2C3;
+    hi2c3.Init.ClockSpeed = 400000;  // 400kHz
+    hi2c3.Init.DutyCycle = I2C_DUTYCYCLE_2;
+    hi2c3.Init.OwnAddress1 = 0;
+    hi2c3.Init.AddressingMode = I2C_ADDRESSINGMODE_7BIT;
+    hi2c3.Init.DualAddressMode = I2C_DUALADDRESS_DISABLE;
+    hi2c3.Init.OwnAddress2 = 0;
+    hi2c3.Init.GeneralCallMode = I2C_GENERALCALL_DISABLE;
+    hi2c3.Init.NoStretchMode = I2C_NOSTRETCH_DISABLE;
     
-    if (HAL_I2C_Init(&hi2c2) != HAL_OK)
+    if (HAL_I2C_Init(&hi2c3) != HAL_OK)
     {
         // 初始化错误处理
         Error_Handler();
     }
 
-    // 使能I2C2中断（事件与错误）
-    HAL_NVIC_SetPriority(I2C2_EV_IRQn, 5, 0);
-    HAL_NVIC_EnableIRQ(I2C2_EV_IRQn);
-    HAL_NVIC_SetPriority(I2C2_ER_IRQn, 5, 0);
-    HAL_NVIC_EnableIRQ(I2C2_ER_IRQn);
+    // 使能I2C3中断（事件与错误）
+    HAL_NVIC_SetPriority(I2C3_EV_IRQn, 5, 0);
+    HAL_NVIC_EnableIRQ(I2C3_EV_IRQn);
+    HAL_NVIC_SetPriority(I2C3_ER_IRQn, 5, 0);
+    HAL_NVIC_EnableIRQ(I2C3_ER_IRQn);
 }
 
 /* MSP GPIO 配置迁移至 BSP：配置 I2C1 引脚 PB6/PB7 */
@@ -81,19 +81,26 @@ void HAL_I2C_MspInit(I2C_HandleTypeDef* hi2c)
         GPIO_InitStruct.Alternate = GPIO_AF4_I2C1;
         HAL_GPIO_Init(BMP280_IIC1_GPIO_PORT, &GPIO_InitStruct);
     }
-    else if (hi2c->Instance == I2C2)
+    else if (hi2c->Instance == I2C3)
     {
         GPIO_InitTypeDef GPIO_InitStruct = {0};
 
-        __HAL_RCC_GPIOB_CLK_ENABLE();
-        __HAL_RCC_I2C2_CLK_ENABLE();
+        __HAL_RCC_GPIOA_CLK_ENABLE();
+        __HAL_RCC_GPIOC_CLK_ENABLE();
+        __HAL_RCC_I2C3_CLK_ENABLE();
 
-        GPIO_InitStruct.Pin = HMC5883l_IIC2_SCL | HMC5883l_IIC2_SDA;
+        // SCL: PA8
+        GPIO_InitStruct.Pin = HMC5883l_IIC3_SCL;
         GPIO_InitStruct.Mode = GPIO_MODE_AF_OD;
         GPIO_InitStruct.Pull = GPIO_PULLUP;
         GPIO_InitStruct.Speed = GPIO_SPEED_FREQ_VERY_HIGH;
-        GPIO_InitStruct.Alternate = GPIO_AF4_I2C2;
-        HAL_GPIO_Init(HMC5883l_IIC2_GPIO_PORT, &GPIO_InitStruct);
+        GPIO_InitStruct.Alternate = GPIO_AF4_I2C3;
+        HAL_GPIO_Init(HMC5883l_IIC3_GPIO_PORT, &GPIO_InitStruct);
+
+        // SDA: PC9
+        GPIO_InitStruct.Pin = HMC5883l_IIC3_SDA;
+        GPIO_InitStruct.Alternate = GPIO_AF4_I2C3;
+        HAL_GPIO_Init(HMC5883l_IIC3_SDA_GPIO_PORT, &GPIO_InitStruct);
     }
 }
 
@@ -103,6 +110,12 @@ void HAL_I2C_MspDeInit(I2C_HandleTypeDef* hi2c)
     {
         __HAL_RCC_I2C1_CLK_DISABLE();
         HAL_GPIO_DeInit(BMP280_IIC1_GPIO_PORT, BMP280_IIC1_SCL | BMP280_IIC1_SDA);
+    }
+    else if (hi2c->Instance == I2C3)
+    {
+        __HAL_RCC_I2C3_CLK_DISABLE();
+        HAL_GPIO_DeInit(HMC5883l_IIC3_GPIO_PORT, HMC5883l_IIC3_SCL);
+        HAL_GPIO_DeInit(HMC5883l_IIC3_SDA_GPIO_PORT, HMC5883l_IIC3_SDA);
     }
 }
 
@@ -207,6 +220,22 @@ void I2C1_EV_IRQHandler(void)
 void I2C1_ER_IRQHandler(void)
 {
     HAL_I2C_ER_IRQHandler(&hi2c1);
+}
+
+/**
+ * @brief I2C3 event interrupt handler
+ */
+void I2C3_EV_IRQHandler(void)
+{
+    HAL_I2C_EV_IRQHandler(&hi2c3);
+}
+
+/**
+ * @brief I2C3 error interrupt handler
+ */
+void I2C3_ER_IRQHandler(void)
+{
+    HAL_I2C_ER_IRQHandler(&hi2c3);
 }
 
 /**

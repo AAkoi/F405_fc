@@ -252,8 +252,8 @@ float hmc5883l_get_gain_scale(hmc5883l_gain_t gain);
 static inline hmc5883l_config_t hmc5883l_get_default_config(void)
 {
     hmc5883l_config_t config = {
-        .odr = HMC5883L_ODR_75HZ,           // 75 Hz 输出率
-        .samples = HMC5883L_SAMPLES_8,      // 8 次采样平均
+        .odr = HMC5883L_ODR_15HZ,           // 15 Hz 输出率（更抗抖）
+        .samples = HMC5883L_SAMPLES_8,      // 8 次采样平均以压噪
         .gain = HMC5883L_GAIN_1_3GA,        // ±1.3 Ga 增益
         .mode = HMC5883L_CONTINUOUS,        // 连续测量模式
         .meas_mode = HMC5883L_MODE_NORMAL   // 正常测量模式
