@@ -19,15 +19,31 @@
 
 extern icm42688p_dev_t icm;
 
-static void init_attitude_from_static_accel(void)
+static void init_attitude_from_sensors(bool use_mag)
 {
-    if (accel_scaled.ready) {
-        Attitude_InitFromAccelerometer(accel_scaled.g_x, accel_scaled.g_y, accel_scaled.g_z);
-        printf("[test_attitude_full] 姿态已从加速度计初始化\r\n");
-    } else {
+    if (!accel_scaled.ready) {
         Attitude_Init();
         printf("[test_attitude_full] 姿态使用默认值初始化\r\n");
+        return;
     }
+
+#if USE_MAGNETOMETER
+    // 优先使用加速度计+磁力计初始化（立即得到正确的yaw）
+    if (use_mag && mag_calibrated.ready) {
+        Attitude_InitFromAccelMag(
+            accel_scaled.g_x, accel_scaled.g_y, accel_scaled.g_z,
+            mag_calibrated.gauss_x, mag_calibrated.gauss_y, mag_calibrated.gauss_z
+        );
+        printf("[test_attitude_full] 姿态已从加速度计+磁力计初始化（yaw立即有效）\r\n");
+        printf("  初始姿态: Roll=%.1f° Pitch=%.1f° Yaw=%.1f°\r\n",
+               euler_angles.roll, euler_angles.pitch, euler_angles.yaw);
+        return;
+    }
+#endif
+
+    // fallback: 仅用加速度计（yaw=0，需要缓慢收敛）
+    Attitude_InitFromAccelerometer(accel_scaled.g_x, accel_scaled.g_y, accel_scaled.g_z);
+    printf("[test_attitude_full] 姿态已从加速度计初始化（yaw=0，将缓慢收敛）\r\n");
 }
 
 // 临时禁用磁力计融合的开关（如果磁力计未校准，设置为false可避免Yaw漂移）
@@ -88,9 +104,10 @@ void test_attitude_full_run(void)
         // 注意：mag_set_calibration 的 offset 单位是 gauss，这里从 LSB 转 gauss
         const float mag_gain = (hmc_dev.gain_scale > 0.0f) ? hmc_dev.gain_scale : 1090.0f;
         mag_set_calibration(
-            40.5f / mag_gain, -335.5f / mag_gain, 12.5f / mag_gain,  // offset_x, offset_y, offset_z (gauss)
-            0.961f, 0.858f, 1.259f                                   // scale_x, scale_y, scale_z
+            -2.0f/mag_gain, -327.0f/mag_gain, 20.0f/mag_gain,     // offset_x, offset_y, offset_z
+            0.930f, 0.899f, 1.229f     // scale_x, scale_y, scale_z
         );
+
         
         // 方式2：同时设置 Attitude 模块的校准参数
         // Attitude_SetMagCalibration(
@@ -120,13 +137,22 @@ void test_attitude_full_run(void)
     Attitude_Init();
     
     // 读取几帧数据用于初始化，同时诊断
+    // 【重要】必须在初始化姿态之前读取磁力计数据，否则 mag_calibrated.ready = false
     printf("\r\n[诊断] 读取初始数据（静止状态）...\r\n");
-    for (int i = 0; i < 3; i++) {
+    int16_t mx_init = 0, my_init = 0, mz_init = 0;
+    for (int i = 0; i < 5; i++) {  // 增加到5次，确保磁力计有数据
         int16_t gx_raw, gy_raw, gz_raw, ax_raw, ay_raw, az_raw;
         float temp;
         if (icm42688p_get_all_data(&gx_raw, &gy_raw, &gz_raw, &ax_raw, &ay_raw, &az_raw, &temp)) {
             gyro_process_sample(gx_raw, gy_raw, gz_raw);
             accel_process_sample(ax_raw, ay_raw, az_raw);
+            
+            // 【关键】也要读取磁力计数据！
+            if (mag_available) {
+                if (hmc5883l_read_raw_data(&mx_init, &my_init, &mz_init)) {
+                    mag_process_sample(mx_init, my_init, mz_init);
+                }
+            }
             
             // 计算补偿后的值（手动验证）
             int16_t gx_comp = gx_raw - icm.gyro_offset[0];
@@ -141,8 +167,13 @@ void test_attitude_full_run(void)
             printf("    task输出: gyro(%.1f,%.1f,%.1f)dps acc(%.3f,%.3f,%.3f)g\r\n",
                    gyro_scaled.dps_x, gyro_scaled.dps_y, gyro_scaled.dps_z,
                    accel_scaled.g_x, accel_scaled.g_y, accel_scaled.g_z);
+            if (mag_available && mag_calibrated.ready) {
+                printf("    mag: raw(%d,%d,%d) gauss(%.3f,%.3f,%.3f)\r\n",
+                       mx_init, my_init, mz_init,
+                       mag_calibrated.gauss_x, mag_calibrated.gauss_y, mag_calibrated.gauss_z);
+            }
         }
-        HAL_Delay(200);
+        HAL_Delay(100);  // 缩短延时，更快完成初始化
     }
     
     printf("\r\n[诊断] ICM42688P 配置:\r\n");
@@ -150,10 +181,15 @@ void test_attitude_full_run(void)
     printf("  accel_scale = %.2f (LSB/g)\r\n", icm.accel_scale);
     printf("  gyro_offset = [%d, %d, %d] [陀螺仪零偏，通常<±500]\r\n", 
            icm.gyro_offset[0], icm.gyro_offset[1], icm.gyro_offset[2]);
-    printf("  accel_offset= [%d, %d, %d] [加速度计零偏，应全为0]\r\n\r\n", 
+    printf("  accel_offset= [%d, %d, %d] [加速度计零偏，应全为0]\r\n", 
            icm.accel_offset[0], icm.accel_offset[1], icm.accel_offset[2]);
+    if (mag_available) {
+        printf("  mag_calibrated.ready = %s\r\n", mag_calibrated.ready ? "true" : "false");
+        printf("  mag_calibrated.gauss = (%.3f, %.3f, %.3f)\r\n\r\n",
+               mag_calibrated.gauss_x, mag_calibrated.gauss_y, mag_calibrated.gauss_z);
+    }
     
-    init_attitude_from_static_accel();
+    init_attitude_from_sensors(USE_MAG_FUSION && mag_available);
 
     printf("\r\n[test_attitude_full] 开始实时输出姿态角...\r\n");
     printf("格式: ATTITUDE_FULL,时间戳,Roll,Pitch,Yaw,ax,ay,az,gx,gy,gz,mx,my,mz\r\n");

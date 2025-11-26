@@ -136,6 +136,24 @@ class DroneVisualizerApp {
             this.recordingManager.addDataPoint(sensorData.gyr);
         }
 
+        // 磁力计校准数据回调
+        if (window.processMagDataForCalibration) {
+            window.processMagDataForCalibration(
+                sensorData.mag.x, 
+                sensorData.mag.y, 
+                sensorData.mag.z
+            );
+        }
+
+        // 陀螺仪校准数据回调
+        if (window.processGyroDataForCalibration) {
+            window.processGyroDataForCalibration(
+                sensorData.gyr.x, 
+                sensorData.gyr.y, 
+                sensorData.gyr.z
+            );
+        }
+
         // 更新姿态
         const orientation = this.orientationCalc.update(sensorData);
         this.uiManager.updateOrientation(this.orientationCalc.getOrientation());

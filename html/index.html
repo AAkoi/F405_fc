@@ -27,7 +27,7 @@
             <button id="connectBtn" class="btn">Connect Serial</button>
             <button id="recordBtn" class="btn btn-record hidden"><i data-lucide="circle-dot"></i> 开始录制</button>
             <button id="gyroCalibBtn" class="btn btn-calib" onclick="openGyroCalibModal()"><i data-lucide="rotate-cw"></i> 陀螺仪校准</button>
-            <button id="magCalibBtn" class="btn btn-calib"><i data-lucide="compass"></i> 磁力计校准</button>
+            <button id="magCalibBtn" class="btn btn-calib" onclick="openMagCalibModal()"><i data-lucide="compass"></i> 磁力计校准</button>
             <button id="resetAttitudeBtn" class="btn btn-reset" onclick="resetAttitude()"><i data-lucide="rotate-ccw"></i> 复位姿态</button>
             <button class="btn" onclick="window.open('api_documentation.html', '_blank')"><i data-lucide="book-open"></i> API Docs</button>
         </div>
@@ -96,10 +96,10 @@
                 </div>
                 <p>样本数: <span id="gyro-samples">0</span></p>
                 <div class="gyro-plot-wrapper">
-                    <canvas id="gyroPlot" width="420" height="420"></canvas>
+                    <canvas id="gyroPlot" width="520" height="450"></canvas>
                     <div class="legend">
-                        <span class="legend-dot" style="background:#ff3333"></span> 原始
-                        <span class="legend-dot" style="background:#33ff66"></span> 校准后
+                        <span><span class="legend-dot" style="background:#ff6b35; color:#ff6b35"></span> 原始数据</span>
+                        <span><span class="legend-dot" style="background:#00ff88; color:#00ff88"></span> 校准后</span>
                     </div>
                 </div>
                 <h4>零偏 (dps)</h4>
@@ -204,7 +204,13 @@
                         <div>Y: [<span id="my-min">--</span>, <span id="my-max">--</span>]</div>
                         <div>Z: [<span id="mz-min">--</span>, <span id="mz-max">--</span>]</div>
                     </div>
-                    <canvas id="magPlot" width="400" height="400"></canvas>
+                    <div class="mag-plot-wrapper">
+                        <canvas id="magPlot" width="520" height="450"></canvas>
+                        <div class="legend">
+                            <span><span class="legend-dot" style="background:#ff6b35; color:#ff6b35"></span> 原始数据</span>
+                            <span><span class="legend-dot" style="background:#00ff88; color:#00ff88"></span> 校准后</span>
+                        </div>
+                    </div>
                 </div>
 
                 <div id="calib-step-3" class="calib-step hidden">
@@ -235,9 +241,17 @@
     0.0f, 0.0f, 0.0f,    // offset_x, offset_y, offset_z
     1.0f, 1.0f, 1.0f     // scale_x, scale_y, scale_z
 );</pre>
-                        <button class="btn btn-copy" onclick="copyCalibCode()">
-                            <i data-lucide="copy"></i> 复制代码
-                        </button>
+                        <div class="btn-group">
+                            <button class="btn btn-copy" onclick="copyCalibCode()">
+                                <i data-lucide="copy"></i> 复制代码
+                            </button>
+                            <button class="btn btn-export" onclick="exportMagData('csv')">
+                                <i data-lucide="download"></i> 导出CSV
+                            </button>
+                            <button class="btn btn-export" onclick="exportMagData('json')">
+                                <i data-lucide="file-json"></i> 导出JSON
+                            </button>
+                        </div>
                         
                         <h4>📈 校准质量</h4>
                         <div id="calib-quality" class="quality-badge">--</div>

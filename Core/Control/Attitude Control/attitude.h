@@ -59,12 +59,19 @@ float fast_inv_sqrt(float x);
 void Attitude_Init(void);
 
 // 利用加速度计静止姿态进行初始化（传入已归一化的加速度向量）
+// 注意：此函数会将yaw初始化为0，然后靠磁力计缓慢收敛
 void Attitude_InitFromAccelerometer(float ax_g, float ay_g, float az_g);
 
 // 设置陀螺仪零偏（单位：dps）
 void Attitude_SetGyroBias(float bias_x, float bias_y, float bias_z);
 
 #if USE_MAGNETOMETER
+// 使用加速度计+磁力计初始化姿态（推荐！立即得到正确的yaw）
+// @param ax_g, ay_g, az_g: 加速度（单位：g）
+// @param mx, my, mz: 磁场（单位：gauss，原始值，函数内部会应用校准）
+void Attitude_InitFromAccelMag(float ax_g, float ay_g, float az_g,
+                               float mx, float my, float mz);
+
 // 设置磁力计校准参数（硬铁偏移和软铁缩放）
 void Attitude_SetMagCalibration(float offset_x, float offset_y, float offset_z,
                                 float scale_x, float scale_y, float scale_z);

@@ -14,34 +14,55 @@ let gyroScene, gyroCamera, gyroRenderer, rawPoints, calPoints, gyroControls;
 
 function initGyroPlot() {
     const canvas = document.getElementById('gyroPlot');
-    const width = canvas.clientWidth;
-    const height = canvas.clientHeight;
+    const width = canvas.clientWidth || 520;
+    const height = canvas.clientHeight || 450;
 
     gyroScene = new THREE.Scene();
-    gyroCamera = new THREE.PerspectiveCamera(45, width / height, 0.1, 1000);
-    gyroCamera.position.set(40, 40, 40);
+    gyroScene.background = new THREE.Color(0x1a1a2e);  // 深蓝色背景
+    
+    gyroCamera = new THREE.PerspectiveCamera(50, width / height, 0.1, 1000);
+    gyroCamera.position.set(30, 25, 30);
+    gyroCamera.lookAt(0, 0, 0);
 
-    gyroRenderer = new THREE.WebGLRenderer({ canvas, antialias: true });
+    gyroRenderer = new THREE.WebGLRenderer({ canvas, antialias: true, alpha: true });
     gyroRenderer.setSize(width, height);
+    gyroRenderer.setPixelRatio(window.devicePixelRatio);
 
     gyroControls = new THREE.OrbitControls(gyroCamera, gyroRenderer.domElement);
     gyroControls.enableDamping = true;
+    gyroControls.dampingFactor = 0.1;
+
+    // 添加环境光
+    const ambientLight = new THREE.AmbientLight(0xffffff, 0.6);
+    gyroScene.add(ambientLight);
 
     // 轴和网格
-    gyroScene.add(new THREE.AxesHelper(20));
-    gyroScene.add(new THREE.GridHelper(40, 20));
+    gyroScene.add(new THREE.AxesHelper(15));
+    gyroScene.add(new THREE.GridHelper(30, 10, 0x444466, 0x333355));
 
-    // 原始点（红）
+    // 原始点（橙红色，较大的点）
     const rawGeo = new THREE.BufferGeometry();
     rawGeo.setAttribute('position', new THREE.Float32BufferAttribute([], 3));
-    const rawMat = new THREE.PointsMaterial({ color: 0xff3333, size: 0.6 });
+    const rawMat = new THREE.PointsMaterial({ 
+        color: 0xff6b35, 
+        size: 3,
+        sizeAttenuation: true,
+        transparent: true,
+        opacity: 0.9
+    });
     rawPoints = new THREE.Points(rawGeo, rawMat);
     gyroScene.add(rawPoints);
 
-    // 校准后点（绿）
+    // 校准后点（亮绿色）
     const calGeo = new THREE.BufferGeometry();
     calGeo.setAttribute('position', new THREE.Float32BufferAttribute([], 3));
-    const calMat = new THREE.PointsMaterial({ color: 0x33ff66, size: 0.6 });
+    const calMat = new THREE.PointsMaterial({ 
+        color: 0x00ff88, 
+        size: 3,
+        sizeAttenuation: true,
+        transparent: true,
+        opacity: 0.9
+    });
     calPoints = new THREE.Points(calGeo, calMat);
     gyroScene.add(calPoints);
 

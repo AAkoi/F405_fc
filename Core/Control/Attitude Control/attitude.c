@@ -29,8 +29,8 @@ static float mag_scale_z = 1.0f;
 #endif
 
 // Mahony标准增益（9DoF）：twoKp=2*Kp, twoKi=2*Ki
-static const float twoKp = 2.0f * 0.5f;   // 比例增益 Kp=0.5
-static const float twoKi = 2.0f * 0.0f;   // 积分增益（默认关闭，可按需开启）
+static const float twoKp = 2.0f * 4.0f;   // 比例增益 Kp=0.5
+static const float twoKi = 2.0f * 0.01f;   // 积分增益（默认关闭，可按需开启）
 
 // 快速平方根倒数（1/sqrt(x)）
 float fast_inv_sqrt(float x)
@@ -144,10 +144,83 @@ void Attitude_InitFromAccelerometer(float ax, float ay, float az)
 
     exInt = eyInt = ezInt = 0.0f;
     lastTick = HAL_GetTick();
-#if USE_MAGNETOMETER
-#endif
     attitude_diag = (AttitudeDiagnostics){0};
 }
+
+#if USE_MAGNETOMETER
+/**
+ * @brief 使用加速度计和磁力计初始化姿态（推荐用于reset）
+ * @note  Roll/Pitch从加速度计计算，Yaw从磁力计计算，立即得到正确姿态
+ */
+void Attitude_InitFromAccelMag(float ax, float ay, float az,
+                               float mx, float my, float mz)
+{
+    // 1. 加速度向量归一化
+    float acc_norm = sqrtf(ax*ax + ay*ay + az*az);
+    if (acc_norm < 1e-6f) acc_norm = 1e-6f;
+    ax /= acc_norm; ay /= acc_norm; az /= acc_norm;
+
+    // 2. 从加速度计计算 Roll 和 Pitch
+    float denom = sqrtf(ay*ay + az*az);
+    float roll, pitch;
+    if (denom < 1e-6f) {
+        roll = 0.0f;
+        pitch = (ax < 0.0f) ? 1.57079633f : -1.57079633f;
+    } else {
+        roll  = atan2f(ay, az);
+        pitch = atan2f(-ax, denom);
+    }
+
+    // 3. 应用磁力计校准（如果有）
+    float mx_cal = (mx - mag_offset_x) * mag_scale_x;
+    float my_cal = (my - mag_offset_y) * mag_scale_y;
+    float mz_cal = (mz - mag_offset_z) * mag_scale_z;
+
+    // 4. 磁力计向量归一化
+    float mag_norm = sqrtf(mx_cal*mx_cal + my_cal*my_cal + mz_cal*mz_cal);
+    if (mag_norm < 1e-6f) {
+        // 磁力计数据无效，fallback到yaw=0
+        Attitude_InitFromAccelerometer(ax, ay, az);
+        return;
+    }
+    mx_cal /= mag_norm; my_cal /= mag_norm; mz_cal /= mag_norm;
+
+    // 5. 将磁力计向量从机体坐标系旋转到水平面（倾斜补偿）
+    // 使用roll和pitch旋转磁向量到水平坐标系
+    float cos_roll  = cosf(roll);
+    float sin_roll  = sinf(roll);
+    float cos_pitch = cosf(pitch);
+    float sin_pitch = sinf(pitch);
+
+    // 水平面上的磁北分量（倾斜补偿后）
+    float mx_h = mx_cal * cos_pitch + my_cal * sin_roll * sin_pitch + mz_cal * cos_roll * sin_pitch;
+    float my_h = my_cal * cos_roll - mz_cal * sin_roll;
+
+    // 6. 计算航向角（相对于磁北）
+    float yaw = atan2f(-my_h, mx_h);
+
+    // 7. 欧拉角转四元数（ZYX内旋）
+    float cr = cosf(roll * 0.5f),  sr = sinf(roll * 0.5f);
+    float cp = cosf(pitch * 0.5f), sp = sinf(pitch * 0.5f);
+    float cy = cosf(yaw * 0.5f),   sy = sinf(yaw * 0.5f);
+
+    attitude_q.p0 = cy*cp*cr + sy*sp*sr;
+    attitude_q.p1 = cy*cp*sr - sy*sp*cr;
+    attitude_q.p2 = cy*sp*cr + sy*cp*sr;
+    attitude_q.p3 = sy*cp*cr - cy*sp*sr;
+    quat_normalize(&attitude_q);
+
+    // 8. 清零积分项和诊断
+    exInt = eyInt = ezInt = 0.0f;
+    lastTick = HAL_GetTick();
+    attitude_diag = (AttitudeDiagnostics){0};
+
+    // 9. 更新欧拉角输出
+    euler_angles.roll  = roll  * RAD2DEG;
+    euler_angles.pitch = pitch * RAD2DEG;
+    euler_angles.yaw   = yaw   * RAD2DEG;
+}
+#endif
 
 #if USE_MAGNETOMETER
 // 内部实现：姿态更新核心算法（带磁力计融合）

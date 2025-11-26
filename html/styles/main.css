@@ -370,15 +370,35 @@ h1 {
     background-color: #4B5563;
 }
 
+.btn-group {
+    display: flex;
+    gap: 10px;
+    flex-wrap: wrap;
+    margin: 15px 0;
+}
+
 .btn-copy {
     background-color: var(--accent);
     color: white;
-    width: 100%;
+    flex: 1;
+    min-width: 120px;
     justify-content: center;
 }
 
 .btn-copy:hover {
     background-color: #047857;
+}
+
+.btn-export {
+    background-color: #3B82F6;
+    color: white;
+    flex: 1;
+    min-width: 100px;
+    justify-content: center;
+}
+
+.btn-export:hover {
+    background-color: #2563EB;
 }
 
 .btn-calib {
@@ -442,17 +462,44 @@ h1 {
     border: 1px solid #222;
 }
 .legend {
-    margin-top: 0.5rem;
+    margin-top: 12px;
     display: flex;
-    gap: 1rem;
+    gap: 1.5rem;
     align-items: center;
-    font-size: 0.9rem;
+    justify-content: center;
+    font-size: 0.95rem;
+    font-weight: 500;
+    color: #ccc;
+    padding: 8px 0;
 }
 .legend-dot {
-    width: 12px;
-    height: 12px;
+    width: 14px;
+    height: 14px;
     display: inline-block;
     border-radius: 50%;
+    margin-right: 6px;
+    box-shadow: 0 0 8px currentColor;
+}
+
+.mag-plot-wrapper, .gyro-plot-wrapper {
+    position: relative;
+    width: 100%;
+    max-width: 520px;
+    margin: 15px auto;
+    border-radius: 12px;
+    overflow: hidden;
+    box-shadow: 0 4px 20px rgba(0, 0, 0, 0.3);
+}
+#magPlot, #gyroPlot {
+    width: 100%;
+    height: 450px;
+    background: linear-gradient(135deg, #0f1116 0%, #1a1a2e 100%);
+    border: 2px solid #2a2a4a;
+    border-radius: 12px;
+    cursor: grab;
+}
+#magPlot:active, #gyroPlot:active {
+    cursor: grabbing;
 }
 
 /* 坐标系调试面板 */

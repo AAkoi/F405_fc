@@ -64,7 +64,7 @@ void test_mag_run(void)
                     // 兼容上位机解析 ATTITUDE_FULL 的磁力计实时显示
                     printf("ATTITUDE_FULL,%lu,0,0,0,0,0,0,0,0,0,%d,%d,%d\r\n",
                            (unsigned long)now, mx_raw, my_raw, mz_raw);
-                    printf("Heading:%f\n",heading);
+                    
                 }
             }
         } else {
