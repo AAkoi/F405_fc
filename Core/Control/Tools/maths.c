@@ -69,3 +69,15 @@ float atan2_approx(float y, float x)
     if (y < 0) res = -res;
     return res;
 }
+
+// 快速平方根倒数（1/sqrt(x)）
+float fast_inv_sqrt(float x)
+{
+    float halfx = 0.5f * x;
+    float y = x;
+    int32_t i = *(int32_t*)&y;
+    i = 0x5f3759df - (i >> 1);
+    y = *(float*)&i;
+    y = y * (1.5f - (halfx * y * y));
+    return y;
+}

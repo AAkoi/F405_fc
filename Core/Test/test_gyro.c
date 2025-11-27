@@ -18,7 +18,6 @@ extern icm42688p_dev_t icm;
 
 static void init_attitude_from_static_accel(void)
 {
-    // 等待一组有效的加速度计数据
     if (accel_scaled.ready) {
         Attitude_InitFromAccelerometer(accel_scaled.g_x, accel_scaled.g_y, accel_scaled.g_z);
         printf("[test_gyro] 姿态已从加速度计初始化\r\n");
@@ -31,7 +30,7 @@ static void init_attitude_from_static_accel(void)
 void test_gyro_run(void)
 {
     printf("\r\n========================================\r\n");
-    printf("[test_gyro] IMU姿态测试 (仅陀螺仪+加速度计)\r\n");
+    printf("[test_gyro] IMU姿态测量(仅陀螺仪+加速度计)\r\n");
     printf("========================================\r\n\r\n");
 
     // 1. 初始化IMU
@@ -57,16 +56,15 @@ void test_gyro_run(void)
     icm42688p_calibrate_accel(&icm, 0);  // 不校准，零偏设为0
     printf("      加速度计零偏: %d %d %d (应全为0)\r\n", icm.accel_offset[0], icm.accel_offset[1], icm.accel_offset[2]);
     
-    // 注意：零偏已在 task_gyro/acc 中自动应用，姿态模块不需要再设置
-    Attitude_SetGyroBias(0.0f, 0.0f, 0.0f);
+    // 零偏由 task_gyro/task_acc 处理，姿态模块直接使用补偿后的数据
 
     // 3. 初始化数据处理模块
-    printf("[3/4] 初始化数据处理模块...\r\n");
-    gyro_processing_init(1);  // 不降采样，1:1
+    printf("[3/4] 初始化数据处理模块..\r\n");
+    gyro_processing_init(1);  // 不降采样:1
     accel_processing_init();
 
     // 4. 初始化姿态解算
-    printf("[4/4] 初始化姿态解算...\r\n");
+    printf("[4/4] 初始化姿态解算..\r\n");
     Attitude_Init();
     
     // 读取几帧数据用于初始化姿态
@@ -81,9 +79,8 @@ void test_gyro_run(void)
     init_attitude_from_static_accel();
 
     printf("\r\n[test_gyro] 开始实时输出姿态角...\r\n");
-    printf("格式: Roll, Pitch, Yaw (度)\r\n");
-    printf("注意: 姿态解算已启用静止检测和零偏自动补偿功能\r\n");
-    printf("      当检测到静止超过1秒时，将自动修正陀螺仪零偏漂移\r\n\r\n");
+    printf("格式: ATTITUDE_FULL,时间,Roll,Pitch,Yaw,ax,ay,az,gx,gy,gz,0,0,0\r\n");
+    printf("注意: 姿态解算不再单独处理零偏，完全依赖 task_gyro/task_acc 校准结果\r\n\r\n");
 
     uint32_t last_print = HAL_GetTick();
     uint32_t last_perf = last_print;
@@ -128,7 +125,6 @@ void test_gyro_run(void)
             last_print = now;
             
             // ATTITUDE_FULL 格式（单片机计算的姿态）
-            // 格式: ATTITUDE_FULL,时间戳,Roll,Pitch,Yaw,ax,ay,az,gx,gy,gz,mx,my,mz
             printf("ATTITUDE_FULL,%lu,%.2f,%.2f,%.2f,%.3f,%.3f,%.3f,%.2f,%.2f,%.2f,0,0,0\r\n",
                    (unsigned long)now,
                    ang.roll, ang.pitch, ang.yaw,

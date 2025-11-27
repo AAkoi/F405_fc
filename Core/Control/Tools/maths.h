@@ -1,4 +1,5 @@
 #include "math.h"
+#include <stdint.h>
 
 #define M_PIf       3.14159265358979323846f
 #define RAD    (M_PIf / 180.0f)
@@ -20,4 +21,4 @@
 float sin_approx(float x);
 float cos_approx(float x);
 float atan2_approx(float y, float x);
-
+float fast_inv_sqrt(float x);

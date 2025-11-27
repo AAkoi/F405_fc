@@ -2,7 +2,7 @@
  * 姿态解算（Mahony 互补滤波 + 磁力计融合）
  * 本模块只负责姿态融合算法，不涉及传感器数据读取
  */
-#include <math.h>
+#include "maths.h"
 #include "stm32f4xx_hal.h"
 #include "attitude.h"
 
@@ -17,37 +17,14 @@ Quaternion attitude_q;
 static float exInt = 0.0f, eyInt = 0.0f, ezInt = 0.0f;
 static uint32_t lastTick = 0;
 
-#if USE_MAGNETOMETER
-// 磁力计校准参数（硬铁偏移 + 软铁缩放）
-static float mag_offset_x = 0.0f;
-static float mag_offset_y = 0.0f;
-static float mag_offset_z = 0.0f;
-static float mag_scale_x = 1.0f;
-static float mag_scale_y = 1.0f;
-static float mag_scale_z = 1.0f;
-
-#endif
-
 // Mahony标准增益（9DoF）：twoKp=2*Kp, twoKi=2*Ki
 static const float twoKp = 2.0f * 4.0f;   // 比例增益 Kp=0.5
 static const float twoKi = 2.0f * 0.01f;   // 积分增益（默认关闭，可按需开启）
 
-// 快速平方根倒数（1/sqrt(x)）
-float fast_inv_sqrt(float x)
-{
-    float halfx = 0.5f * x;
-    float y = x;
-    int32_t i = *(int32_t*)&y;
-    i = 0x5f3759df - (i >> 1);
-    y = *(float*)&i;
-    y = y * (1.5f - (halfx * y * y));
-    return y;
-}
 
 // 四元数归一化： q = q / |q|
 static void quat_normalize(Quaternion *q)
 {
-    // |q| = sqrt(qw^2 + qx^2 + qy^2 + qz^2)
     float n2 = q->p0*q->p0 + q->p1*q->p1 + q->p2*q->p2 + q->p3*q->p3;
     if (n2 > 0.0f) {
         float inv = fast_inv_sqrt(n2);
@@ -62,7 +39,6 @@ static AttitudeDiagnostics attitude_diag = {0};
 
 void Attitude_Init(void)
 {
-    // 欧拉角清零，四元数置单位元 q=[1,0,0,0]
     euler_angles.pitch = 0.0f;
     euler_angles.roll  = 0.0f;
     euler_angles.yaw   = 0.0f;
@@ -74,67 +50,31 @@ void Attitude_Init(void)
 
     exInt = eyInt = ezInt = 0.0f;
     lastTick = HAL_GetTick();
-#if USE_MAGNETOMETER
-#endif
     attitude_diag = (AttitudeDiagnostics){0};
 }
 
-void Attitude_SetGyroBias(float bias_x, float bias_y, float bias_z)
-{
-    // 零偏由外部流程处理，这里不再应用
-    (void)bias_x;
-    (void)bias_y;
-    (void)bias_z;
-}
-
-#if USE_MAGNETOMETER
-void Attitude_SetMagCalibration(float offset_x, float offset_y, float offset_z,
-                                float scale_x, float scale_y, float scale_z)
-{
-    mag_offset_x = offset_x;
-    mag_offset_y = offset_y;
-    mag_offset_z = offset_z;
-    mag_scale_x = scale_x;
-    mag_scale_y = scale_y;
-    mag_scale_z = scale_z;
-}
-#endif
-
 void Attitude_InitFromAccelerometer(float ax, float ay, float az)
 {
-    // 加速度向量归一化： a = a / ||a||
     float n2 = ax*ax + ay*ay + az*az;
     if (n2 > 1e-6f) {
         float inv = fast_inv_sqrt(n2);
         ax *= inv; ay *= inv; az *= inv;
     }
 
-    // 通过加速度静态姿态计算初始姿态：
-    // 常规：
-    //   roll  = atan2(ay, az)
-    //   pitch = atan2(-ax, sqrt(ay^2 + az^2))
-    // 特殊：当 pitch ≈ ±90° 时，ay≈0, az≈0，出现欧拉奇异（横滚/航向不再可辨），
-    // 为避免 atan2(0,0) 造成不稳定，这里在分母过小情况下固定 roll=0，仅设置 pitch=±90°。
     float denom = sqrtf(ay*ay + az*az);
     float roll, pitch;
     if (denom < 1e-6f) {
-        // 近似 90° 俯仰：仅由 ax 决定方向
         roll = 0.0f;
         pitch = (ax < 0.0f) ? 1.57079633f : -1.57079633f; // ±pi/2
     } else {
-        roll  = atan2f(ay, az);
-        pitch = atan2f(-ax, denom);
+        roll  = atan2_approx(ay, az);
+        pitch = atan2_approx(-ax, denom);
     }
     float yaw   = 0.0f;
 
-    // 欧拉角(Yaw-Pitch-Roll, 采用ZYX内旋) 转 四元数：
-    // q0 = cy*cp*cr + sy*sp*sr
-    // q1 = cy*cp*sr - sy*sp*cr
-    // q2 = cy*sp*cr + sy*cp*sr
-    // q3 = sy*cp*cr - cy*sp*sr
-    float cr = cosf(roll * 0.5f),  sr = sinf(roll * 0.5f);
-    float cp = cosf(pitch * 0.5f), sp = sinf(pitch * 0.5f);
-    float cy = cosf(yaw * 0.5f),   sy = sinf(yaw * 0.5f);
+    float cr = cos_approx(roll * 0.5f),  sr = sin_approx(roll * 0.5f);
+    float cp = cos_approx(pitch * 0.5f), sp = sin_approx(pitch * 0.5f);
+    float cy = cos_approx(yaw * 0.5f),   sy = sin_approx(yaw * 0.5f);
 
     attitude_q.p0 = cy*cp*cr + sy*sp*sr;
     attitude_q.p1 = cy*cp*sr - sy*sp*cr;
@@ -153,56 +93,45 @@ void Attitude_InitFromAccelerometer(float ax, float ay, float az)
  * @note  Roll/Pitch从加速度计计算，Yaw从磁力计计算，立即得到正确姿态
  */
 void Attitude_InitFromAccelMag(float ax, float ay, float az,
-                               float mx, float my, float mz)
+                               float mx_gauss, float my_gauss, float mz_gauss)
 {
-    // 1. 加速度向量归一化
     float acc_norm = sqrtf(ax*ax + ay*ay + az*az);
     if (acc_norm < 1e-6f) acc_norm = 1e-6f;
     ax /= acc_norm; ay /= acc_norm; az /= acc_norm;
 
-    // 2. 从加速度计计算 Roll 和 Pitch
     float denom = sqrtf(ay*ay + az*az);
     float roll, pitch;
     if (denom < 1e-6f) {
         roll = 0.0f;
         pitch = (ax < 0.0f) ? 1.57079633f : -1.57079633f;
     } else {
-        roll  = atan2f(ay, az);
-        pitch = atan2f(-ax, denom);
+        roll  = atan2_approx(ay, az);
+        pitch = atan2_approx(-ax, denom);
     }
 
-    // 3. 应用磁力计校准（如果有）
-    float mx_cal = (mx - mag_offset_x) * mag_scale_x;
-    float my_cal = (my - mag_offset_y) * mag_scale_y;
-    float mz_cal = (mz - mag_offset_z) * mag_scale_z;
-
-    // 4. 磁力计向量归一化
-    float mag_norm = sqrtf(mx_cal*mx_cal + my_cal*my_cal + mz_cal*mz_cal);
-    if (mag_norm < 1e-6f) {
-        // 磁力计数据无效，fallback到yaw=0
+    float mag_norm2 = mx_gauss*mx_gauss + my_gauss*my_gauss + mz_gauss*mz_gauss;
+    if (mag_norm2 < 1e-6f) {
         Attitude_InitFromAccelerometer(ax, ay, az);
         return;
     }
-    mx_cal /= mag_norm; my_cal /= mag_norm; mz_cal /= mag_norm;
+    float inv_mag = fast_inv_sqrt(mag_norm2);
+    float mx_unit = mx_gauss * inv_mag;
+    float my_unit = my_gauss * inv_mag;
+    float mz_unit = mz_gauss * inv_mag;
 
-    // 5. 将磁力计向量从机体坐标系旋转到水平面（倾斜补偿）
-    // 使用roll和pitch旋转磁向量到水平坐标系
-    float cos_roll  = cosf(roll);
-    float sin_roll  = sinf(roll);
-    float cos_pitch = cosf(pitch);
-    float sin_pitch = sinf(pitch);
+    float cos_roll  = cos_approx(roll);
+    float sin_roll  = sin_approx(roll);
+    float cos_pitch = cos_approx(pitch);
+    float sin_pitch = sin_approx(pitch);
 
-    // 水平面上的磁北分量（倾斜补偿后）
-    float mx_h = mx_cal * cos_pitch + my_cal * sin_roll * sin_pitch + mz_cal * cos_roll * sin_pitch;
-    float my_h = my_cal * cos_roll - mz_cal * sin_roll;
+    float mx_h = mx_unit * cos_pitch + my_unit * sin_roll * sin_pitch + mz_unit * cos_roll * sin_pitch;
+    float my_h = my_unit * cos_roll - mz_unit * sin_roll;
 
-    // 6. 计算航向角（相对于磁北）
-    float yaw = atan2f(-my_h, mx_h);
+    float yaw = atan2_approx(-my_h, mx_h);
 
-    // 7. 欧拉角转四元数（ZYX内旋）
-    float cr = cosf(roll * 0.5f),  sr = sinf(roll * 0.5f);
-    float cp = cosf(pitch * 0.5f), sp = sinf(pitch * 0.5f);
-    float cy = cosf(yaw * 0.5f),   sy = sinf(yaw * 0.5f);
+    float cr = cos_approx(roll * 0.5f),  sr = sin_approx(roll * 0.5f);
+    float cp = cos_approx(pitch * 0.5f), sp = sin_approx(pitch * 0.5f);
+    float cy = cos_approx(yaw * 0.5f),   sy = sin_approx(yaw * 0.5f);
 
     attitude_q.p0 = cy*cp*cr + sy*sp*sr;
     attitude_q.p1 = cy*cp*sr - sy*sp*cr;
@@ -210,12 +139,10 @@ void Attitude_InitFromAccelMag(float ax, float ay, float az,
     attitude_q.p3 = sy*cp*cr - cy*sp*sr;
     quat_normalize(&attitude_q);
 
-    // 8. 清零积分项和诊断
     exInt = eyInt = ezInt = 0.0f;
     lastTick = HAL_GetTick();
     attitude_diag = (AttitudeDiagnostics){0};
 
-    // 9. 更新欧拉角输出
     euler_angles.roll  = roll  * RAD2DEG;
     euler_angles.pitch = pitch * RAD2DEG;
     euler_angles.yaw   = yaw   * RAD2DEG;
@@ -223,7 +150,6 @@ void Attitude_InitFromAccelMag(float ax, float ay, float az,
 #endif
 
 #if USE_MAGNETOMETER
-// 内部实现：姿态更新核心算法（带磁力计融合）
 static Euler_angles Attitude_Update_Internal(float ax_g, float ay_g, float az_g,
                                              float gx_dps, float gy_dps, float gz_dps,
                                              float mx_gauss, float my_gauss, float mz_gauss, 
@@ -235,14 +161,12 @@ Euler_angles Attitude_Update(float ax_g, float ay_g, float az_g,
 {
     const uint32_t cycle_start = DWT->CYCCNT;
 
-    // 时间步长 dt（s）并限制范围，避免突发抖动
     uint32_t now = HAL_GetTick();
     float dt = (now - lastTick) * 0.001f;
     lastTick = now;
     if (dt < 1e-4f) dt = 1e-4f;
     if (dt > 0.05f) dt = 0.05f;
 
-    // 陀螺直接使用外部已补偿的数据（不在此处处理零偏）
     float spin_rate_dps = sqrtf(gx_dps*gx_dps + gy_dps*gy_dps + gz_dps*gz_dps);
     float gx = gx_dps * DEG2RAD;
     float gy = gy_dps * DEG2RAD;
@@ -251,49 +175,43 @@ Euler_angles Attitude_Update(float ax_g, float ay_g, float az_g,
     attitude_diag.mag_used = false;
     attitude_diag.mag_strength_ok = false;
 
-    // 加速度向量归一化
-    bool acc_valid = true;
     float acc_norm = sqrtf(ax_g*ax_g + ay_g*ay_g + az_g*az_g);
     if (acc_norm < ACC_FIELD_MIN_G) acc_norm = ACC_FIELD_MIN_G;
     ax_g /= acc_norm; ay_g /= acc_norm; az_g /= acc_norm;
+    bool acc_valid = true;
 
-    // 由当前四元数估计重力方向 v=[vx,vy,vz]
     float qw = attitude_q.p0, qx = attitude_q.p1, qy = attitude_q.p2, qz = attitude_q.p3;
     float vx = 2.0f * (qx*qz - qw*qy);
     float vy = 2.0f * (qw*qx + qy*qz);
     float vz = qw*qw - qx*qx - qy*qy + qz*qz;
 
-    // 初始化误差
     float ex = 0.0f, ey = 0.0f, ez = 0.0f;
 
-    // 加速度计误差修正
     if (acc_valid) {
-        // 误差为向量叉乘： e_acc = a_meas x a_est
         ex = (ay_g * vz - az_g * vy);
         ey = (az_g * vx - ax_g * vz);
         ez = (ax_g * vy - ay_g * vx);
     }
 
 #if USE_MAGNETOMETER
-    // 磁力计误差修正（标准 Mahony 9DoF）
     if (use_mag) {
         float mag_norm = sqrtf(mx_gauss*mx_gauss + my_gauss*my_gauss + mz_gauss*mz_gauss);
-        if (mag_norm < MAG_FIELD_MIN_GAUSS) mag_norm = MAG_FIELD_MIN_GAUSS;
+        const bool mag_strength_ok = mag_norm >= MAG_FIELD_MIN_GAUSS;
+        if (!mag_strength_ok) {
+            mag_norm = MAG_FIELD_MIN_GAUSS;
+        }
         mx_gauss /= mag_norm; my_gauss /= mag_norm; mz_gauss /= mag_norm;
 
-        // 参考方向计算（MahonyAHRS）
         float hx = 2.0f * (mx_gauss * (0.5f - qy*qy - qz*qz) + my_gauss * (qx*qy - qw*qz) + mz_gauss * (qx*qz + qw*qy));
         float hy = 2.0f * (mx_gauss * (qx*qy + qw*qz) + my_gauss * (0.5f - qx*qx - qz*qz) + mz_gauss * (qy*qz - qw*qx));
         float hz = 2.0f * (mx_gauss * (qx*qz - qw*qy) + my_gauss * (qy*qz + qw*qx) + mz_gauss * (0.5f - qx*qx - qy*qy));
         float bx = sqrtf(hx*hx + hy*hy);
         float bz = hz;
 
-        // 估计的磁向量
         float wx = 2.0f * (bx * (0.5f - qy*qy - qz*qz) + bz * (qx*qz - qw*qy));
         float wy = 2.0f * (bx * (qx*qy - qw*qz) + bz * (qw*qx + qy*qz));
         float wz = 2.0f * (bx * (qw*qy + qx*qz) + bz * (0.5f - qx*qx - qy*qy));
 
-        // 磁误差： e_mag = m_meas x m_est
         float ex_mag = (my_gauss * wz - mz_gauss * wy);
         float ey_mag = (mz_gauss * wx - mx_gauss * wz);
         float ez_mag = (mx_gauss * wy - my_gauss * wx);
@@ -302,46 +220,40 @@ Euler_angles Attitude_Update(float ax_g, float ay_g, float az_g,
         ey += ey_mag;
         ez += ez_mag;
         attitude_diag.mag_used = true;
-        attitude_diag.mag_strength_ok = true;
+        attitude_diag.mag_strength_ok = mag_strength_ok;
     }
 #endif
 
-    // 误差积分项（积分抗漂移）
     exInt += twoKi * ex * dt;
     eyInt += twoKi * ey * dt;
     ezInt += twoKi * ez * dt;
 
-    // 比例 + 积分 反馈修正陀螺
     gx += twoKp * ex + exInt;
     gy += twoKp * ey + eyInt;
     gz += twoKp * ez + ezInt;
 
-    // 四元数微分： q_dot = 0.5 * q otimes [0,gx,gy,gz]
     float qw_dot = 0.5f * (-qx*gx - qy*gy - qz*gz);
     float qx_dot = 0.5f * ( qw*gx + qy*gz - qz*gy);
     float qy_dot = 0.5f * ( qw*gy - qx*gz + qz*gx);
     float qz_dot = 0.5f * ( qw*gz + qx*gy - qy*gx);
 
-    // 四元数积分(更新四元数)
     attitude_q.p0 += qw_dot * dt;
     attitude_q.p1 += qx_dot * dt;
     attitude_q.p2 += qy_dot * dt;
     attitude_q.p3 += qz_dot * dt;
-    //并归一化
     quat_normalize(&attitude_q);
 
-    // 四元数转欧拉角（ZYX）
     qw = attitude_q.p0; qx = attitude_q.p1; qy = attitude_q.p2; qz = attitude_q.p3;
     float sinr_cosp = 2.0f * (qw*qx + qy*qz);
     float cosr_cosp = 1.0f - 2.0f * (qx*qx + qy*qy);
-    float roll = atan2f(sinr_cosp, cosr_cosp);
+    float roll = atan2_approx(sinr_cosp, cosr_cosp);
 
     float sinp = 2.0f * (qw*qy - qz*qx);
-    float pitch = (fabsf(sinp) >= 1.0f) ? copysignf((float)M_PI/2.0f, sinp) : asinf(sinp);
+    float pitch = (fabsf(sinp) >= 1.0f) ? copysignf(0.5f * M_PIf, sinp) : asinf(sinp);
 
     float siny_cosp = 2.0f * (qw*qz + qx*qy);
     float cosy_cosp = 1.0f - 2.0f * (qy*qy + qz*qz);
-    float yaw = atan2f(siny_cosp, cosy_cosp);
+    float yaw = atan2_approx(siny_cosp, cosy_cosp);
 
     euler_angles.roll  = roll  * RAD2DEG;
     euler_angles.pitch = pitch * RAD2DEG;
@@ -360,22 +272,15 @@ Euler_angles Attitude_Update(float ax_g, float ay_g, float az_g,
 }
 
 #if USE_MAGNETOMETER
-// 公开接口：带磁力计的姿态更新
 Euler_angles Attitude_Update(float ax_g, float ay_g, float az_g,
                              float gx_dps, float gy_dps, float gz_dps,
                              float mx_gauss, float my_gauss, float mz_gauss)
 {
-    // 应用磁力计校准参数
-    float mx_cal = (mx_gauss - mag_offset_x) * mag_scale_x;
-    float my_cal = (my_gauss - mag_offset_y) * mag_scale_y;
-    float mz_cal = (mz_gauss - mag_offset_z) * mag_scale_z;
-    
     return Attitude_Update_Internal(ax_g, ay_g, az_g, 
                                    gx_dps, gy_dps, gz_dps, 
-                                   mx_cal, my_cal, mz_cal, true);
+                                   mx_gauss, my_gauss, mz_gauss, true);
 }
 
-// 公开接口：仅使用IMU的姿态更新
 Euler_angles Attitude_Update_IMU_Only(float ax_g, float ay_g, float az_g,
                                       float gx_dps, float gy_dps, float gz_dps)
 {
@@ -385,33 +290,21 @@ Euler_angles Attitude_Update_IMU_Only(float ax_g, float ay_g, float az_g,
 }
 #endif
 
-/**
- * @brief 获取当前横滚角
- */
 float Attitude_Get_Roll(void)
 {
     return euler_angles.roll;
 }
 
-/**
- * @brief 获取当前俯仰角
- */
 float Attitude_Get_Pitch(void)
 {
     return euler_angles.pitch;
 }
 
-/**
- * @brief 获取当前航向角
- */
 float Attitude_Get_Yaw(void)
 {
     return euler_angles.yaw;
 }
 
-/**
- * @brief 获取当前完整姿态角
- */
 Euler_angles Attitude_Get_Angles(void)
 {
     return euler_angles;

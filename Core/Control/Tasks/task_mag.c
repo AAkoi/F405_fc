@@ -10,6 +10,8 @@
 #include <math.h>
 #include "stm32f4xx_hal.h"
 
+#define MAG_FIELD_MIN_GAUSS 0.05f
+
 // 处理状态
 static bool mag_processing_ready = false;   // 是否已初始化
 
@@ -148,3 +150,26 @@ bool mag_process_sample(int16_t raw_x, int16_t raw_y, int16_t raw_z)
     return true;
 }
 
+/**
+ * @brief 获取归一化后的磁力计向量
+ */
+bool mag_get_normalized(float *mx_unit, float *my_unit, float *mz_unit, float *strength_gauss)
+{
+    if (!mag_calibrated.ready) {
+        return false;
+    }
+
+    float norm = mag_calibrated.magnitude_gauss;
+    if (strength_gauss) {
+        *strength_gauss = norm;
+    }
+    if (norm < MAG_FIELD_MIN_GAUSS) {
+        norm = MAG_FIELD_MIN_GAUSS;
+    }
+
+    const float inv = 1.0f / norm;
+    *mx_unit = mag_calibrated.gauss_x * inv;
+    *my_unit = mag_calibrated.gauss_y * inv;
+    *mz_unit = mag_calibrated.gauss_z * inv;
+    return true;
+}

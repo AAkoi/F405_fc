@@ -39,16 +39,16 @@ typedef struct {
 
 // 运行诊断信息（性能 / 传感器使用状态）
 typedef struct {
-    float dt;               // 上次更新的时间步长 (s)
+    float dt;               // 上次更新的时间步长(s)
     float spin_rate_dps;    // 上次更新时陀螺旋转率 (deg/s)
     bool acc_valid;         // 是否使用了加速度计
     bool mag_used;          // 是否使用了磁力计
     bool mag_strength_ok;   // 磁场幅值是否在合理范围
-    uint32_t cycles;        // 本次姿态更新耗费的 DWT 时钟周期数
+    uint32_t cycles;        // 本次姿态更新耗费的DWT 时钟周期数
     uint32_t cycles_max;    // 运行以来的最大周期数
 } AttitudeDiagnostics;
 
-// 模块状态（在 attitude.c 中定义）
+// 模块状态（由 attitude.c 定义）
 extern Euler_angles euler_angles;
 extern Quaternion attitude_q;
 
@@ -62,37 +62,21 @@ void Attitude_Init(void);
 // 注意：此函数会将yaw初始化为0，然后靠磁力计缓慢收敛
 void Attitude_InitFromAccelerometer(float ax_g, float ay_g, float az_g);
 
-// 设置陀螺仪零偏（单位：dps）
-void Attitude_SetGyroBias(float bias_x, float bias_y, float bias_z);
-
 #if USE_MAGNETOMETER
-// 使用加速度计+磁力计初始化姿态（推荐！立即得到正确的yaw）
-// @param ax_g, ay_g, az_g: 加速度（单位：g）
-// @param mx, my, mz: 磁场（单位：gauss，原始值，函数内部会应用校准）
+// 使用加速度 + 磁力计初始化姿态（推荐！立即得到正确的yaw）
 void Attitude_InitFromAccelMag(float ax_g, float ay_g, float az_g,
                                float mx, float my, float mz);
 
-// 设置磁力计校准参数（硬铁偏移和软铁缩放）
-void Attitude_SetMagCalibration(float offset_x, float offset_y, float offset_z,
-                                float scale_x, float scale_y, float scale_z);
-
 // 更新姿态（带磁力计融合）
-// @param ax_g, ay_g, az_g: 加速度（单位：g）
-// @param gx_dps, gy_dps, gz_dps: 角速度（单位：°/s）
-// @param mx_gauss, my_gauss, mz_gauss: 磁场强度（单位：gauss，已校准）
 Euler_angles Attitude_Update(float ax_g, float ay_g, float az_g,
                              float gx_dps, float gy_dps, float gz_dps,
                              float mx_gauss, float my_gauss, float mz_gauss);
 
 // 更新姿态（仅使用IMU，不使用磁力计）
-// @param ax_g, ay_g, az_g: 加速度（单位：g）
-// @param gx_dps, gy_dps, gz_dps: 角速度（单位：°/s）
 Euler_angles Attitude_Update_IMU_Only(float ax_g, float ay_g, float az_g,
                                       float gx_dps, float gy_dps, float gz_dps);
 #else
 // 更新姿态（不带磁力计）
-// @param ax_g, ay_g, az_g: 加速度（单位：g）
-// @param gx_dps, gy_dps, gz_dps: 角速度（单位：°/s）
 Euler_angles Attitude_Update(float ax_g, float ay_g, float az_g,
                              float gx_dps, float gy_dps, float gz_dps);
 #endif
