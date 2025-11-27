@@ -72,15 +72,7 @@ void Attitude_InitFromAccelerometer(float ax, float ay, float az)
     }
     float yaw   = 0.0f;
 
-    float cr = cos_approx(roll * 0.5f),  sr = sin_approx(roll * 0.5f);
-    float cp = cos_approx(pitch * 0.5f), sp = sin_approx(pitch * 0.5f);
-    float cy = cos_approx(yaw * 0.5f),   sy = sin_approx(yaw * 0.5f);
-
-    attitude_q.p0 = cy*cp*cr + sy*sp*sr;
-    attitude_q.p1 = cy*cp*sr - sy*sp*cr;
-    attitude_q.p2 = cy*sp*cr + sy*cp*sr;
-    attitude_q.p3 = sy*cp*cr - cy*sp*sr;
-    quat_normalize(&attitude_q);
+    attitude_q = Attitude_EulerToQuat(roll, pitch, yaw);
 
     exInt = eyInt = ezInt = 0.0f;
     lastTick = HAL_GetTick();
@@ -129,15 +121,7 @@ void Attitude_InitFromAccelMag(float ax, float ay, float az,
 
     float yaw = atan2_approx(-my_h, mx_h);
 
-    float cr = cos_approx(roll * 0.5f),  sr = sin_approx(roll * 0.5f);
-    float cp = cos_approx(pitch * 0.5f), sp = sin_approx(pitch * 0.5f);
-    float cy = cos_approx(yaw * 0.5f),   sy = sin_approx(yaw * 0.5f);
-
-    attitude_q.p0 = cy*cp*cr + sy*sp*sr;
-    attitude_q.p1 = cy*cp*sr - sy*sp*cr;
-    attitude_q.p2 = cy*sp*cr + sy*cp*sr;
-    attitude_q.p3 = sy*cp*cr - cy*sp*sr;
-    quat_normalize(&attitude_q);
+    attitude_q = Attitude_EulerToQuat(roll, pitch, yaw);
 
     exInt = eyInt = ezInt = 0.0f;
     lastTick = HAL_GetTick();
@@ -313,4 +297,20 @@ Euler_angles Attitude_Get_Angles(void)
 const AttitudeDiagnostics *Attitude_GetDiagnostics(void)
 {
     return &attitude_diag;
+}
+
+// 欧拉角(rad) 转 四元数（ZYX，内旋）
+Quaternion Attitude_EulerToQuat(float roll_rad, float pitch_rad, float yaw_rad)
+{
+    float cr = cos_approx(roll_rad * 0.5f),  sr = sin_approx(roll_rad * 0.5f);
+    float cp = cos_approx(pitch_rad * 0.5f), sp = sin_approx(pitch_rad * 0.5f);
+    float cy = cos_approx(yaw_rad * 0.5f),   sy = sin_approx(yaw_rad * 0.5f);
+
+    Quaternion q;
+    q.p0 = cy*cp*cr + sy*sp*sr;
+    q.p1 = cy*cp*sr - sy*sp*cr;
+    q.p2 = cy*sp*cr + sy*cp*sr;
+    q.p3 = sy*cp*cr - cy*sp*sr;
+    quat_normalize(&q);
+    return q;
 }

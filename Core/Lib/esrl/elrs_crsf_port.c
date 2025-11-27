@@ -61,6 +61,15 @@ static inline float rc_map_throttle_11b(uint16_t v)
     return clampf(t, 0.0f, 1.0f);
 }
 
+uint16_t ELRS_CRSF_MapRaw11bToUs(uint16_t v11b)
+{
+    // 0..2047 -> 1000..2000（中心约 1500），并做合理限幅
+    int32_t us = 1500 + ((int32_t)v11b - 1024) * 1000 / 1024;
+    if (us < 800) us = 800;
+    if (us > 2200) us = 2200;
+    return (uint16_t)us;
+}
+
 static void crsf_on_rc_channels(elrs_crsf_t *ctx, const uint16_t *ch, uint8_t count, uint32_t ts_us)
 {
     (void)ctx;

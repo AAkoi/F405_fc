@@ -117,6 +117,103 @@
     <!-- 3D 容器 -->
     <div id="canvas-container"></div>
 
+    <!-- ELRS/RC 状态面板 -->
+    <div class="rc-panel">
+        <div class="rc-header">
+            <div class="rc-title">ELRS / CRSF RC</div>
+            <div class="rc-meta">
+                <span id="rc-link-state">Link: --</span>
+                <span id="rc-rssi">RSSI: --</span>
+                <span id="rc-lq">LQ: --</span>
+            </div>
+        </div>
+        <div class="rc-body">
+            <div class="rc-sticks">
+                <div class="rc-stick">
+                    <div class="rc-stick-label">THR / YAW</div>
+                    <div class="rc-stick-base">
+                        <div id="rc-stick-left" class="rc-stick-knob"></div>
+                    </div>
+                </div>
+                <div class="rc-stick">
+                    <div class="rc-stick-label">PITCH / ROLL</div>
+                    <div class="rc-stick-base">
+                        <div id="rc-stick-right" class="rc-stick-knob"></div>
+                    </div>
+                </div>
+            </div>
+            <div class="rc-bars">
+                <div class="rc-bar">
+                    <span class="rc-bar-label">THR</span>
+                    <div class="rc-bar-track">
+                        <div id="rc-bar-thr" class="rc-bar-fill"></div>
+                        <div class="rc-bar-mid rc-bar-mid-left"></div>
+                        <div class="rc-bar-mid rc-bar-mid-right"></div>
+                    </div>
+                    <span id="rc-bar-thr-val" class="rc-bar-val">0%</span>
+                </div>
+                <div class="rc-bar">
+                    <span class="rc-bar-label">ROLL</span>
+                    <div class="rc-bar-track">
+                        <div id="rc-bar-roll" class="rc-bar-fill rc-centered"></div>
+                        <div class="rc-bar-mid"></div>
+                    </div>
+                    <span id="rc-bar-roll-val" class="rc-bar-val">0</span>
+                </div>
+                <div class="rc-bar">
+                    <span class="rc-bar-label">PITCH</span>
+                    <div class="rc-bar-track">
+                        <div id="rc-bar-pitch" class="rc-bar-fill rc-centered"></div>
+                        <div class="rc-bar-mid"></div>
+                    </div>
+                    <span id="rc-bar-pitch-val" class="rc-bar-val">0</span>
+                </div>
+                <div class="rc-bar">
+                    <span class="rc-bar-label">YAW</span>
+                    <div class="rc-bar-track">
+                        <div id="rc-bar-yaw" class="rc-bar-fill rc-centered"></div>
+                        <div class="rc-bar-mid"></div>
+                    </div>
+                    <span id="rc-bar-yaw-val" class="rc-bar-val">0</span>
+                </div>
+            </div>
+            <div class="rc-aux">
+                <div class="rc-aux-item">
+                    <span class="rc-aux-label">AUX1</span>
+                    <div class="rc-aux-track"><div id="rc-aux-1" class="rc-aux-fill"></div></div>
+                </div>
+                <div class="rc-aux-item">
+                    <span class="rc-aux-label">AUX2</span>
+                    <div class="rc-aux-track"><div id="rc-aux-2" class="rc-aux-fill"></div></div>
+                </div>
+                <div class="rc-aux-item">
+                    <span class="rc-aux-label">AUX3</span>
+                    <div class="rc-aux-track"><div id="rc-aux-3" class="rc-aux-fill"></div></div>
+                </div>
+                <div class="rc-aux-item">
+                    <span class="rc-aux-label">AUX4</span>
+                    <div class="rc-aux-track"><div id="rc-aux-4" class="rc-aux-fill"></div></div>
+                </div>
+                <div class="rc-aux-item">
+                    <span class="rc-aux-label">AUX5</span>
+                    <div class="rc-aux-track"><div id="rc-aux-5" class="rc-aux-fill"></div></div>
+                </div>
+                <div class="rc-aux-item">
+                    <span class="rc-aux-label">AUX6</span>
+                    <div class="rc-aux-track"><div id="rc-aux-6" class="rc-aux-fill"></div></div>
+                </div>
+                <div class="rc-aux-item">
+                    <span class="rc-aux-label">AUX7</span>
+                    <div class="rc-aux-track"><div id="rc-aux-7" class="rc-aux-fill"></div></div>
+                </div>
+                <div class="rc-aux-item">
+                    <span class="rc-aux-label">AUX8</span>
+                    <div class="rc-aux-track"><div id="rc-aux-8" class="rc-aux-fill"></div></div>
+                </div>
+            </div>
+        </div>
+    </div>
+
     <!-- 视角切换 -->
     <div class="control-bar">
         <button class="view-btn active" data-mode="iso">ISO</button>

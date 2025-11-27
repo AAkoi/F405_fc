@@ -2,6 +2,7 @@
 #include "bsp_pins.h"
 
 I2C_HandleTypeDef hi2c1;
+I2C_HandleTypeDef hi2c2; // 预留给 TOF/其他设备
 I2C_HandleTypeDef hi2c3;
 extern void Error_Handler(void);
 
@@ -34,6 +35,32 @@ void MX_I2C1_Init(void)
     HAL_NVIC_EnableIRQ(I2C1_EV_IRQn);
     HAL_NVIC_SetPriority(I2C1_ER_IRQn, 5, 0);
     HAL_NVIC_EnableIRQ(I2C1_ER_IRQn);
+}
+
+/**
+ * @brief I2C2初始化函数（默认 400kHz，管脚由 bsp_pins.h 定义）
+ */
+void MX_I2C2_Init(void)
+{
+    hi2c2.Instance = I2C2;
+    hi2c2.Init.ClockSpeed = 400000;  // 400kHz
+    hi2c2.Init.DutyCycle = I2C_DUTYCYCLE_2;
+    hi2c2.Init.OwnAddress1 = 0;
+    hi2c2.Init.AddressingMode = I2C_ADDRESSINGMODE_7BIT;
+    hi2c2.Init.DualAddressMode = I2C_DUALADDRESS_DISABLE;
+    hi2c2.Init.OwnAddress2 = 0;
+    hi2c2.Init.GeneralCallMode = I2C_GENERALCALL_DISABLE;
+    hi2c2.Init.NoStretchMode = I2C_NOSTRETCH_DISABLE;
+    
+    if (HAL_I2C_Init(&hi2c2) != HAL_OK)
+    {
+        Error_Handler();
+    }
+
+    HAL_NVIC_SetPriority(I2C2_EV_IRQn, 5, 0);
+    HAL_NVIC_EnableIRQ(I2C2_EV_IRQn);
+    HAL_NVIC_SetPriority(I2C2_ER_IRQn, 5, 0);
+    HAL_NVIC_EnableIRQ(I2C2_ER_IRQn);
 }
 
 /**
@@ -80,6 +107,35 @@ void HAL_I2C_MspInit(I2C_HandleTypeDef* hi2c)
         GPIO_InitStruct.Speed = GPIO_SPEED_FREQ_VERY_HIGH;
         GPIO_InitStruct.Alternate = GPIO_AF4_I2C1;
         HAL_GPIO_Init(BMP280_IIC1_GPIO_PORT, &GPIO_InitStruct);
+    }
+    else if (hi2c->Instance == I2C2)
+    {
+        GPIO_InitTypeDef GPIO_InitStruct = {0};
+
+        __HAL_RCC_GPIOB_CLK_ENABLE(); // 默认使用 PB10/PB11，如需更改请在 bsp_pins.h 定义 I2C2_SCL/SDA
+        __HAL_RCC_I2C2_CLK_ENABLE();
+
+#ifndef I2C2_SCL_PIN
+#define I2C2_SCL_PIN     GPIO_PIN_10
+#define I2C2_SCL_PORT    GPIOB
+#endif
+#ifndef I2C2_SDA_PIN
+#define I2C2_SDA_PIN     GPIO_PIN_11
+#define I2C2_SDA_PORT    GPIOB
+#endif
+
+        // SCL
+        GPIO_InitStruct.Pin = I2C2_SCL_PIN;
+        GPIO_InitStruct.Mode = GPIO_MODE_AF_OD;
+        GPIO_InitStruct.Pull = GPIO_PULLUP;
+        GPIO_InitStruct.Speed = GPIO_SPEED_FREQ_VERY_HIGH;
+        GPIO_InitStruct.Alternate = GPIO_AF4_I2C2;
+        HAL_GPIO_Init(I2C2_SCL_PORT, &GPIO_InitStruct);
+
+        // SDA
+        GPIO_InitStruct.Pin = I2C2_SDA_PIN;
+        GPIO_InitStruct.Alternate = GPIO_AF4_I2C2;
+        HAL_GPIO_Init(I2C2_SDA_PORT, &GPIO_InitStruct);
     }
     else if (hi2c->Instance == I2C3)
     {

@@ -19,7 +19,31 @@ class UIManager {
             pitch: document.getElementById('val-pitch'),
             yaw: document.getElementById('val-yaw'),
             statusText: document.getElementById('status-text'),
-            statusDot: document.getElementById('status-dot')
+            statusDot: document.getElementById('status-dot'),
+            // RC / ELRS
+            rcStickLeft: document.getElementById('rc-stick-left'),
+            rcStickRight: document.getElementById('rc-stick-right'),
+            rcBarThr: document.getElementById('rc-bar-thr'),
+            rcBarRoll: document.getElementById('rc-bar-roll'),
+            rcBarPitch: document.getElementById('rc-bar-pitch'),
+            rcBarYaw: document.getElementById('rc-bar-yaw'),
+            rcBarThrVal: document.getElementById('rc-bar-thr-val'),
+            rcBarRollVal: document.getElementById('rc-bar-roll-val'),
+            rcBarPitchVal: document.getElementById('rc-bar-pitch-val'),
+            rcBarYawVal: document.getElementById('rc-bar-yaw-val'),
+            rcAux: [
+                document.getElementById('rc-aux-1'),
+                document.getElementById('rc-aux-2'),
+                document.getElementById('rc-aux-3'),
+                document.getElementById('rc-aux-4'),
+                document.getElementById('rc-aux-5'),
+                document.getElementById('rc-aux-6'),
+                document.getElementById('rc-aux-7'),
+                document.getElementById('rc-aux-8')
+            ],
+            rcLinkState: document.getElementById('rc-link-state'),
+            rcRssi: document.getElementById('rc-rssi'),
+            rcLq: document.getElementById('rc-lq')
         };
     }
 
@@ -74,6 +98,9 @@ class UIManager {
         if (this.elements.imuTemp) {
             this.elements.imuTemp.innerText = (sensorData.imuTempDeci / 10).toFixed(1);
         }
+
+        // 更新 RC 显示
+        this.updateRC(sensorData.rc);
     }
 
     updateOrientation(orientation) {
@@ -132,5 +159,74 @@ class UIManager {
             this.elements.statusText.innerText = recording ? "Recording..." : "Connected";
         }
     }
-}
 
+    updateRC(rc) {
+        if (!rc) return;
+        const clamp = (v, lo, hi) => Math.min(Math.max(v, lo), hi);
+
+        // 摇杆可视化
+        const stickLeft = this.elements.rcStickLeft;
+        if (stickLeft) {
+            const x = clamp(rc.yaw, -1, 1) * 40;          // 左右
+            const y = (0.5 - clamp(rc.throttle, 0, 1)) * 80; // 油门向上
+            stickLeft.style.transform = `translate(calc(-50% + ${x}px), calc(-50% + ${y}px))`;
+        }
+        const stickRight = this.elements.rcStickRight;
+        if (stickRight) {
+            const x = clamp(rc.roll, -1, 1) * 40;
+            const y = clamp(-rc.pitch, -1, 1) * 40; // 正pitch让摇杆向上
+            stickRight.style.transform = `translate(calc(-50% + ${x}px), calc(-50% + ${y}px))`;
+        }
+
+        // 条形值
+        const setCenteredBar = (el, val) => {
+            if (!el) return;
+            const v = clamp(val, -1, 1);
+            const width = Math.abs(v) * 50; // 百分比
+            const left = 50 + Math.min(v, 0) * 50;
+            el.style.width = `${width}%`;
+            el.style.left = `${left}%`;
+        };
+        const setPositiveBar = (el, val) => {
+            if (!el) return;
+            const v = clamp(val, 0, 1) * 100;
+            el.style.width = `${v}%`;
+            el.style.left = '0%';
+        };
+
+        setPositiveBar(this.elements.rcBarThr, rc.throttle);
+        setCenteredBar(this.elements.rcBarRoll, rc.roll);
+        setCenteredBar(this.elements.rcBarPitch, rc.pitch);
+        setCenteredBar(this.elements.rcBarYaw, rc.yaw);
+
+        if (this.elements.rcBarThrVal) {
+            this.elements.rcBarThrVal.innerText = `${Math.round(clamp(rc.throttle,0,1)*100)}%`;
+        }
+        if (this.elements.rcBarRollVal) this.elements.rcBarRollVal.innerText = rc.roll.toFixed(2);
+        if (this.elements.rcBarPitchVal) this.elements.rcBarPitchVal.innerText = rc.pitch.toFixed(2);
+        if (this.elements.rcBarYawVal) this.elements.rcBarYawVal.innerText = rc.yaw.toFixed(2);
+
+        // AUX
+        if (this.elements.rcAux && Array.isArray(this.elements.rcAux)) {
+            for (let i = 0; i < this.elements.rcAux.length; i++) {
+                const el = this.elements.rcAux[i];
+                if (el) {
+                    const v = rc.aux && rc.aux[i] !== undefined ? clamp(rc.aux[i], 0, 1) : 0;
+                    el.style.width = `${v * 100}%`;
+                }
+            }
+        }
+
+        // 链路状态
+        if (this.elements.rcLinkState) {
+            const alive = (Date.now() - rc.lastTs) < 600;
+            this.elements.rcLinkState.innerText = `Link: ${alive ? 'Active' : '--'}`;
+        }
+        if (this.elements.rcRssi) {
+            this.elements.rcRssi.innerText = `RSSI: ${rc.rssi !== null ? rc.rssi.toFixed(0) + ' dB' : '--'}`;
+        }
+        if (this.elements.rcLq) {
+            this.elements.rcLq.innerText = `LQ: ${rc.lq !== null ? rc.lq.toFixed(0) + '%' : '--'}`;
+        }
+    }
+}

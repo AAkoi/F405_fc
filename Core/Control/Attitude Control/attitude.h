@@ -90,4 +90,7 @@ Euler_angles Attitude_Get_Angles(void);
 // 获取诊断信息（只读指针）
 const AttitudeDiagnostics *Attitude_GetDiagnostics(void);
 
+// 欧拉角(rad) 转 四元数
+Quaternion Attitude_EulerToQuat(float roll_rad, float pitch_rad, float yaw_rad);
+
 #endif // ATTITUDE_H

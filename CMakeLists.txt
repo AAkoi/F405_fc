@@ -63,6 +63,14 @@ target_sources(${CMAKE_PROJECT_NAME} PRIVATE
     Core/Lib/hmc5883l/hmc5883l.c
     Core/Lib/hmc5883l/hmc5883l_lib.c
     
+    # VL53L0X ToF Distance Sensor Library
+    Core/Lib/tof/tof.c
+    Core/Lib/tof/core/src/vl53l0x_api.c
+    Core/Lib/tof/core/src/vl53l0x_api_calibration.c
+    Core/Lib/tof/core/src/vl53l0x_api_core.c
+    Core/Lib/tof/core/src/vl53l0x_api_ranging.c
+    Core/Lib/tof/core/src/vl53l0x_api_strings.c
+    
     # ELRS/CRSF UART helper
     Core/Lib/esrl/elrs_crsf_uart.c
     Core/Lib/esrl/elrs_crsf_port.c
@@ -103,6 +111,9 @@ target_include_directories(${CMAKE_PROJECT_NAME} PRIVATE
     Core/Lib/icm42688p          # ICM42688P library
     Core/Lib/bmp280             # BMP280 library
     Core/Lib/hmc5883l           # HMC5883L library
+    Core/Lib/tof                # VL53L0X ToF library
+    Core/Lib/tof/core/inc       # VL53L0X core API headers
+    Core/Lib/tof/platform/inc   # VL53L0X platform headers
     Core/Lib/esrl               # ELRS/CRSF helper
     Core/Control/PID            # PID controller
     Core/Control/Filter         # Filters

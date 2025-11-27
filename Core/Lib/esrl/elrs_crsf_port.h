@@ -63,6 +63,9 @@ bool ELRS_CRSF_IsActive(uint32_t timeout_ms);
 // 发送一次 RX 绑定命令（让接收机进入绑定，部分接收机支持）
 void ELRS_CRSF_SendBind(void);
 
+// 将 0..2047 原始通道映射到近似 1000..2000us（中心 ~1500）
+uint16_t ELRS_CRSF_MapRaw11bToUs(uint16_t v11b);
+
 #ifdef __cplusplus
 }
 #endif
