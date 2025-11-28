@@ -1,0 +1,480 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <title>IMU Visualizer Pro</title>
+    <style>
+        /* --- 基础环境 --- */
+        body {
+            background-color: #F3F4F6;
+            font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Helvetica, Arial, sans-serif;
+            display: flex;
+            justify-content: center;
+            padding-top: 50px;
+        }
+
+        /* --- 卡片容器 --- */
+        .imu-card {
+            width: 340px; /* 稍微宽一点点，容纳下拉框 */
+            background: white;
+            border-radius: 10px; /* 圆角稍微大一点，更柔和 */
+            box-shadow: 0 4px 6px -1px rgba(0, 0, 0, 0.1), 0 2px 4px -1px rgba(0, 0, 0, 0.06);
+            padding: 16px;
+            box-sizing: border-box;
+            position: relative;
+            overflow: hidden;
+            /* 高度自适应过渡 */
+            transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+        }
+
+        /* --- 顶部 Header --- */
+        .imu-header {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            margin-bottom: 12px;
+            height: 28px;
+        }
+
+        .imu-title {
+            font-size: 14px;
+            font-weight: 700;
+            color: #475569;
+            white-space: nowrap;
+        }
+
+        /* --- 下拉选择框 (核心优化) --- */
+        .sensor-select {
+            appearance: none; /* 去掉默认丑陋样式 */
+            background-color: #F1F5F9;
+            border: none;
+            border-radius: 6px;
+            padding: 4px 24px 4px 10px; /* 右侧留空给箭头 */
+            font-size: 12px;
+            font-weight: 600;
+            color: #64748B;
+            cursor: pointer;
+            outline: none;
+            text-align: center;
+            transition: all 0.2s;
+            /* 自定义下拉箭头 (SVG base64) */
+            background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' fill='none' viewBox='0 0 24 24' stroke='%2364748B'%3E%3Cpath stroke-linecap='round' stroke-linejoin='round' stroke-width='2' d='M19 9l-7 7-7-7'%3E%3C/path%3E%3C/svg%3E");
+            background-repeat: no-repeat;
+            background-position: right 4px center;
+            background-size: 14px;
+            
+            /* 初始隐藏，只在图表模式显示，JS控制 */
+            opacity: 0; 
+            pointer-events: none;
+            width: 0; 
+            margin: 0;
+        }
+        
+        .sensor-select:hover {
+            background-color: #E2E8F0;
+            color: #334155;
+        }
+
+        /* 当处于图表模式时，下拉框显示 */
+        .imu-card.view-mode-chart .sensor-select {
+            opacity: 1;
+            pointer-events: auto;
+            width: auto;
+            margin: 0 8px; /* 给两边留点空隙 */
+        }
+
+        /* --- 切换按钮 --- */
+        .view-toggle-btn {
+            background: transparent;
+            border: 1px solid #E2E8F0;
+            border-radius: 6px;
+            width: 28px;
+            height: 28px;
+            flex-shrink: 0; /* 防止被挤压 */
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            cursor: pointer;
+            color: #94A3B8;
+            transition: all 0.2s;
+        }
+        .view-toggle-btn:hover {
+            border-color: #3B82F6;
+            color: #3B82F6;
+            background: #EFF6FF;
+        }
+
+        /* --- 内容区域 --- */
+        .content-wrapper {
+            position: relative;
+            /* 这里不设固定高度，由内容撑开 */
+        }
+
+        /* 表格视图 */
+        .table-view {
+            width: 100%;
+            transition: opacity 0.2s ease;
+        }
+        /* 隐藏表格的样式 */
+        .imu-card.view-mode-chart .table-view {
+            display: none; /* 直接移除DOM流，防止高度塌陷问题 */
+        }
+
+        .data-table {
+            width: 100%;
+            border-collapse: separate;
+            border-spacing: 0 4px; /* 行间距 */
+            font-size: 12px;
+            text-align: center;
+        }
+        .data-table th { color: #94A3B8; font-weight: 500; font-size: 11px; }
+        .data-table td { 
+            color: #334155; 
+            font-family: 'Menlo', monospace; 
+            background: #F8FAFC; 
+            padding: 8px 0; 
+            border-radius: 4px;
+        }
+        .data-table td:first-child { 
+            font-weight: 600; 
+            color: #64748B; 
+            background: transparent; 
+            text-align: left; 
+            padding-left: 4px;
+        }
+        .col-x { color: #EF4444; }
+        .col-y { color: #10B981; }
+        .col-z { color: #3B82F6; }
+
+        /* --- 图表视图 --- */
+        .chart-view {
+            display: none; /* 默认不显示 */
+            flex-direction: column;
+            gap: 12px; /* 图表之间的间距 */
+            padding-top: 4px;
+            padding-bottom: 4px; /* 底部留白，修复文字溢出 */
+        }
+        .imu-card.view-mode-chart .chart-view {
+            display: flex;
+        }
+
+        /* 单行图表块 */
+        .mini-chart-row {
+            display: flex;
+            flex-direction: column;
+            width: 100%;
+            /* 默认高度自适应 */
+        }
+
+        .chart-header {
+            display: flex;
+            justify-content: space-between;
+            align-items: flex-end; /* 底部对齐 */
+            font-size: 11px;
+            color: #64748B;
+            margin-bottom: 4px; /* 增加一点间距，防止文字贴着画布 */
+            padding: 0 2px;
+        }
+
+        .chart-canvas-container {
+            background: #F8FAFC;
+            border-radius: 6px;
+            border: 1px solid #F1F5F9;
+            width: 100%;
+            position: relative;
+            overflow: hidden;
+            /* 默认高度：3个都显示时比较扁 */
+            height: 40px; 
+            transition: height 0.3s ease;
+        }
+        
+        canvas { display: block; width: 100%; height: 100%; }
+
+        /* 数值显示 */
+        .live-val { font-family: monospace; font-weight: 700; margin-left: 6px; font-size: 11px; }
+        .val-x { color: #EF4444; }
+        .val-y { color: #10B981; }
+        .val-z { color: #3B82F6; }
+
+        /* --- 筛选模式样式 (单显模式) --- */
+        /* 1. 选中 Gyro: 隐藏其他，增高 Gyro */
+        .chart-view[data-filter="gyro"] .row-acc,
+        .chart-view[data-filter="gyro"] .row-mag { display: none; }
+        .chart-view[data-filter="gyro"] .row-gyro .chart-canvas-container { height: 140px; }
+
+        /* 2. 选中 Acc */
+        .chart-view[data-filter="acc"] .row-gyro,
+        .chart-view[data-filter="acc"] .row-mag { display: none; }
+        .chart-view[data-filter="acc"] .row-acc .chart-canvas-container { height: 140px; }
+
+        /* 3. 选中 Mag */
+        .chart-view[data-filter="mag"] .row-gyro,
+        .chart-view[data-filter="mag"] .row-acc { display: none; }
+        .chart-view[data-filter="mag"] .row-mag .chart-canvas-container { height: 140px; }
+
+    </style>
+</head>
+<body>
+
+    <div class="imu-card" id="imuCard">
+        
+        <!-- 头部 -->
+        <div class="imu-header">
+            <div class="imu-title">IMU Raw Data</div>
+            
+            <!-- 新增：下拉筛选框 -->
+            <select id="sensorSelector" class="sensor-select">
+                <option value="all">All Combined</option>
+                <option value="gyro">Gyroscope</option>
+                <option value="acc">Accelerometer</option>
+                <option value="mag">Magnetometer</option>
+            </select>
+
+            <!-- 视图切换按钮 -->
+            <button class="view-toggle-btn" id="toggleBtn" title="Toggle Graph">
+                <!-- 图标：波形 -->
+                <svg id="icon-chart" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+                    <polyline points="22 12 18 12 15 21 9 3 6 12 2 12"></polyline>
+                </svg>
+                <!-- 图标：列表 -->
+                <svg id="icon-table" width="16" height="16" style="display:none;" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+                    <line x1="8" y1="6" x2="21" y2="6"></line>
+                    <line x1="8" y1="12" x2="21" y2="12"></line>
+                    <line x1="8" y1="18" x2="21" y2="18"></line>
+                    <line x1="3" y1="6" x2="3.01" y2="6"></line>
+                    <line x1="3" y1="12" x2="3.01" y2="12"></line>
+                    <line x1="3" y1="18" x2="3.01" y2="18"></line>
+                </svg>
+            </button>
+        </div>
+
+        <!-- 内容容器 -->
+        <div class="content-wrapper">
+            
+            <!-- 表格模式 -->
+            <div class="table-view">
+                <table class="data-table">
+                    <thead>
+                        <tr>
+                            <th style="width: 20%"></th>
+                            <th class="col-x">X</th>
+                            <th class="col-y">Y</th>
+                            <th class="col-z">Z</th>
+                        </tr>
+                    </thead>
+                    <tbody>
+                        <tr><td>GYRO</td><td id="t-g-x">0</td><td id="t-g-y">0</td><td id="t-g-z">0</td></tr>
+                        <tr><td>ACC</td><td id="t-a-x">-0.02</td><td id="t-a-y">0.01</td><td id="t-a-z">0.99</td></tr>
+                        <tr><td>MAG</td><td id="t-m-x">-185</td><td id="t-m-y">108</td><td id="t-m-z">-320</td></tr>
+                    </tbody>
+                </table>
+            </div>
+
+            <!-- 图表模式 -->
+            <div class="chart-view" id="chartViewContainer" data-filter="all">
+                
+                <!-- GYRO Row -->
+                <div class="mini-chart-row row-gyro">
+                    <div class="chart-header">
+                        <span style="font-weight:600;">GYRO</span>
+                        <div>
+                            <span class="live-val val-x" id="c-g-x">0</span>
+                            <span class="live-val val-y" id="c-g-y">0</span>
+                            <span class="live-val val-z" id="c-g-z">0</span>
+                        </div>
+                    </div>
+                    <div class="chart-canvas-container">
+                        <canvas id="canvas-gyro"></canvas>
+                    </div>
+                </div>
+
+                <!-- ACC Row -->
+                <div class="mini-chart-row row-acc">
+                    <div class="chart-header">
+                        <span style="font-weight:600;">ACC</span>
+                        <div>
+                            <span class="live-val val-x" id="c-a-x">0</span>
+                            <span class="live-val val-y" id="c-a-y">0</span>
+                            <span class="live-val val-z" id="c-a-z">0</span>
+                        </div>
+                    </div>
+                    <div class="chart-canvas-container">
+                        <canvas id="canvas-acc"></canvas>
+                    </div>
+                </div>
+                
+                <!-- MAG Row -->
+                <div class="mini-chart-row row-mag">
+                    <div class="chart-header">
+                        <span style="font-weight:600;">MAG</span>
+                        <div>
+                            <span class="live-val val-x" id="c-m-x">0</span>
+                            <span class="live-val val-y" id="c-m-y">0</span>
+                            <span class="live-val val-z" id="c-m-z">0</span>
+                        </div>
+                    </div>
+                    <div class="chart-canvas-container">
+                        <canvas id="canvas-mag"></canvas>
+                    </div>
+                </div>
+
+            </div>
+        </div>
+    </div>
+
+    <script>
+        // --- 绘图类 (保持高效) ---
+        class LineChart {
+            constructor(canvasId, maxPoints = 60) {
+                this.canvas = document.getElementById(canvasId);
+                this.ctx = this.canvas.getContext('2d');
+                this.maxPoints = maxPoints;
+                this.data = [[], [], []]; 
+                this.colors = ['#EF4444', '#10B981', '#3B82F6'];
+                
+                // 监听 ResizeObserver，自动处理大小变化
+                this.resizeObserver = new ResizeObserver(() => this.resize());
+                this.resizeObserver.observe(this.canvas.parentElement);
+            }
+
+            resize() {
+                const parent = this.canvas.parentElement;
+                const dpr = window.devicePixelRatio || 1;
+                // 获取 CSS 布局后的实际尺寸
+                const rect = parent.getBoundingClientRect();
+                
+                this.canvas.width = rect.width * dpr;
+                this.canvas.height = rect.height * dpr;
+                this.ctx.scale(dpr, dpr);
+                this.width = rect.width;
+                this.height = rect.height;
+                
+                this.draw(); // Resize 后立即重绘，防止闪烁
+            }
+
+            update(values) {
+                values.forEach((val, index) => {
+                    this.data[index].push(val);
+                    if (this.data[index].length > this.maxPoints) this.data[index].shift();
+                });
+                this.draw();
+            }
+
+            draw() {
+                const { ctx, width, height, data } = this;
+                ctx.clearRect(0, 0, width, height);
+
+                // 绘制中线
+                ctx.beginPath();
+                ctx.strokeStyle = '#E2E8F0';
+                ctx.moveTo(0, height / 2);
+                ctx.lineTo(width, height / 2);
+                ctx.stroke();
+
+                const allValues = data.flat();
+                if (allValues.length === 0) return;
+
+                // 自动缩放算法 (加了 Padding 防止贴顶)
+                let max = Math.max(...allValues);
+                let min = Math.min(...allValues);
+                if (max === min) { max += 0.1; min -= 0.1; } // 防止除以0
+                const padding = (max - min) * 0.1;
+                max += padding;
+                min -= padding;
+                const range = max - min;
+
+                data.forEach((lineData, colorIdx) => {
+                    if (lineData.length < 2) return;
+                    ctx.beginPath();
+                    ctx.strokeStyle = this.colors[colorIdx];
+                    ctx.lineWidth = 1.5;
+                    ctx.lineJoin = 'round';
+
+                    const stepX = width / (this.maxPoints - 1);
+                    lineData.forEach((val, i) => {
+                        const y = height - ((val - min) / range * height);
+                        if (i === 0) ctx.moveTo(0, y);
+                        else ctx.lineTo(i * stepX, y);
+                    });
+                    ctx.stroke();
+                });
+            }
+        }
+
+        // --- 初始化 ---
+        const chartGyro = new LineChart('canvas-gyro');
+        const chartAcc = new LineChart('canvas-acc');
+        const chartMag = new LineChart('canvas-mag');
+
+        // --- 交互逻辑 ---
+        const imuCard = document.getElementById('imuCard');
+        const toggleBtn = document.getElementById('toggleBtn');
+        const sensorSelect = document.getElementById('sensorSelector');
+        const chartViewContainer = document.getElementById('chartViewContainer');
+        const iconChart = document.getElementById('icon-chart');
+        const iconTable = document.getElementById('icon-table');
+        
+        let isChartView = false;
+
+        // 1. 切换 列表/图表 视图
+        toggleBtn.addEventListener('click', () => {
+            isChartView = !isChartView;
+            if (isChartView) {
+                imuCard.classList.add('view-mode-chart');
+                iconChart.style.display = 'none';
+                iconTable.style.display = 'block';
+                // 触发一次 Resize，确保切换过来时 Canvas 尺寸正确
+                setTimeout(() => {
+                    chartGyro.resize(); chartAcc.resize(); chartMag.resize();
+                }, 100); // 稍微延时等待 CSS transition
+            } else {
+                imuCard.classList.remove('view-mode-chart');
+                iconChart.style.display = 'block';
+                iconTable.style.display = 'none';
+            }
+        });
+
+        // 2. 下拉框筛选逻辑
+        sensorSelect.addEventListener('change', (e) => {
+            const filter = e.target.value; // 'all', 'gyro', 'acc', 'mag'
+            // 设置 data-filter 属性，CSS 会自动处理显示/隐藏和高度调整
+            chartViewContainer.setAttribute('data-filter', filter);
+            
+            // 必须触发 resize，因为高度变了（从40px变成了140px）
+            setTimeout(() => {
+                chartGyro.resize(); 
+                chartAcc.resize(); 
+                chartMag.resize();
+            }, 300); // 等待 transition 动画完成
+        });
+
+        // --- 数据模拟 Loop ---
+        let t = 0;
+        setInterval(() => {
+            t += 0.1;
+            const gyro = [Math.sin(t), Math.cos(t), Math.sin(t*2)*0.5];
+            const acc = [(Math.random()-0.5)*0.2, (Math.random()-0.5)*0.2, 0.98];
+            const mag = [Math.sin(t*0.5)*50, Math.cos(t*0.5)*50, -300 + Math.random()*10];
+
+            // 更新 DOM 数字
+            const updateText = (prefix, data) => {
+                document.getElementById(prefix + '-x').innerText = data[0].toFixed(2);
+                document.getElementById(prefix + '-y').innerText = data[1].toFixed(2);
+                document.getElementById(prefix + '-z').innerText = data[2].toFixed(2);
+            };
+
+            // 更新表格
+            if (!isChartView) {
+                updateText('t-g', gyro); updateText('t-a', acc); updateText('t-m', mag);
+            }
+            
+            // 更新图表 (总是更新数据，以免切换时断档)
+            updateText('c-g', gyro); updateText('c-a', acc); updateText('c-m', mag);
+            chartGyro.update(gyro);
+            chartAcc.update(acc);
+            chartMag.update(mag);
+        }, 50);
+
+    </script>
+</body>
+</html>

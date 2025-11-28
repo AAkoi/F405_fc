@@ -1,0 +1,250 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>安全检查 - 极简版</title>
+    <style>
+        :root {
+            --primary: #2563eb;       /* 科技蓝 */
+            --primary-hover: #1d4ed8;
+            --danger: #ef4444;        /* 警告红 */
+            --danger-bg: #fef2f2;
+            --text-main: #1e293b;
+            --text-sub: #64748b;
+        }
+
+        body {
+            margin: 0;
+            font-family: -apple-system, BlinkMacSystemFont, "PingFang SC", "Microsoft YaHei", sans-serif;
+            background-color: #f8fafc;
+            height: 100vh;
+            display: flex; justify-content: center; align-items: center;
+            overflow: hidden;
+        }
+
+        /* 背景纹理 */
+        .bg-blur {
+            position: absolute; width: 100%; height: 100%;
+            background: radial-gradient(circle at 50% 40%, #e2e8f0 0%, #cbd5e1 100%);
+            z-index: 0;
+        }
+
+        /* 遮罩 */
+        .overlay {
+            position: fixed; top: 0; left: 0; width: 100%; height: 100%;
+            background: rgba(15, 23, 42, 0.35);
+            backdrop-filter: blur(12px);
+            display: flex; justify-content: center; align-items: center;
+            opacity: 0; visibility: hidden;
+            transition: all 0.4s cubic-bezier(0.16, 1, 0.3, 1);
+            z-index: 100;
+        }
+        .overlay.active { opacity: 1; visibility: visible; }
+
+        /* 卡片主体 */
+        .card {
+            width: 380px; /* 克制的宽度 */
+            background: rgba(255, 255, 255, 0.96);
+            border-radius: 32px; /* 大圆角 */
+            padding: 40px 32px;
+            text-align: center;
+            box-shadow: 0 30px 60px -12px rgba(0, 0, 0, 0.2);
+            transform: scale(0.9) translateY(20px);
+            transition: all 0.4s cubic-bezier(0.16, 1, 0.3, 1);
+            position: relative;
+        }
+        .overlay.active .card { transform: scale(1) translateY(0); }
+
+        /* --- 1. 超大呼吸图标 --- */
+        .icon-wrapper {
+            position: relative; width: 90px; height: 90px; margin: 0 auto 24px;
+            display: flex; align-items: center; justify-content: center;
+        }
+        /* 呼吸波纹 */
+        .wave {
+            position: absolute; width: 100%; height: 100%;
+            border-radius: 50%; background: var(--danger);
+            opacity: 0;
+            animation: wave 2.5s infinite;
+        }
+        .wave:nth-child(2) { animation-delay: 0.6s; }
+        
+        @keyframes wave {
+            0% { transform: scale(0.8); opacity: 0.2; }
+            100% { transform: scale(1.8); opacity: 0; }
+        }
+
+        .icon-inner {
+            position: relative; z-index: 2;
+            width: 90px; height: 90px;
+            background: var(--danger-bg);
+            border-radius: 50%;
+            display: flex; align-items: center; justify-content: center;
+            color: var(--danger);
+            box-shadow: 0 10px 20px rgba(239, 68, 68, 0.15);
+        }
+
+        /* --- 2. 文本 --- */
+        h2 { font-size: 22px; color: var(--text-main); margin: 0 0 12px; font-weight: 700; }
+        p { font-size: 15px; color: var(--text-sub); line-height: 1.6; margin: 0 0 32px; }
+        strong { color: var(--danger); font-weight: 600; }
+
+        /* --- 3. 极简复选框 (去掉长条背景) --- */
+        .checkbox-row {
+            display: flex; align-items: center; justify-content: center;
+            gap: 10px;
+            margin-bottom: 24px;
+            cursor: pointer;
+            user-select: none;
+            transition: opacity 0.2s;
+        }
+        .checkbox-row:hover { opacity: 0.8; }
+
+        /* 自定义圆形勾选框 */
+        .custom-check {
+            width: 20px; height: 20px;
+            border: 2px solid #cbd5e1;
+            border-radius: 50%; /* 圆形 */
+            display: flex; align-items: center; justify-content: center;
+            background: white;
+            transition: all 0.2s cubic-bezier(0.4, 0, 0.2, 1);
+        }
+        .custom-check svg { transform: scale(0); transition: 0.2s; color: white; }
+
+        /* 选中状态 */
+        #safetyCheck:checked + .custom-check {
+            background: var(--primary);
+            border-color: var(--primary);
+            box-shadow: 0 4px 10px rgba(37, 99, 235, 0.3);
+        }
+        #safetyCheck:checked + .custom-check svg { transform: scale(1); }
+
+        .check-text { font-size: 14px; color: var(--text-main); font-weight: 500; }
+
+        /* --- 4. 小巧圆滑按钮 --- */
+        .btn-round {
+            border: none;
+            background: #e2e8f0; color: #94a3b8;
+            height: 48px;
+            padding: 0 40px; /* 控制宽度 */
+            border-radius: 999px; /* 完全胶囊 */
+            font-size: 15px; font-weight: 600;
+            cursor: not-allowed;
+            transition: all 0.3s;
+            box-shadow: none;
+            display: inline-flex; align-items: center; justify-content: center;
+        }
+
+        .btn-round.active {
+            background: var(--primary); color: white;
+            cursor: pointer;
+            box-shadow: 0 8px 20px -4px rgba(37, 99, 235, 0.5); /* 漂亮的悬浮阴影 */
+        }
+        .btn-round.active:hover {
+            background: var(--primary-hover);
+            transform: translateY(-2px);
+            box-shadow: 0 12px 24px -4px rgba(37, 99, 235, 0.6);
+        }
+        .btn-round.active:active { transform: translateY(1px); }
+
+        /* 关闭按钮 */
+        .btn-close {
+            position: absolute; top: 24px; right: 24px;
+            color: #cbd5e1; cursor: pointer; transition: 0.2s;
+        }
+        .btn-close:hover { color: #64748b; }
+
+        /* 震动特效 */
+        .shake { animation: shake 0.4s ease-in-out; }
+        @keyframes shake {
+            0%, 100% { transform: translateX(0); }
+            20%, 60% { transform: translateX(-6px); }
+            40%, 80% { transform: translateX(6px); }
+        }
+
+    </style>
+</head>
+<body>
+
+    <button onclick="document.getElementById('modal').classList.add('active')" style="position:fixed; bottom:30px; padding:10px 20px;">重置弹窗</button>
+
+    <div class="bg-blur"></div>
+
+    <div class="overlay active" id="modal">
+        <div class="card" id="card">
+            
+            <div class="btn-close" onclick="closeModal()">
+                <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><line x1="18" y1="6" x2="6" y2="18"></line><line x1="6" y1="6" x2="18" y2="18"></line></svg>
+            </div>
+
+            <!-- 超大图标区 -->
+            <div class="icon-wrapper">
+                <div class="wave"></div>
+                <div class="wave"></div>
+                <div class="icon-inner">
+                    <svg width="42" height="42" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><path d="M10.29 3.86L1.82 18a2 2 0 0 0 1.71 3h16.94a2 2 0 0 0 1.71-3L13.71 3.86a2 2 0 0 0-3.42 0z"></path><line x1="12" y1="9" x2="12" y2="13"></line><line x1="12" y1="17" x2="12.01" y2="17"></line></svg>
+                </div>
+            </div>
+
+            <!-- 文字区 -->
+            <h2>安全检查</h2>
+            <p>
+                电机即将高速旋转。<br>
+                请务必确认 <strong>已拆除所有螺旋桨</strong>。
+            </p>
+
+            <!-- 干净的复选框 -->
+            <label class="checkbox-row">
+                <input type="checkbox" id="safetyCheck" style="display:none" onchange="updateBtn()">
+                <div class="custom-check">
+                    <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="4" stroke-linecap="round" stroke-linejoin="round"><polyline points="20 6 9 17 4 12"></polyline></svg>
+                </div>
+                <span class="check-text">我已确认拆除螺旋桨</span>
+            </label>
+
+            <!-- 小巧圆滑按钮 -->
+            <button class="btn-round" id="confirmBtn" onclick="submit()">
+                开始测试
+            </button>
+
+        </div>
+    </div>
+
+    <script>
+        const modal = document.getElementById('modal');
+        const card = document.getElementById('card');
+        const checkbox = document.getElementById('safetyCheck');
+        const btn = document.getElementById('confirmBtn');
+
+        function updateBtn() {
+            if (checkbox.checked) {
+                btn.classList.add('active');
+            } else {
+                btn.classList.remove('active');
+            }
+        }
+
+        function submit() {
+            if (!checkbox.checked) {
+                // 震动提醒
+                card.classList.remove('shake');
+                void card.offsetWidth;
+                card.classList.add('shake');
+                return;
+            }
+            closeModal();
+            console.log("Started");
+        }
+
+        function closeModal() {
+            modal.classList.remove('active');
+            // 演示用：自动重置
+            setTimeout(() => {
+                checkbox.checked = false;
+                updateBtn();
+            }, 500);
+        }
+    </script>
+</body>
+</html>

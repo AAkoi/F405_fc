@@ -1,0 +1,31 @@
+<!-- 容器设为 Flex 布局，两端对齐 -->
+<div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 12px;">
+    <!-- 左侧标题 -->
+    <div style="font-weight: 600; color: #555; font-size: 14px;">
+        IMU Raw Data
+    </div>
+
+    <!-- 右侧小巧精致的按钮 -->
+    <button style="
+        background: transparent;
+        border: 1px solid #E2E8F0; /* 极淡的边框 */
+        border-radius: 6px;       /* 稍微圆润一点 */
+        padding: 4px 8px;
+        cursor: pointer;
+        display: flex;
+        align-items: center;
+        gap: 4px;
+        transition: all 0.2s;
+        color: #64748B;
+    "
+    onmouseover="this.style.borderColor='#3B82F6'; this.style.color='#3B82F6'; this.style.background='#EFF6FF'"
+    onmouseout="this.style.borderColor='#E2E8F0'; this.style.color='#64748B'; this.style.background='transparent'"
+    >
+        <!-- 图标 (使用 SVG 或 IconFont，这里演示用 SVG) -->
+        <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+            <polyline points="22 12 18 12 15 21 9 3 6 12 2 12"></polyline>
+        </svg>
+        <!-- 文字可选，如果想极致小巧可以去掉文字 -->
+        <span style="font-size: 12px; font-weight: 500;">Chart</span>
+    </button>
+</div>

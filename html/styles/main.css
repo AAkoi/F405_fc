@@ -1,6 +1,5 @@
-/* 主样式文件 */
+/* 核心变量与通用按钮 */
 :root {
-    --bg-color: #F3F4F6;
     --panel-bg: #FFFFFF;
     --text-main: #111827;
     --text-sub: #4B5563;
@@ -9,62 +8,6 @@
     --danger: #DC2626;
     --border-radius: 6px;
     --shadow: 0 1px 3px 0 rgba(0, 0, 0, 0.1), 0 1px 2px 0 rgba(0, 0, 0, 0.06);
-}
-
-* {
-    margin: 0;
-    padding: 0;
-    box-sizing: border-box;
-}
-
-body {
-    margin: 0;
-    overflow: hidden;
-    font-family: 'Segoe UI', Roboto, Helvetica, Arial, sans-serif;
-    background-color: var(--bg-color);
-    color: var(--text-main);
-}
-
-/* 顶部栏 */
-header {
-    position: absolute;
-    top: 0;
-    left: 0;
-    width: 100%;
-    padding: 15px 30px;
-    box-sizing: border-box;
-    display: flex;
-    justify-content: space-between;
-    align-items: center;
-    z-index: 10;
-    pointer-events: none;
-    background-color: var(--panel-bg);
-    border-bottom: 1px solid #E5E7EB;
-    box-shadow: var(--shadow);
-}
-
-header > * { 
-    pointer-events: auto;
-}
-
-h1 {
-    font-size: 1.2rem;
-    margin: 0;
-    color: var(--primary);
-    font-weight: 700;
-    letter-spacing: 0.5px;
-}
-
-.header-controls {
-    display: flex;
-    align-items: center;
-    gap: 10px;
-}
-
-.status-text {
-    font-size: 0.9rem;
-    color: var(--text-sub);
-    font-weight: 500;
 }
 
 .btn {
@@ -84,7 +27,7 @@ h1 {
 }
 
 .btn:hover { 
-    background: #1e3a8a; /* Darker shade of primary */
+    background: #1e3a8a;
 }
 
 .btn-record {
@@ -97,241 +40,6 @@ h1 {
 
 .hidden {
     display: none !important;
-}
-
-#status-dot {
-    height: 10px;
-    width: 10px;
-    background-color: var(--danger);
-    border-radius: 50%; /* Circle is fine for status dot */
-    display: inline-block;
-    margin-right: 4px;
-}
-
-/* 3D 容器 */
-#canvas-container {
-    width: 100%;
-    height: 100vh;
-    background-color: #e5e7eb; /* Slightly darker background for 3D space contrast */
-}
-
-/* ========================================
-   ELRS / RC Panel
-   ======================================== */
-.rc-panel {
-    position: absolute;
-    right: 24px;
-    bottom: 24px;
-    width: 340px;
-    background: var(--panel-bg);
-    border: 1px solid #E5E7EB;
-    box-shadow: var(--shadow);
-    border-radius: 10px;
-    padding: 14px;
-    z-index: 9;
-}
-
-.rc-header {
-    display: flex;
-    justify-content: space-between;
-    align-items: center;
-    margin-bottom: 10px;
-}
-
-.rc-title {
-    font-weight: 700;
-    color: var(--primary);
-    letter-spacing: 0.5px;
-}
-
-.rc-meta {
-    display: flex;
-    gap: 10px;
-    font-size: 0.85rem;
-    color: var(--text-sub);
-}
-
-.rc-body {
-    display: flex;
-    flex-direction: column;
-    gap: 10px;
-}
-
-.rc-sticks {
-    display: flex;
-    gap: 12px;
-}
-
-.rc-stick {
-    flex: 1;
-    background: #F9FAFB;
-    border: 1px solid #E5E7EB;
-    border-radius: 8px;
-    padding: 8px;
-}
-
-.rc-stick-label {
-    font-size: 0.8rem;
-    color: var(--text-sub);
-    margin-bottom: 6px;
-    text-align: center;
-}
-
-.rc-stick-base {
-    position: relative;
-    height: 110px;
-    border-radius: 10px;
-    border: 1px solid #E5E7EB;
-    background: linear-gradient(135deg, #f5f7fb 0%, #eef2ff 100%);
-    overflow: hidden;
-}
-
-.rc-stick-base::before,
-.rc-stick-base::after {
-    content: '';
-    position: absolute;
-    background: rgba(17, 24, 39, 0.08);
-}
-
-.rc-stick-base::before {
-    top: 50%;
-    left: 0;
-    width: 100%;
-    height: 1px;
-    transform: translateY(-50%);
-}
-
-.rc-stick-base::after {
-    left: 50%;
-    top: 0;
-    width: 1px;
-    height: 100%;
-    transform: translateX(-50%);
-}
-
-.rc-stick-knob {
-    position: absolute;
-    top: 50%;
-    left: 50%;
-    width: 24px;
-    height: 24px;
-    background: radial-gradient(circle at 30% 30%, #ffffff, #c7d2fe);
-    border: 1px solid #3b82f6;
-    border-radius: 50%;
-    transform: translate(-50%, -50%);
-    box-shadow: 0 4px 10px rgba(37, 99, 235, 0.2);
-    transition: transform 0.08s ease-out;
-}
-
-.rc-bars {
-    display: flex;
-    flex-direction: column;
-    gap: 6px;
-}
-
-.rc-bar {
-    display: flex;
-    align-items: center;
-    gap: 8px;
-    font-size: 0.9rem;
-}
-
-.rc-bar-label {
-    width: 42px;
-    color: var(--text-sub);
-    font-weight: 600;
-}
-
-.rc-bar-track {
-    position: relative;
-    flex: 1;
-    height: 10px;
-    border-radius: 999px;
-    background: #F3F4F6;
-    overflow: hidden;
-    border: 1px solid #E5E7EB;
-}
-
-.rc-bar-fill {
-    position: absolute;
-    top: 0;
-    left: 0;
-    height: 100%;
-    width: 0%;
-    background: linear-gradient(90deg, #1E3A8A, #3B82F6);
-    transition: width 0.1s ease-out, left 0.1s ease-out;
-}
-
-.rc-centered {
-    left: 50%;
-    transform: translateX(-50%);
-}
-
-.rc-bar-mid {
-    position: absolute;
-    top: 0;
-    left: 50%;
-    width: 1px;
-    height: 100%;
-    background: rgba(17, 24, 39, 0.2);
-}
-
-.rc-bar-mid-left,
-.rc-bar-mid-right {
-    position: absolute;
-    top: 0;
-    width: 1px;
-    height: 100%;
-    background: rgba(17, 24, 39, 0.15);
-}
-
-.rc-bar-mid-left { left: 33.3%; }
-.rc-bar-mid-right { left: 66.6%; }
-
-.rc-bar-val {
-    width: 50px;
-    text-align: right;
-    font-variant-numeric: tabular-nums;
-    color: var(--text-sub);
-}
-
-.rc-aux {
-    display: grid;
-    grid-template-columns: repeat(2, 1fr);
-    gap: 6px;
-}
-
-.rc-aux-item {
-    display: flex;
-    align-items: center;
-    gap: 6px;
-    font-size: 0.85rem;
-}
-
-.rc-aux-label {
-    width: 40px;
-    color: var(--text-sub);
-    font-weight: 600;
-}
-
-.rc-aux-track {
-    position: relative;
-    flex: 1;
-    height: 8px;
-    border-radius: 6px;
-    background: #F3F4F6;
-    border: 1px solid #E5E7EB;
-    overflow: hidden;
-}
-
-.rc-aux-fill {
-    position: absolute;
-    top: 0;
-    left: 0;
-    height: 100%;
-    width: 0%;
-    background: linear-gradient(90deg, #10B981, #34D399);
-    transition: width 0.1s ease-out;
 }
 
 /* ========================================
@@ -668,17 +376,9 @@ h1 {
     margin-top: 10px;
 }
 
-.gyro-plot-wrapper {
-    position: relative;
-    width: 100%;
-    max-width: 480px;
-    margin: 10px auto;
-}
+.gyro-plot-wrapper,
 #gyroPlot {
-    width: 100%;
-    height: 420px;
-    background: #0f1116;
-    border: 1px solid #222;
+    display: none;
 }
 .legend {
     margin-top: 12px;
@@ -700,7 +400,7 @@ h1 {
     box-shadow: 0 0 8px currentColor;
 }
 
-.mag-plot-wrapper, .gyro-plot-wrapper {
+.mag-plot-wrapper {
     position: relative;
     width: 100%;
     max-width: 520px;
@@ -709,7 +409,7 @@ h1 {
     overflow: hidden;
     box-shadow: 0 4px 20px rgba(0, 0, 0, 0.3);
 }
-#magPlot, #gyroPlot {
+#magPlot {
     width: 100%;
     height: 450px;
     background: linear-gradient(135deg, #0f1116 0%, #1a1a2e 100%);
@@ -717,7 +417,7 @@ h1 {
     border-radius: 12px;
     cursor: grab;
 }
-#magPlot:active, #gyroPlot:active {
+#magPlot:active {
     cursor: grabbing;
 }
 
@@ -780,30 +480,6 @@ h1 {
     cursor: pointer;
 }
 
-.coord-debug-btn {
-    position: fixed;
-    bottom: 20px;
-    right: 20px;
-    width: 50px;
-    height: 50px;
-    border-radius: 50%;
-    background: var(--primary);
-    color: white;
-    border: none;
-    cursor: pointer;
-    box-shadow: 0 4px 12px rgba(0,0,0,0.3);
-    display: flex;
-    align-items: center;
-    justify-content: center;
-    z-index: 99;
-    transition: all 0.3s;
-}
-
-.coord-debug-btn:hover {
-    transform: scale(1.1);
-    background: #1e3a8a;
-}
-
 .realtime-debug {
     margin-top: 15px;
     padding: 15px;
@@ -816,33 +492,3 @@ h1 {
     margin: 5px 0;
 }
 
-/* Toast提示 */
-.toast {
-    position: fixed;
-    top: 80px;
-    left: 50%;
-    transform: translateX(-50%) translateY(-100px);
-    background-color: #10B981;
-    color: white;
-    padding: 12px 24px;
-    border-radius: var(--border-radius);
-    box-shadow: 0 10px 40px rgba(0,0,0,0.3);
-    font-size: 0.95rem;
-    font-weight: 600;
-    opacity: 0;
-    transition: all 0.3s;
-    z-index: 2000;
-}
-
-.toast.show {
-    transform: translateX(-50%) translateY(0);
-    opacity: 1;
-}
-
-.btn-success {
-    background-color: #10B981 !important;
-}
-
-.btn-success:hover {
-    background-color: #059669 !important;
-}

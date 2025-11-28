@@ -16,6 +16,7 @@ class SceneManager {
         this.camera = null;
         this.renderer = null;
         this.controls = null;
+        this.isDragging = false;
         
         this.init();
         console.log('[SceneManager] Initialization complete');
@@ -46,6 +47,8 @@ class SceneManager {
         this.controls = new THREE.OrbitControls(this.camera, this.renderer.domElement);
         this.controls.enableDamping = CONFIG.controls.enableDamping;
         this.controls.dampingFactor = CONFIG.controls.dampingFactor;
+        this.controls.addEventListener('start', () => { this.isDragging = true; });
+        this.controls.addEventListener('end', () => { this.isDragging = false; });
 
         // 添加灯光
         this.addLights();
@@ -95,9 +98,13 @@ class SceneManager {
         const grid = new THREE.GridHelper(
             CONFIG.scene.gridSize,
             CONFIG.scene.gridDivisions,
-            0x94a3b8, // Center line: Slate-400
-            0xe2e8f0  // Grid lines: Slate-200
+            0xcfd8e3, // Center line: lighter
+            0xf3f4f6  // Grid lines: very light
         );
+        if (grid.material) {
+            grid.material.opacity = 0.35;
+            grid.material.transparent = true;
+        }
         this.scene.add(grid);
     }
 
@@ -127,24 +134,7 @@ class SceneManager {
         cone.position.y = 6;
         cone.castShadow = true;
         
-        // Text Label
-        const canvas = document.createElement('canvas');
-        canvas.width = 128;
-        canvas.height = 128;
-        const ctx = canvas.getContext('2d');
-        ctx.fillStyle = "#" + color.toString(16).padStart(6, '0');
-        ctx.font = "bold 90px Arial"; // Sans-serif
-        ctx.textAlign = "center";
-        ctx.fillText(label, 64, 100);
-        
-        const sprite = new THREE.Sprite(new THREE.SpriteMaterial({
-            map: new THREE.CanvasTexture(canvas),
-            transparent: true
-        }));
-        sprite.position.y = 6.8;
-        sprite.scale.set(1.5, 1.5, 1.5);
-
-        g.add(rod, cone, sprite);
+        g.add(rod, cone);
         return g;
     }
 

@@ -1,0 +1,144 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+<style>
+    :root {
+        --primary-blue: #2563eb;
+        --primary-hover: #1d4ed8;
+        --surface: #ffffff;
+        --surface-hover: #f1f5f9;
+        --border: #e2e8f0;
+        --text-main: #334155;
+        --text-sub: #64748b;
+        --danger: #ef4444;
+    }
+
+    body {
+        background: #f8fafc;
+        display: flex; justify-content: center; align-items: center; min-height: 200px;
+        font-family: sans-serif;
+    }
+
+    /* 容器：将它们视为一个整体工具栏 */
+    .control-toolbar {
+        display: flex;
+        align-items: center;
+        gap: 12px;
+        padding: 8px;
+        background: #fff;
+        border: 1px solid #cbd5e1;
+        border-radius: 8px; /* 适中的圆角，不再是那种很大的圆 */
+        box-shadow: 0 4px 6px -1px rgba(0, 0, 0, 0.05);
+    }
+
+    /* --- 1. 连接按钮 (主按钮) --- */
+    .btn-connect {
+        display: flex; align-items: center; gap: 8px;
+        height: 36px;
+        padding: 0 16px;
+        background: var(--primary-blue);
+        color: white;
+        border: none;
+        border-radius: 6px;
+        font-size: 14px; font-weight: 600;
+        cursor: pointer;
+        transition: all 0.2s;
+        box-shadow: 0 1px 2px rgba(37, 99, 235, 0.3);
+    }
+    .btn-connect:hover { background: var(--primary-hover); transform: translateY(-1px); }
+    .btn-connect:active { transform: translateY(0); }
+    
+    /* 连接状态指示点 */
+    .status-dot {
+        width: 8px; height: 8px; border-radius: 50%;
+        background: #fff; opacity: 0.5;
+        box-shadow: 0 0 4px rgba(255,255,255,0.5);
+    }
+    .btn-connect.connected .status-dot { background: #4ade80; opacity: 1; }
+
+    /* 分割线：视觉上区分“连接”和“工具” */
+    .divider {
+        width: 1px; height: 24px;
+        background: #e2e8f0;
+        margin: 0 4px;
+    }
+
+    /* --- 2,3,4. 工具按钮组 (次级按钮) --- */
+    .tool-btn {
+        position: relative;
+        width: 36px; height: 36px;
+        border: 1px solid var(--border);
+        background: var(--surface);
+        color: var(--text-sub);
+        border-radius: 6px;
+        display: flex; align-items: center; justify-content: center;
+        cursor: pointer;
+        transition: all 0.2s;
+    }
+
+    .tool-btn:hover {
+        background: var(--surface-hover);
+        color: var(--primary-blue);
+        border-color: #cbd5e1;
+    }
+    
+    /* 激活状态 (按下) */
+    .tool-btn:active { background: #e2e8f0; transform: scale(0.96); }
+
+    /* 特殊：电机按钮悬停时显示警告色，因为电机危险 */
+    .tool-btn.danger-hover:hover {
+        color: var(--danger);
+        background: #fef2f2;
+        border-color: #fecaca;
+    }
+
+    /* --- Tooltip (纯CSS提示) --- */
+    .tool-btn::after {
+        content: attr(data-tooltip);
+        position: absolute;
+        bottom: 120%; left: 50%; transform: translateX(-50%);
+        background: #1e293b; color: white;
+        padding: 4px 8px; font-size: 12px; white-space: nowrap;
+        border-radius: 4px;
+        opacity: 0; visibility: hidden; pointer-events: none;
+        transition: 0.2s;
+        box-shadow: 0 4px 6px -1px rgba(0,0,0,0.1);
+    }
+    .tool-btn::before { /* 小三角 */
+        content: ''; position: absolute; bottom: 110%; left: 50%; margin-left:-4px;
+        border-width: 4px; border-style: solid;
+        border-color: #1e293b transparent transparent transparent;
+        opacity: 0; visibility: hidden; transition: 0.2s;
+    }
+    .tool-btn:hover::after, .tool-btn:hover::before {
+        opacity: 1; visibility: visible; bottom: 125%;
+    }
+    .tool-btn:hover::before { bottom: 115%; }
+
+</style>
+</head>
+<body>
+
+    <div class="control-toolbar">
+        <button class="btn-connect" onclick="this.classList.toggle('connected')">
+            <div class="status-dot"></div>
+            <span>连接串口</span>
+        </button>
+
+        <div class="divider"></div>
+
+        <button class="tool-btn" data-tooltip="磁力计校准 (Mag Calib)">
+            <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="10"></circle><polygon points="16.24 7.76 14.12 14.12 7.76 16.24 9.88 9.88 16.24 7.76"></polygon></svg>
+        </button>
+
+        <button class="tool-btn danger-hover" data-tooltip="电机测试 (Motor Test)">
+            <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M12 12c0-3 2.5-5.5 5.5-5.5S23 9 23 12H12z"></path><path d="M12 12c0 3-2.5 5.5-5.5 5.5S1 15 1 12h11z"></path><path d="M12 12c3 0 5.5 2.5 5.5 5.5S15 23 12 23v-11z"></path><path d="M12 12c-3 0-5.5-2.5-5.5-5.5S9 1 12 1v11z"></path><circle cx="12" cy="12" r="2"></circle></svg>
+        </button>
+
+        <button class="tool-btn" data-tooltip="姿态复位 (Reset Attitude)">
+            <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="10"></circle><line x1="2" y1="12" x2="22" y2="12"></line><line x1="12" y1="2" x2="12" y2="22"></line></svg>
+        </button>
+    </div>
+
+</body>
+</html>

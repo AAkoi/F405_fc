@@ -21,6 +21,11 @@ class DroneVisualizerApp {
             
             this.droneModel = new DroneModel(this.sceneManager.getScene());
             console.log('[App] DroneModel created');
+
+            // Console throttle state
+            this.lastConsoleTs = 0;
+            this.throttleSkipped = 0;
+            this.throttleIntervalMs = 200;
             
             this.init();
         } catch (error) {
@@ -34,6 +39,7 @@ class DroneVisualizerApp {
         this.serialManager.onDataUpdate = (data) => {
             this.onDataUpdate(data);
         };
+        this.serialManager.onLine = (line) => this.appendConsoleLine(line, 'log-rx');
 
         // 绑定按钮事件
         this.bindEvents();
@@ -49,7 +55,13 @@ class DroneVisualizerApp {
         // 连接按钮
         const connectBtn = document.getElementById('connectBtn');
         if (connectBtn) {
-            connectBtn.addEventListener('click', () => this.connectSerial());
+            connectBtn.addEventListener('click', () => {
+                if (this.serialManager.port) {
+                    this.disconnectSerial();
+                } else {
+                    this.connectSerial();
+                }
+            });
         }
 
         // 录制按钮
@@ -68,14 +80,19 @@ class DroneVisualizerApp {
             });
         }
 
-        // 视角按钮
-        const viewButtons = document.querySelectorAll('.view-btn');
-        viewButtons.forEach(btn => {
-            btn.addEventListener('click', (e) => {
-                const mode = e.currentTarget.dataset.mode;
-                if (mode) this.setCamera(mode);
+        // 电机测试按钮
+        const motorBtn = document.getElementById('motorTestBtn');
+        if (motorBtn) {
+            motorBtn.addEventListener('click', (e) => {
+                e.preventDefault();
+                if (typeof window.startMotorFlow === 'function') {
+                    window.startMotorFlow();
+                } else if (typeof window.openMotorModal === 'function') {
+                    window.openMotorModal();
+                }
             });
-        });
+        }
+
     }
 
     async connectSerial() {
@@ -84,16 +101,56 @@ class DroneVisualizerApp {
             this.uiManager.setConnectionStatus(true);
             
             const connectBtn = document.getElementById('connectBtn');
-            if (connectBtn) connectBtn.style.display = 'none';
+            if (connectBtn) {
+                connectBtn.innerHTML = '<span class="status-dot"></span><span>断开连接</span>';
+                connectBtn.classList.remove('btn-primary');
+                connectBtn.classList.add('btn-danger', 'connected');
+                // Re-initialize icons
+                if (typeof lucide !== 'undefined') {
+                    lucide.createIcons();
+                }
+            }
             
             const recordBtn = document.getElementById('recordBtn');
             if (recordBtn) recordBtn.style.display = 'inline-flex';
             
             this.serialManager.startReading();
+            this.appendConsoleLine('Serial port opened.', 'log-sys');
         } catch (e) {
             console.error('串口连接失败:', e);
-            alert(e.message || '串口连接失败');
+            const msg = e?.message === 'No port selected by the user.' ? '未选择串口，连接已取消' : (e?.message || '串口连接失败');
+            if (this.uiManager.alerts) {
+                this.uiManager.alerts.toast({ type: 'error', title: 'Serial Error', message: msg });
+            } else {
+                alert(msg);
+            }
+            this.appendConsoleLine(`ERR: ${msg}`, 'log-err');
         }
+    }
+
+    async disconnectSerial() {
+        try {
+            await this.serialManager.disconnect();
+        } catch (e) {
+            console.warn('串口断开时异常', e);
+        }
+        this.uiManager.setConnectionStatus(false);
+        const connectBtn = document.getElementById('connectBtn');
+        if (connectBtn) {
+            connectBtn.innerHTML = '<span class="status-dot"></span><span>连接串口</span>';
+            connectBtn.classList.remove('btn-danger', 'connected');
+            connectBtn.classList.add('btn-primary');
+            // Re-initialize icons
+            if (typeof lucide !== 'undefined') {
+                lucide.createIcons();
+            }
+        }
+        const recordBtn = document.getElementById('recordBtn');
+        if (recordBtn) {
+            recordBtn.style.display = 'none';
+            recordBtn.innerHTML = '<i data-lucide="circle-dot"></i> 开始录制';
+        }
+        this.appendConsoleLine('Serial port closed.', 'log-sys');
     }
 
     toggleRecording() {
@@ -128,44 +185,30 @@ class DroneVisualizerApp {
     }
 
     onDataUpdate(sensorData) {
+        const updateType = sensorData.lastUpdateType || 'sensor';
+
         // 更新UI
         this.uiManager.updateSensorData(sensorData);
 
         // 录制数据
-        if (this.recordingManager.getStatus()) {
+        if (this.recordingManager.getStatus() && (updateType === 'attitude' || updateType === 'sensor')) {
             this.recordingManager.addDataPoint(sensorData.gyr);
         }
 
-        // 磁力计校准数据回调
-        if (window.processMagDataForCalibration) {
-            window.processMagDataForCalibration(
-                sensorData.mag.x, 
-                sensorData.mag.y, 
-                sensorData.mag.z
-            );
-        }
-
-        // 陀螺仪校准数据回调
-        if (window.processGyroDataForCalibration) {
-            window.processGyroDataForCalibration(
-                sensorData.gyr.x, 
-                sensorData.gyr.y, 
-                sensorData.gyr.z
-            );
-        }
-
         // 更新姿态
-        const orientation = this.orientationCalc.update(sensorData);
-        this.uiManager.updateOrientation(this.orientationCalc.getOrientation());
-        
-        // 调试：每秒打印一次姿态数据
-        if (!this.lastDebugTime || Date.now() - this.lastDebugTime > 1000) {
-            console.log('姿态角(度):', this.orientationCalc.getOrientation());
-            console.log('姿态角(弧度):', orientation);
-            this.lastDebugTime = Date.now();
+        if (updateType === 'attitude' || updateType === 'sensor') {
+            const orientation = this.orientationCalc.update(sensorData);
+            this.uiManager.updateOrientation(this.orientationCalc.getOrientation());
+            
+            // 调试：每秒打印一次姿态数据
+            if (!this.lastDebugTime || Date.now() - this.lastDebugTime > 1000) {
+                console.log('姿态角(度):', this.orientationCalc.getOrientation());
+                console.log('姿态角(弧度):', orientation);
+                this.lastDebugTime = Date.now();
+            }
+            
+            this.droneModel.updateOrientation(orientation.pitch, orientation.roll, orientation.yaw);
         }
-        
-        this.droneModel.updateOrientation(orientation.pitch, orientation.roll, orientation.yaw);
     }
 
     setCamera(mode) {
@@ -190,6 +233,40 @@ class DroneVisualizerApp {
         // 渲染场景
         this.sceneManager.render();
     }
+
+    appendConsoleLine(text, cls = '') {
+        const out = document.getElementById('console-body');
+        if (!out) return;
+        const throttleEnabled = document.getElementById('chk-throttle')?.checked;
+        const now = Date.now();
+        if (throttleEnabled) {
+            if (now - this.lastConsoleTs < this.throttleIntervalMs) {
+                this.throttleSkipped += 1;
+                return;
+            }
+            if (this.throttleSkipped > 0) {
+                const info = document.createElement('div');
+                info.className = 'log-line';
+                info.innerHTML = `<span class="log-sys">[throttle] skipped ${this.throttleSkipped} lines</span>`;
+                out.appendChild(info);
+                this.throttleSkipped = 0;
+            }
+            this.lastConsoleTs = now;
+        } else {
+            this.throttleSkipped = 0;
+            this.lastConsoleTs = now;
+        }
+        const line = document.createElement('div');
+        line.className = 'log-line';
+        const showTs = document.getElementById('chk-ts')?.checked;
+        const autoScroll = document.getElementById('chk-scroll')?.checked;
+        const ts = showTs ? `[${new Date().toLocaleTimeString()}] ` : '';
+        line.innerHTML = `${ts}<span class="${cls}">${text}</span>`;
+        out.appendChild(line);
+        if (autoScroll) {
+            out.scrollTop = out.scrollHeight;
+        }
+    }
 }
 
 // 页面加载完成后启动应用
@@ -205,4 +282,3 @@ document.addEventListener('DOMContentLoaded', () => {
         console.error('[App] Failed to start application:', error);
     }
 });
-

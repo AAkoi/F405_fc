@@ -9,6 +9,7 @@ class SerialManager {
             mag: {x: 0, y: 0, z: 0},
             bar: {tempDeci: 0, pressurePa: 0, altDeci: 0},
             imuTempDeci: 0,
+            tof: { distanceMm: null, ts: 0 },
             // 单片机计算的姿态角（从 ATTITUDE_FULL 消息获取）
             attitude: {roll: 0, pitch: 0, yaw: 0, fromMCU: false},
             // ELRS/CRSF RC 数据（归一化）
@@ -17,9 +18,11 @@ class SerialManager {
                 aux: [0, 0, 0, 0],
                 rssi: null, lq: null,
                 lastTs: 0
-            }
+            },
+            lastUpdateType: 'init'
         };
         this.onDataUpdate = null;
+        this.onLine = null; // 原始文本行回调（用于控制台输出）
     }
 
     async connect() {
@@ -61,7 +64,27 @@ class SerialManager {
 
     parseLine(line) {
         if (!line) return;
+        if (this.onLine) {
+            this.onLine(line);
+        }
         
+        // ToF 距离（毫米）：TOF,timestamp,distMm
+        if (line.startsWith('TOF,')) {
+            const parts = line.split(',');
+            if (parts.length >= 3) {
+                const dist = parseInt(parts[2]);
+                if (!Number.isNaN(dist)) {
+                    this.sensorData.tof.distanceMm = dist;
+                    this.sensorData.tof.ts = Date.now();
+                    this.sensorData.lastUpdateType = 'tof';
+                    if (this.onDataUpdate) {
+                        this.onDataUpdate(this.sensorData);
+                    }
+                    return;
+                }
+            }
+        }
+
         // ELRS/CRSF RC 数据（归一化，roll/pitch/yaw -1..1，thr 0..1）
         // 格式: ELRS_RC,ts,roll,pitch,yaw,thr,aux1,aux2,aux3,aux4,rssi,lq
         if (line.startsWith('ELRS_RC,')) {
@@ -92,6 +115,7 @@ class SerialManager {
                     this.sensorData.rc.lq = Number.isNaN(lq) ? null : lq;
                 }
                 this.sensorData.rc.lastTs = Date.now();
+                this.sensorData.lastUpdateType = 'rc';
 
                 if (this.onDataUpdate) {
                     this.onDataUpdate(this.sensorData);
@@ -132,6 +156,7 @@ class SerialManager {
                 this.sensorData.mag.x = mx;
                 this.sensorData.mag.y = my;
                 this.sensorData.mag.z = mz;
+                this.sensorData.lastUpdateType = 'attitude';
                 
                 if (this.onDataUpdate) {
                     this.onDataUpdate(this.sensorData);
@@ -168,6 +193,8 @@ class SerialManager {
                 if (!Number.isNaN(val)) this.sensorData.imuTempDeci = val;
             }
         });
+
+        this.sensorData.lastUpdateType = 'sensor';
         
         if (this.onDataUpdate) {
             this.onDataUpdate(this.sensorData);
@@ -185,6 +212,7 @@ class SerialManager {
         if (this.port) {
             await this.port.close();
         }
+        this.reader = null;
+        this.port = null;
     }
 }
-

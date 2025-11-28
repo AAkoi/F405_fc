@@ -7,8 +7,8 @@
     
     <!-- 样式文件 -->
     <link rel="stylesheet" href="styles/main.css">
-    <link rel="stylesheet" href="styles/hud.css">
-    <link rel="stylesheet" href="styles/controls.css">
+    <link rel="stylesheet" href="styles/new-ui.css">
+    <link rel="stylesheet" href="styles/layout.css">
     
     <!-- Icons -->
     <script src="https://unpkg.com/lucide@latest"></script>
@@ -19,207 +19,270 @@
 </head>
 <body>
 
-    <header>
-        <h1>AERO VISUALIZER</h1>
-        <div class="header-controls">
-            <span id="status-dot"></span>
-            <span id="status-text" class="status-text">Disconnected</span>
-            <button id="connectBtn" class="btn">Connect Serial</button>
-            <button id="recordBtn" class="btn btn-record hidden"><i data-lucide="circle-dot"></i> 开始录制</button>
-            <button id="gyroCalibBtn" class="btn btn-calib" onclick="openGyroCalibModal()"><i data-lucide="rotate-cw"></i> 陀螺仪校准</button>
-            <button id="magCalibBtn" class="btn btn-calib" onclick="openMagCalibModal()"><i data-lucide="compass"></i> 磁力计校准</button>
-            <button id="resetAttitudeBtn" class="btn btn-reset" onclick="resetAttitude()"><i data-lucide="rotate-ccw"></i> 复位姿态</button>
-            <button class="btn" onclick="window.open('api_documentation.html', '_blank')"><i data-lucide="book-open"></i> API Docs</button>
+    <div class="app-shell">
+        <!-- 顶部导航 -->
+        <nav class="top-bar">
+            <div class="brand">
+                <div class="brand-icon"><svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="3"><path d="M12 2L2 7l10 5 10-5-10-5zM2 17l10 5 10-5M2 12l10 5 10-5"/></svg></div>
+                <span>AERO VISUALIZER</span>
+            </div>
+
+            <div class="status-strip">
+                <div class="vital-item">
+                    <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><rect x="1" y="6" width="18" height="12" rx="2" ry="2"></rect><line x1="23" y1="13" x2="23" y2="11"></line></svg>
+                    <span class="vital-val" id="val-imu-temp">--</span>°C
+                </div>
+                <div class="vital-item" style="border-left:1px solid var(--border); padding-left:16px;">
+                    <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M5 12.55a11 11 0 0 1 14.08 0"></path><path d="M1.42 9a16 16 0 0 1 21.16 0"></path><path d="M8.53 16.11a6 6 0 0 1 6.95 0"></path><line x1="12" y1="20" x2="12.01" y2="20"></line></svg>
+                    <span class="vital-val" id="status-text">Disconnected</span>
+                </div>
+            </div>
+
+            <button id="connectBtn" class="btn btn-primary">
+                <span class="status-dot" id="status-dot"></span>
+                <span>连接串口</span>
+            </button>
+            <div class="tool-actions">
+                <button id="recordBtn" class="btn btn-danger hidden"><i data-lucide="circle-dot"></i> 开始录制</button>
+                <button id="magCalibBtn" class="btn btn-ghost" onclick="openMagCalibModal()"><i data-lucide="compass"></i></button>
+                <button id="motorTestBtn" class="btn btn-ghost"><i data-lucide="fan"></i></button>
+                <button id="resetAttitudeBtn" class="btn btn-ghost" onclick="resetAttitude()"><i data-lucide="rotate-ccw"></i></button>
+                <button class="btn btn-ghost" onclick="window.open('api_documentation.html', '_blank')"><i data-lucide="book-open"></i></button>
+            </div>
+        </nav>
+
+        <!-- 主布局 -->
+        <div class="main-layout">
+            <!-- 左侧 Telemetry -->
+            <aside class="sidebar-col">
+                <div class="card imu-card" id="imu-card">
+                    <div class="imu-header">
+                        <div class="imu-title">IMU 原始数据</div>
+                        <select id="sensorSelector" class="sensor-select">
+                            <option value="all">全部</option>
+                            <option value="gyro">陀螺仪</option>
+                            <option value="acc">加速度计</option>
+                            <option value="mag">磁力计</option>
+                        </select>
+                        <button class="view-toggle-btn" id="toggleBtn" title="切换图表/表格">
+                            <svg id="icon-chart" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+                                <polyline points="22 12 18 12 15 21 9 3 6 12 2 12"></polyline>
+                            </svg>
+                            <svg id="icon-table" width="16" height="16" style="display:none;" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+                                <line x1="8" y1="6" x2="21" y2="6"></line>
+                                <line x1="8" y1="12" x2="21" y2="12"></line>
+                                <line x1="8" y1="18" x2="21" y2="18"></line>
+                                <line x1="3" y1="6" x2="3.01" y2="6"></line>
+                                <line x1="3" y1="12" x2="3.01" y2="12"></line>
+                                <line x1="3" y1="18" x2="3.01" y2="18"></line>
+                            </svg>
+                        </button>
+                    </div>
+
+                    <div class="content-wrapper">
+                        <div class="table-view">
+                            <table class="data-table">
+                                <thead>
+                                    <tr>
+                                        <th style="width: 20%"></th>
+                                        <th class="col-x">X</th>
+                                        <th class="col-y">Y</th>
+                                        <th class="col-z">Z</th>
+                                    </tr>
+                                </thead>
+                                <tbody>
+                                    <tr><td>GYRO</td><td id="t-g-x">0</td><td id="t-g-y">0</td><td id="t-g-z">0</td></tr>
+                                    <tr><td>ACC</td><td id="t-a-x">0</td><td id="t-a-y">0</td><td id="t-a-z">0</td></tr>
+                                    <tr><td>MAG</td><td id="t-m-x">0</td><td id="t-m-y">0</td><td id="t-m-z">0</td></tr>
+                                </tbody>
+                            </table>
+                        </div>
+
+                        <div class="chart-view" id="chartViewContainer" data-filter="all">
+                            <div class="mini-chart-row row-gyro">
+                                <div class="chart-header">
+                                    <span style="font-weight:600;">GYRO</span>
+                                    <div>
+                                        <span class="live-val val-x" id="c-g-x">0</span>
+                                        <span class="live-val val-y" id="c-g-y">0</span>
+                                        <span class="live-val val-z" id="c-g-z">0</span>
+                                    </div>
+                                </div>
+                                <div class="chart-canvas-container">
+                                    <canvas id="canvas-gyro"></canvas>
+                                </div>
+                            </div>
+
+                            <div class="mini-chart-row row-acc">
+                                <div class="chart-header">
+                                    <span style="font-weight:600;">ACC</span>
+                                    <div>
+                                        <span class="live-val val-x" id="c-a-x">0</span>
+                                        <span class="live-val val-y" id="c-a-y">0</span>
+                                        <span class="live-val val-z" id="c-a-z">0</span>
+                                    </div>
+                                </div>
+                                <div class="chart-canvas-container">
+                                    <canvas id="canvas-acc"></canvas>
+                                </div>
+                            </div>
+
+                            <div class="mini-chart-row row-mag">
+                                <div class="chart-header">
+                                    <span style="font-weight:600;">MAG</span>
+                                    <div>
+                                        <span class="live-val val-x" id="c-m-x">0</span>
+                                        <span class="live-val val-y" id="c-m-y">0</span>
+                                        <span class="live-val val-z" id="c-m-z">0</span>
+                                    </div>
+                                </div>
+                                <div class="chart-canvas-container">
+                                    <canvas id="canvas-mag"></canvas>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+
+                <div class="card">
+                    <div class="section-header">Attitude</div>
+                    <div class="angle-row">
+                        <div class="angle-info"><span>Roll</span><span class="angle-num" id="att-r">0.0°</span></div>
+                        <div class="vis-bar-track"><div class="vis-bar-fill" id="vis-r"></div></div>
+                    </div>
+                    <div class="angle-row">
+                        <div class="angle-info"><span>Pitch</span><span class="angle-num" id="att-p">0.0°</span></div>
+                        <div class="vis-bar-track"><div class="vis-bar-fill" id="vis-p"></div></div>
+                    </div>
+                    <div class="angle-row">
+                        <div class="angle-info"><span>Yaw</span><span class="angle-num" id="att-y">0°</span></div>
+                        <div class="vis-bar-track"><div class="vis-bar-fill" id="vis-y" style="left:0"></div></div>
+                    </div>
+                </div>
+
+
+                <div class="card">
+                    <div class="section-header">测距传感器</div>
+                    <div class="tof-panel is-offline" id="tof-panel">
+                        <div class="tof-icon">ToF</div>
+                        <div class="tof-data">
+                            <div class="tof-label">
+                                DISTANCE
+                            </div>
+                            <div class="tof-val-group">
+                                <span class="tof-val" id="tof-val">--</span>
+                                <span class="tof-unit">mm</span>
+                            </div>
+                            <div class="tof-bar-bg">
+                                <div class="tof-bar-fill" id="tof-bar"></div>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+
+                <div class="card">
+                    <div class="section-header">Environment</div>
+                    <div class="sensor-grid">
+                        <div class="env-item">
+                            <span class="env-l">Temp</span>
+                            <span class="env-v"><span id="val-temp">--</span>°C</span>
+                        </div>
+                        <div class="env-item">
+                            <span class="env-l">Pressure</span>
+                            <span class="env-v"><span id="val-baro">--</span>hPa</span>
+                        </div>
+                    </div>
+                </div>
+            </aside>
+
+            <!-- 中间 3D -->
+            <section class="center-stage">
+                <div id="canvas-container"></div>
+                <div class="axis-gizmo">
+                    <span class="giz-x">X</span>
+                    <span class="giz-y">Y</span>
+                    <span class="giz-z">Z</span>
+                </div>
+                <div class="toast-container canvas-toast" id="toast-container"></div>
+            </section>
+
+            <!-- 右侧 RC -->
+            <aside class="sidebar-col">
+                <div class="monitor-card offline" id="rc-monitor">
+                    <div class="card-header">
+                        <div class="header-title">RC INPUT</div>
+                        <div class="signal-badge">
+                            <span class="dot-anim"></span>
+                            <span id="rc-status-text">DISCONNECTED</span>
+                        </div>
+                    </div>
+
+                    <div class="gimbals-wrapper">
+                        <div class="gimbal-unit">
+                            <div class="axis-mark am-h"></div><div class="axis-mark am-v"></div>
+                            <div class="stick-dot" id="stick-l"></div>
+                            <div class="axis-label lbl-y-top">THR</div>
+                            <div class="axis-label lbl-x-right">YAW</div>
+                        </div>
+                        <div class="gimbal-unit">
+                            <div class="axis-mark am-h"></div><div class="axis-mark am-v"></div>
+                            <div class="stick-dot" id="stick-r"></div>
+                            <div class="axis-label lbl-y-top">PIT</div>
+                            <div class="axis-label lbl-x-right">ROL</div>
+                        </div>
+                    </div>
+
+                    <div class="data-panel">
+                        <div class="switch-grid">
+                            <div class="sw-col" id="sw1"><div class="sw-name">ARM</div><div class="led-stack"><div class="led-seg seg-h"></div><div class="led-seg seg-m"></div><div class="led-seg seg-l"></div></div></div>
+                            <div class="sw-col" id="sw2"><div class="sw-name">MODE</div><div class="led-stack"><div class="led-seg seg-h"></div><div class="led-seg seg-m"></div><div class="led-seg seg-l"></div></div></div>
+                            <div class="sw-col" id="sw3"><div class="sw-name">AUX1</div><div class="led-stack"><div class="led-seg seg-h"></div><div class="led-seg seg-m"></div><div class="led-seg seg-l"></div></div></div>
+                            <div class="sw-col" id="sw4"><div class="sw-name">AUX2</div><div class="led-stack"><div class="led-seg seg-h"></div><div class="led-seg seg-m"></div><div class="led-seg seg-l"></div></div></div>
+                        </div>
+
+                        <div class="channel-list">
+                            <div class="ch-item"><div class="ch-info"><span class="ch-name">THR</span><span class="ch-num" id="txt-thr">1000</span></div><div class="bar-container"><div class="bar-fill" id="bar-thr"></div></div></div>
+                            <div class="ch-item"><div class="ch-info"><span class="ch-name">YAW</span><span class="ch-num" id="txt-yaw">1500</span></div><div class="bar-container"><div class="bar-fill" id="bar-yaw"></div></div></div>
+                            <div class="ch-item"><div class="ch-info"><span class="ch-name">PIT</span><span class="ch-num" id="txt-pit">1500</span></div><div class="bar-container"><div class="bar-fill" id="bar-pit"></div></div></div>
+                            <div class="ch-item"><div class="ch-info"><span class="ch-name">ROL</span><span class="ch-num" id="txt-rol">1500</span></div><div class="bar-container"><div class="bar-fill" id="bar-rol"></div></div></div>
+                        </div>
+                    </div>
+
+                    <div class="footer-status">
+                        <span>Protocol: CRSF/S.Bus</span>
+                        <span class="hz-counter">Rate: <span id="hz-val">0</span> Hz</span>
+                    </div>
+                </div>
+
+                <div class="card">
+                    <div class="section-header">Axis Invert</div>
+                    <div class="axis-invert-row">
+                        <label><input type="checkbox" id="invertRoll"> Roll</label>
+                        <label><input type="checkbox" id="invertPitch"> Pitch</label>
+                        <label><input type="checkbox" id="invertYaw" checked> Yaw</label>
+                    </div>
+                </div>
+            </aside>
         </div>
-    </header>
-
-    <!-- 左侧 HUD 数据显示 -->
-    <div class="hud-panel">
-        <div class="hud-title">Temperatures</div>
-        <div class="hud-row">
-            <span class="hud-label">IMU</span>
-            <span class="hud-val"><span id="val-imu-temp">--</span>°C</span>
-        </div>
-        <div class="hud-row">
-            <span class="hud-label">BAR</span>
-            <span class="hud-val"><span id="val-btemp">--</span>°C</span>
-        </div>
-        
-        <div class="hud-divider"></div>
-        
-        <div class="hud-title">Accelerometer</div>
-        <div class="hud-row"><span class="hud-label">AX</span> <span id="val-ax">0</span></div>
-        <div class="hud-row"><span class="hud-label">AY</span> <span id="val-ay">0</span></div>
-        <div class="hud-row"><span class="hud-label">AZ</span> <span id="val-az">0</span></div>
-
-        <div class="hud-divider"></div>
-
-        <div class="hud-title">Gyroscope</div>
-        <div class="hud-row"><span class="hud-label">GX</span> <span id="val-gx">0</span></div>
-        <div class="hud-row"><span class="hud-label">GY</span> <span id="val-gy">0</span></div>
-        <div class="hud-row"><span class="hud-label">GZ</span> <span id="val-gz">0</span></div>
-
-        <div class="hud-divider"></div>
-
-        <div class="hud-title">Euler Angles</div>
-        <div class="hud-row"><span class="hud-label">ROLL</span> <span id="val-roll">0</span>°</div>
-        <div class="hud-row"><span class="hud-label">PITCH</span> <span id="val-pitch">0</span>°</div>
-        <div class="hud-row"><span class="hud-label">YAW</span> <span id="val-yaw">0</span>°</div>
-
-        <div class="hud-divider"></div>
-
-        <div class="hud-title">Magnetometer</div>
-        <div class="hud-row"><span class="hud-label">MX</span> <span id="val-mx">0</span></div>
-        <div class="hud-row"><span class="hud-label">MY</span> <span id="val-my">0</span></div>
-        <div class="hud-row"><span class="hud-label">MZ</span> <span id="val-mz">0</span></div>
-
-        <div class="hud-divider"></div>
-
-        <div class="hud-title">Barometer</div>
-        <div class="hud-row"><span class="hud-label">P</span> <span class="hud-val"><span id="val-press">0</span> hPa</span></div>
-        <div class="hud-row"><span class="hud-label">ALT</span> <span class="hud-val"><span id="val-alt">0</span> m</span></div>
     </div>
 
-    <!-- 陀螺仪校准模态框 -->
-    <div id="gyroCalibModal" class="modal">
-        <div class="modal-content">
-            <div class="modal-header">
-                <h2><i data-lucide="rotate-cw"></i> 陀螺仪校准</h2>
-                <button class="modal-close" onclick="closeGyroCalibModal()">&times;</button>
+    <!-- 底部串口输出 -->
+    <div class="console-drawer closed" id="console-drawer">
+        <div class="console-header">
+            <div style="display:flex;align-items:center;gap:8px;font-weight:700">
+                <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><polyline points="4 17 10 11 4 5"></polyline><line x1="12" y1="19" x2="20" y2="19"></line></svg>
+                SERIAL OUTPUT
             </div>
-            <div class="modal-body">
-                <p class="calib-tip">保持静止，点击开始采集。完成后计算零偏，并查看原始/校准后 3D 点云。</p>
-                <div class="calib-actions">
-                    <button class="btn btn-primary" onclick="startGyroCalibration()"><i data-lucide="play"></i> 开始采集</button>
-                    <button class="btn btn-secondary" onclick="finishGyroCalibration()"><i data-lucide="check"></i> 计算零偏</button>
-                    <button class="btn btn-secondary" onclick="resetGyroCalibration()"><i data-lucide="refresh-ccw"></i> 重置</button>
-                </div>
-                <p>样本数: <span id="gyro-samples">0</span></p>
-                <div class="gyro-plot-wrapper">
-                    <canvas id="gyroPlot" width="520" height="450"></canvas>
-                    <div class="legend">
-                        <span><span class="legend-dot" style="background:#ff6b35; color:#ff6b35"></span> 原始数据</span>
-                        <span><span class="legend-dot" style="background:#00ff88; color:#00ff88"></span> 校准后</span>
-                    </div>
-                </div>
-                <h4>零偏 (dps)</h4>
-                <div class="param-values">
-                    <span>X: <code id="gyro-offset-x">0.0</code></span>
-                    <span>Y: <code id="gyro-offset-y">0.0</code></span>
-                    <span>Z: <code id="gyro-offset-z">0.0</code></span>
-                </div>
-                <h4>复制代码</h4>
-                <pre id="gyro-code" class="code-block">Attitude_SetGyroBias(0.0f, 0.0f, 0.0f);</pre>
+            <div class="console-ops">
+                <label class="opt-label"><input type="checkbox" id="chk-scroll" checked> Auto-Scroll</label>
+                <label class="opt-label"><input type="checkbox" id="chk-ts" checked> Time</label>
+                <label class="opt-label"><input type="checkbox" id="chk-throttle" checked> Throttle</label>
+                <button class="btn btn-ghost" style="height:24px;padding:0 8px" onclick="document.getElementById('console-body').innerHTML = '';">Clear</button>
             </div>
         </div>
-    </div>
-
-    <!-- 3D 容器 -->
-    <div id="canvas-container"></div>
-
-    <!-- ELRS/RC 状态面板 -->
-    <div class="rc-panel">
-        <div class="rc-header">
-            <div class="rc-title">ELRS / CRSF RC</div>
-            <div class="rc-meta">
-                <span id="rc-link-state">Link: --</span>
-                <span id="rc-rssi">RSSI: --</span>
-                <span id="rc-lq">LQ: --</span>
-            </div>
+        <div class="console-body" id="console-body">
+            <div class="log-line"><span class="log-sys">Console ready. Waiting for connection...</span></div>
         </div>
-        <div class="rc-body">
-            <div class="rc-sticks">
-                <div class="rc-stick">
-                    <div class="rc-stick-label">THR / YAW</div>
-                    <div class="rc-stick-base">
-                        <div id="rc-stick-left" class="rc-stick-knob"></div>
-                    </div>
-                </div>
-                <div class="rc-stick">
-                    <div class="rc-stick-label">PITCH / ROLL</div>
-                    <div class="rc-stick-base">
-                        <div id="rc-stick-right" class="rc-stick-knob"></div>
-                    </div>
-                </div>
-            </div>
-            <div class="rc-bars">
-                <div class="rc-bar">
-                    <span class="rc-bar-label">THR</span>
-                    <div class="rc-bar-track">
-                        <div id="rc-bar-thr" class="rc-bar-fill"></div>
-                        <div class="rc-bar-mid rc-bar-mid-left"></div>
-                        <div class="rc-bar-mid rc-bar-mid-right"></div>
-                    </div>
-                    <span id="rc-bar-thr-val" class="rc-bar-val">0%</span>
-                </div>
-                <div class="rc-bar">
-                    <span class="rc-bar-label">ROLL</span>
-                    <div class="rc-bar-track">
-                        <div id="rc-bar-roll" class="rc-bar-fill rc-centered"></div>
-                        <div class="rc-bar-mid"></div>
-                    </div>
-                    <span id="rc-bar-roll-val" class="rc-bar-val">0</span>
-                </div>
-                <div class="rc-bar">
-                    <span class="rc-bar-label">PITCH</span>
-                    <div class="rc-bar-track">
-                        <div id="rc-bar-pitch" class="rc-bar-fill rc-centered"></div>
-                        <div class="rc-bar-mid"></div>
-                    </div>
-                    <span id="rc-bar-pitch-val" class="rc-bar-val">0</span>
-                </div>
-                <div class="rc-bar">
-                    <span class="rc-bar-label">YAW</span>
-                    <div class="rc-bar-track">
-                        <div id="rc-bar-yaw" class="rc-bar-fill rc-centered"></div>
-                        <div class="rc-bar-mid"></div>
-                    </div>
-                    <span id="rc-bar-yaw-val" class="rc-bar-val">0</span>
-                </div>
-            </div>
-            <div class="rc-aux">
-                <div class="rc-aux-item">
-                    <span class="rc-aux-label">AUX1</span>
-                    <div class="rc-aux-track"><div id="rc-aux-1" class="rc-aux-fill"></div></div>
-                </div>
-                <div class="rc-aux-item">
-                    <span class="rc-aux-label">AUX2</span>
-                    <div class="rc-aux-track"><div id="rc-aux-2" class="rc-aux-fill"></div></div>
-                </div>
-                <div class="rc-aux-item">
-                    <span class="rc-aux-label">AUX3</span>
-                    <div class="rc-aux-track"><div id="rc-aux-3" class="rc-aux-fill"></div></div>
-                </div>
-                <div class="rc-aux-item">
-                    <span class="rc-aux-label">AUX4</span>
-                    <div class="rc-aux-track"><div id="rc-aux-4" class="rc-aux-fill"></div></div>
-                </div>
-                <div class="rc-aux-item">
-                    <span class="rc-aux-label">AUX5</span>
-                    <div class="rc-aux-track"><div id="rc-aux-5" class="rc-aux-fill"></div></div>
-                </div>
-                <div class="rc-aux-item">
-                    <span class="rc-aux-label">AUX6</span>
-                    <div class="rc-aux-track"><div id="rc-aux-6" class="rc-aux-fill"></div></div>
-                </div>
-                <div class="rc-aux-item">
-                    <span class="rc-aux-label">AUX7</span>
-                    <div class="rc-aux-track"><div id="rc-aux-7" class="rc-aux-fill"></div></div>
-                </div>
-                <div class="rc-aux-item">
-                    <span class="rc-aux-label">AUX8</span>
-                    <div class="rc-aux-track"><div id="rc-aux-8" class="rc-aux-fill"></div></div>
-                </div>
-            </div>
-        </div>
-    </div>
-
-    <!-- 视角切换 -->
-    <div class="control-bar">
-        <button class="view-btn active" data-mode="iso">ISO</button>
-        <button class="view-btn" data-mode="top">TOP</button>
-        <button class="view-btn" data-mode="front">FRONT</button>
-        <button class="view-btn" data-mode="side">SIDE</button>
     </div>
 
     <!-- 坐标系调试面板 -->
@@ -260,10 +323,6 @@
         </div>
         <button class="btn btn-secondary" onclick="toggleCoordDebug()">关闭</button>
     </div>
-    
-    <button id="coordDebugBtn" class="coord-debug-btn" onclick="toggleCoordDebug()">
-        <i data-lucide="grid-3x3"></i>
-    </button>
 
     <!-- 磁力计校准模态框 -->
     <div id="magCalibModal" class="modal">
@@ -361,19 +420,217 @@
         </div>
     </div>
 
+    <!-- Alerts / Critical modal -->
+    <div class="hud-alert-container" id="hud-alert">
+        <div class="hud-badge">
+            <svg class="hud-icon" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><path d="M10.29 3.86L1.82 18a2 2 0 0 0 1.71 3h16.94a2 2 0 0 0 1.71-3L13.71 3.86a2 2 0 0 0-3.42 0z"></path><line x1="12" y1="9" x2="12" y2="13"></line><line x1="12" y1="17" x2="12.01" y2="17"></line></svg>
+            <span id="hud-text">System Ready</span>
+        </div>
+    </div>
+
+    <div class="modal-overlay" id="critical-modal">
+        <div class="error-card">
+            <div class="ec-header">
+                <div class="ec-icon-box">
+                    <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M18.42 2.11A3 3 0 0 0 16.3 1.23H7.7a3 3 0 0 0-2.12.88l-4.7 4.7a3 3 0 0 0-.88 2.12v8.6a3 3 0 0 0 .88 2.12l4.7 4.7a3 3 0 0 0 2.12.88h8.6a3 3 0 0 0 2.12-.88l4.7-4.7a3 3 0 0 0 .88-2.12V8.93a3 3 0 0 0-.88-2.12z"></path><line x1="12" y1="9" x2="12" y2="13"></line><line x1="12" y1="17" x2="12.01" y2="17"></line></svg>
+                </div>
+                <div class="ec-title-group">
+                    <div class="ec-title" id="ec-title">Critical Failure</div>
+                    <div class="ec-subtitle" id="ec-subtitle">Flight Controller Halted</div>
+                </div>
+            </div>
+            <div class="ec-body">
+                <div class="ec-msg" id="ec-message">
+                    The IMU sensor is not responding. The system has triggered failsafe mode to prevent unstable flight behavior.
+                </div>
+                <div class="error-code-box">
+                    <span>ERR_CODE:</span>
+                    <span id="ec-code">--</span>
+                </div>
+            </div>
+            <div class="ec-actions">
+                <button class="alert-btn alert-btn-ghost" id="ec-ignore">Ignore</button>
+                <button class="alert-btn alert-btn-danger" id="ec-stop">Emergency Stop</button>
+            </div>
+        </div>
+    </div>
+
+    <!-- 电机安全确认弹窗 -->
+    <div class="safety-modal modal-overlay hidden" id="motorSafetyModal">
+        <div class="safety-card" id="motorSafetyCard">
+            <button class="safety-close" id="motorSafetyClose">
+                <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><line x1="18" y1="6" x2="6" y2="18"></line><line x1="6" y1="6" x2="18" y2="18"></line></svg>
+            </button>
+            
+            <!-- 超大图标区 -->
+            <div class="icon-wrapper">
+                <div class="wave"></div>
+                <div class="wave"></div>
+                <div class="icon-inner">
+                    <svg width="42" height="42" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><path d="M10.29 3.86L1.82 18a2 2 0 0 0 1.71 3h16.94a2 2 0 0 0 1.71-3L13.71 3.86a2 2 0 0 0-3.42 0z"></path><line x1="12" y1="9" x2="12" y2="13"></line><line x1="12" y1="17" x2="12.01" y2="17"></line></svg>
+                </div>
+            </div>
+
+            <!-- 文字区 -->
+            <div class="safety-body">
+                <h2>安全检查</h2>
+                <p>
+                    电机即将高速旋转。<br>
+                    请务必确认 <strong>已拆除所有螺旋桨</strong>。
+                </p>
+
+                <!-- 干净的复选框 -->
+                <label class="checkbox-row">
+                    <input type="checkbox" id="motorSafetyCheck" style="display:none">
+                    <div class="custom-check">
+                        <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="4" stroke-linecap="round" stroke-linejoin="round"><polyline points="20 6 9 17 4 12"></polyline></svg>
+                    </div>
+                    <span class="check-text">我已确认拆除螺旋桨</span>
+                </label>
+
+                <!-- 小巧圆滑按钮 -->
+                <button class="btn-round" id="motorConfirmBtn">
+                    开始测试
+                </button>
+            </div>
+        </div>
+    </div>
+
+    <!-- 电机测试模态框 -->
+    <div class="motor-modal modal-overlay hidden" id="motorModal">
+        <div class="motor-card">
+            <div class="motor-header">
+                <div class="motor-title">
+                    <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="#475569" stroke-width="2"><circle cx="12" cy="12" r="10"></circle><path d="M12 16v-4"/><path d="M12 8h.01"/></svg>
+                    电机测试 <span class="motor-badge">Test Mode</span>
+                </div>
+                <button class="motor-close" onclick="closeMotorModal()">&times;</button>
+            </div>
+            <div class="motor-body">
+                <div class="drone-stage">
+                    <svg class="drone-svg-body" viewBox="0 0 400 400" fill="none">
+                        <path d="M170 160 L60 60 L70 50 L180 150 Z" fill="#475569" stroke="#1E293B" stroke-width="2"/>
+                        <path d="M230 160 L340 60 L330 50 L220 150 Z" fill="#475569" stroke="#1E293B" stroke-width="2"/>
+                        <path d="M170 240 L60 340 L70 350 L180 250 Z" fill="#475569" stroke="#1E293B" stroke-width="2"/>
+                        <path d="M230 240 L340 340 L330 350 L220 250 Z" fill="#475569" stroke="#1E293B" stroke-width="2"/>
+                        <rect x="160" y="140" width="80" height="120" rx="20" fill="#334155" />
+                        <rect x="170" y="150" width="60" height="100" rx="15" fill="#1E293B" />
+                        <path d="M 185 140 L 190 125 C 190 120, 210 120, 210 125 L 215 140 Z" fill="#94A3B8" stroke="#64748B" stroke-width="1.5"/>
+                        <rect x="150" y="190" width="100" height="20" rx="4" fill="#0EA5E9" fill-opacity="0.9"/>
+                    </svg>
+
+                    <div class="motor-trigger pos-fl dir-cw" onclick="toggleMotor(this)">
+                        <svg class="arrow-ring-layer" viewBox="0 0 100 100">
+                            <path class="ring-track" d="M 14 50 A 36 36 0 0 1 48 14.5" stroke="currentColor" fill="none" />
+                            <path class="ring-arrow-head" d="M 44 6 L 60 14.5 L 44 23 Z" fill="currentColor" />
+                        </svg>
+                        <div class="motor-unit"><span class="motor-num">4</span><div class="motor-coil"></div></div>
+                        <div class="prop-layer"><svg viewBox="0 0 100 100" width="100%" height="100%"><g transform="translate(50,50)"><path class="prop-shape" d="M-5 0 Q -10 -40 0 -45 Q 10 -40 5 0 Z" /><path class="prop-tip" d="M-2 -35 Q 0 -45 2 -35 Z" transform="translate(0, -5) scale(2)"/><path class="prop-shape" d="M-5 0 Q -10 40 0 45 Q 10 40 5 0 Z" /><path class="prop-tip" d="M-2 35 Q 0 45 2 35 Z" transform="translate(0, 5) scale(2)"/></g></svg></div>
+                    </div>
+
+                    <div class="motor-trigger pos-fr dir-ccw" onclick="toggleMotor(this)">
+                        <svg class="arrow-ring-layer" viewBox="0 0 100 100">
+                            <path class="ring-track" d="M 86 50 A 36 36 0 0 0 52 14.5" stroke="currentColor" fill="none" />
+                            <path class="ring-arrow-head" d="M 56 6 L 40 14.5 L 56 23 Z" fill="currentColor" />
+                        </svg>
+                        <div class="motor-unit"><span class="motor-num">2</span><div class="motor-coil"></div></div>
+                        <div class="prop-layer"><svg viewBox="0 0 100 100" width="100%" height="100%"><g transform="translate(50,50)"><path class="prop-shape" d="M-5 0 Q -10 -40 0 -45 Q 10 -40 5 0 Z" /><path class="prop-tip" d="M-2 -35 Q 0 -45 2 -35 Z" transform="translate(0, -5) scale(2)"/><path class="prop-shape" d="M-5 0 Q -10 40 0 45 Q 10 40 5 0 Z" /><path class="prop-tip" d="M-2 35 Q 0 45 2 35 Z" transform="translate(0, 5) scale(2)"/></g></svg></div>
+                    </div>
+
+                    <div class="motor-trigger pos-rl dir-ccw" onclick="toggleMotor(this)">
+                        <svg class="arrow-ring-layer" viewBox="0 0 100 100">
+                            <path class="ring-track" d="M 14 50 A 36 36 0 0 0 48 85.5" stroke="currentColor" fill="none" />
+                            <path class="ring-arrow-head" d="M 44 77 L 60 85.5 L 44 94 Z" fill="currentColor" />
+                        </svg>
+                        <div class="motor-unit"><span class="motor-num">3</span><div class="motor-coil"></div></div>
+                        <div class="prop-layer"><svg viewBox="0 0 100 100" width="100%" height="100%"><g transform="translate(50,50)"><path class="prop-shape" d="M-5 0 Q -10 -40 0 -45 Q 10 -40 5 0 Z" /><path class="prop-tip" d="M-2 -35 Q 0 -45 2 -35 Z" transform="translate(0, -5) scale(2)"/><path class="prop-shape" d="M-5 0 Q -10 40 0 45 Q 10 40 5 0 Z" /><path class="prop-tip" d="M-2 35 Q 0 45 2 35 Z" transform="translate(0, 5) scale(2)"/></g></svg></div>
+                    </div>
+
+                    <div class="motor-trigger pos-rr dir-cw" onclick="toggleMotor(this)">
+                        <svg class="arrow-ring-layer" viewBox="0 0 100 100">
+                            <path class="ring-track" d="M 86 50 A 36 36 0 0 1 52 85.5" stroke="currentColor" fill="none" />
+                            <path class="ring-arrow-head" d="M 56 77 L 40 85.5 L 56 94 Z" fill="currentColor" />
+                        </svg>
+                        <div class="motor-unit"><span class="motor-num">1</span><div class="motor-coil"></div></div>
+                        <div class="prop-layer"><svg viewBox="0 0 100 100" width="100%" height="100%"><g transform="translate(50,50)"><path class="prop-shape" d="M-5 0 Q -10 -40 0 -45 Q 10 -40 5 0 Z" /><path class="prop-tip" d="M-2 -35 Q 0 -45 2 -35 Z" transform="translate(0, -5) scale(2)"/><path class="prop-shape" d="M-5 0 Q -10 40 0 45 Q 10 40 5 0 Z" /><path class="prop-tip" d="M-2 35 Q 0 45 2 35 Z" transform="translate(0, 5) scale(2)"/></g></svg></div>
+                    </div>
+                </div>
+
+                <div class="modal-footer motor-footer">
+                    <button class="btn-main btn-start" id="masterBtn" onclick="toggleMaster()">启动全部电机</button>
+                    <button class="btn-main btn-stop" onclick="closeMotorModal()">关闭</button>
+                </div>
+            </div>
+        </div>
+    </div>
+
     <!-- JavaScript 模块 -->
     <script src="js/config.js"></script>
+    <script src="js/ui-sidebar.js"></script>
+    <script src="js/ui-rc-monitor.js"></script>
+    <script src="js/ui-alerts.js"></script>
+    <script src="js/ui-imu-card.js"></script>
     <script src="js/serial.js"></script>
+    <script src="js/motor-modal.js"></script>
     <script src="js/ui.js"></script>
     <script src="js/recording.js"></script>
     <script src="js/mag-calibration.js"></script>
-    <script src="js/gyro-calibration.js"></script>
     <script src="js/attitude-reset.js"></script>
     <script src="js/orientation.js"></script>
     <script src="js/scene.js"></script>
     <script src="js/drone.js"></script>
     <script src="js/app.js"></script>
     <script>
+        // Console drawer toggle + resize (min/max clamp)
+        document.addEventListener('DOMContentLoaded', () => {
+            const drawer = document.getElementById('console-drawer');
+            const header = drawer?.querySelector('.console-header');
+            const minH = 120;
+            const maxH = 400;
+            let startY = 0;
+            let startH = 0;
+            let dragging = false;
+
+            const setHeight = (h) => {
+                const clamped = Math.max(minH, Math.min(maxH, h));
+                drawer.style.setProperty('--console-height', `${clamped}px`);
+                if (drawer.classList.contains('closed')) {
+                    drawer.classList.add('closed'); // reapply transform with new height
+                }
+            };
+
+            const endDrag = (toggleIfClick) => {
+                if (!dragging) return;
+                dragging = false;
+                document.removeEventListener('mousemove', onMove);
+                document.removeEventListener('mouseup', onUp);
+                if (toggleIfClick) {
+                    drawer.classList.toggle('closed');
+                }
+            };
+
+            const onMove = (e) => {
+                if (!dragging) return;
+                const delta = startY - e.clientY;
+                setHeight(startH + delta);
+            };
+            const onUp = (e) => {
+                const delta = Math.abs(startY - e.clientY);
+                endDrag(delta < 3);
+            };
+
+            if (drawer && header) {
+                header.addEventListener('mousedown', (e) => {
+                    if (e.target.closest('.console-ops')) return;
+                    if (e.target.closest('input,button')) return;
+                    startY = e.clientY;
+                    startH = drawer.getBoundingClientRect().height;
+                    dragging = true;
+                    document.addEventListener('mousemove', onMove);
+                    document.addEventListener('mouseup', onUp);
+                });
+            }
+        });
         lucide.createIcons();
     </script>
 </body>
