@@ -1,0 +1,342 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Aero Nav Corrected Layout</title>
+    <link href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css" rel="stylesheet">
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/three.js/r128/three.min.js"></script>
+
+    <style>
+        :root {
+            --primary: #2563eb;
+            --bg-body: #eef2f6;
+            --bg-panel: #ffffff;
+            --text-main: #334155;
+            --text-sub: #94a3b8;
+            --border: #e2e8f0;
+            --success: #10b981;
+            --warning: #f59e0b;
+            --danger: #ef4444;
+            --shadow-md: 0 4px 6px -1px rgba(0, 0, 0, 0.05);
+            --btn-size: 40px;
+        }
+
+        body {
+            margin: 0; padding: 30px;
+            background-color: var(--bg-body);
+            font-family: 'Segoe UI', Roboto, sans-serif;
+            overflow: hidden;
+            -webkit-font-smoothing: antialiased;
+        }
+
+        /* ================= 导航栏容器 ================= */
+        .navbar {
+            display: flex; align-items: center; justify-content: space-between;
+            background: var(--bg-panel);
+            padding: 0 24px;
+            border-radius: 14px;
+            box-shadow: var(--shadow-md);
+            height: 60px;
+        }
+
+        /* --- 左侧区域：Logo + 状态栏 --- */
+        .nav-left {
+            display: flex; align-items: center; gap: 20px;
+        }
+
+        .brand {
+            display: flex; align-items: center; gap: 10px;
+            font-weight: 800; font-size: 18px; color: var(--text-main);
+            letter-spacing: 0.5px;
+            margin-right: 5px;
+        }
+        .brand-icon {
+            background: var(--primary); color: white;
+            width: 32px; height: 32px; border-radius: 8px;
+            display: flex; align-items: center; justify-content: center; font-size: 16px;
+        }
+
+        /* 竖分割线 */
+        .v-divider { width: 1px; height: 24px; background: #f1f5f9; }
+
+        /* 透明状态栏 (现在在左边) */
+        .status-transparent {
+            display: flex; align-items: center;
+            gap: 25px;
+        }
+
+        .stat-item {
+            display: flex; align-items: center; gap: 6px;
+            font-size: 14px; font-weight: 700; color: var(--text-main);
+            flex-shrink: 0;
+        }
+        
+        .stat-icon { 
+            font-size: 13px; color: var(--text-sub);
+            width: 16px; text-align: center;
+            transition: color 0.3s; 
+            backface-visibility: hidden; transform: translateZ(0); will-change: transform;
+        }
+        
+        .stat-unit { font-size: 11px; font-weight: 500; color: var(--text-sub); margin-left: 2px; }
+        .stat-line { width: 1px; height: 14px; background: #e2e8f0; }
+
+        /* 防抖动数字容器 */
+        .fixed-w {
+            display: inline-block; min-width: 42px; text-align: right;
+            font-family: 'Roboto Mono', 'Consolas', monospace; font-variant-numeric: tabular-nums;
+        }
+
+        /* --- 右侧区域：操作按钮 --- */
+        .nav-right {
+            display: flex; align-items: center; gap: 12px;
+        }
+
+        /* 连接按钮 */
+        .btn-connect {
+            height: 38px; padding: 0 18px;
+            border: none; border-radius: 8px;
+            font-size: 13px; font-weight: 700; cursor: pointer;
+            display: flex; align-items: center; justify-content: center; gap: 8px;
+            transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+            position: relative; overflow: hidden; min-width: 100px;
+        }
+        /* 未连接 */
+        .btn-connect.disconnected { background: var(--primary); color: white; box-shadow: 0 4px 10px rgba(37, 99, 235, 0.2); }
+        .btn-connect.disconnected:hover { background: #1d4ed8; transform: translateY(-1px); }
+        /* 连接中 */
+        .btn-connect.connecting { background: #e2e8f0; color: var(--text-sub); pointer-events: none; box-shadow: none; }
+        /* 已连接 */
+        .btn-connect.connected { background: #dcfce7; color: #15803d; box-shadow: none; border: 1px solid #bbf7d0; }
+        .btn-connect.connected:hover { background: #fee2e2; color: #b91c1c; border-color: #fecaca; }
+
+        .dot-glow { width: 6px; height: 6px; background: #22c55e; border-radius: 50%; box-shadow: 0 0 0 rgba(34, 197, 94, 0.4); animation: pulse-green 2s infinite; }
+        @keyframes pulse-green { 0% { box-shadow: 0 0 0 0 rgba(34, 197, 94, 0.7); } 70% { box-shadow: 0 0 0 6px rgba(34, 197, 94, 0); } 100% { box-shadow: 0 0 0 0 rgba(34, 197, 94, 0); } }
+
+        /* 图标工具按钮 */
+        .tool-btn-wrap { position: relative; }
+        .btn-icon {
+            width: var(--btn-size); height: var(--btn-size);
+            background: transparent; border: 1px solid transparent; border-radius: 8px;
+            color: var(--text-sub); font-size: 16px; cursor: pointer;
+            display: flex; align-items: center; justify-content: center;
+            transition: all 0.2s;
+        }
+        .btn-icon:hover { background: #f8fafc; color: var(--primary); border-color: #f1f5f9; }
+
+        /* 悬浮动画 */
+        .tool-btn-wrap:hover .fa-compass { animation: spin 1s infinite cubic-bezier(0.68, -0.55, 0.27, 1.55); }
+        .tool-btn-wrap:hover .fa-fan { animation: spinFan 0.6s infinite linear; }
+        .tool-btn-wrap:hover .fa-rotate-left { animation: spinReverse 0.6s ease; }
+        .tool-btn-wrap:hover .fa-book { animation: bounce 0.6s infinite alternate; }
+
+        /* 特效 CSS */
+        .press-anim { transition: transform 0.5s cubic-bezier(0.34, 1.56, 0.64, 1); }
+        .tof-danger i { color: var(--danger); animation: rapidPulse 0.5s infinite; }
+        .tof-far i { color: #8b5cf6; } .tof-normal i { color: var(--primary); }
+        .temp-hot i { color: var(--danger); animation: shake 0.5s infinite; } .temp-normal i { color: var(--warning); }
+        .bat-low { color: var(--danger) !important; animation: rapidPulse 1s infinite; }
+        @keyframes rapidPulse { 0% { opacity: 1; transform: scale(1); } 50% { opacity: 0.5; transform: scale(0.9); } 100% { opacity: 1; transform: scale(1); } }
+        @keyframes shake { 0% { transform: rotate(0deg); } 25% { transform: rotate(10deg); } 75% { transform: rotate(-10deg); } 100% { transform: rotate(0deg); } }
+        @keyframes spin { 0% {transform: rotate(0deg);} 100% {transform: rotate(360deg);} }
+        @keyframes spinFan { 0% {transform: rotate(0deg);} 100% {transform: rotate(360deg);} }
+        @keyframes spinReverse { 0% {transform: rotate(0deg);} 100% {transform: rotate(-360deg);} }
+        @keyframes bounce { 0% {transform: translateY(0);} 100% {transform: translateY(-3px);} }
+
+        /* Tooltip */
+        .tooltip { position: absolute; top: 110%; left: 50%; transform: translateX(-50%); background: #0f172a; color: white; padding: 4px 8px; border-radius: 4px; font-size: 11px; white-space: nowrap; opacity: 0; pointer-events: none; transition: all 0.2s; z-index: 20; }
+        .tool-btn-wrap:hover .tooltip { opacity: 1; transform: translateX(-50%) translateY(4px); }
+
+        /* Modal */
+        .modal-overlay { position: fixed; top: 0; left: 0; width: 100%; height: 100%; background: rgba(0,0,0,0.5); backdrop-filter: blur(4px); z-index: 100; display: none; justify-content: center; align-items: center; }
+        .modal-overlay.active { display: flex; }
+        .modal-card { width: 400px; height: 450px; background: #fff; border-radius: 12px; display: flex; flex-direction: column; overflow: hidden; box-shadow: 0 25px 50px -12px rgba(0,0,0,0.3); }
+
+    </style>
+</head>
+<body>
+
+    <nav class="navbar">
+        <!-- === 左侧区域：Logo + 状态栏 === -->
+        <div class="nav-left">
+            <div class="brand">
+                <div class="brand-icon"><i class="fa-solid fa-layer-group"></i></div>
+                <span>AERO</span>
+            </div>
+
+            <div class="v-divider"></div>
+
+            <!-- 状态栏 -->
+            <div class="status-transparent">
+                <!-- 温度 -->
+                <div class="stat-item" id="box-temp">
+                    <i class="fa-solid fa-temperature-half stat-icon"></i>
+                    <span class="fixed-w" id="val-temp">0.0</span>
+                    <span class="stat-unit">°C</span>
+                </div>
+                
+                <div class="stat-line"></div>
+                
+                <!-- 气压 -->
+                <div class="stat-item" id="box-press">
+                    <i class="fa-solid fa-gauge-high stat-icon press-anim" id="icon-press"></i>
+                    <span class="fixed-w" id="val-press">1013</span>
+                    <span class="stat-unit">hPa</span>
+                </div>
+    
+                <div class="stat-line"></div>
+    
+                <!-- ToF -->
+                <div class="stat-item" id="box-tof">
+                    <i class="fa-solid fa-ruler-vertical stat-icon"></i>
+                    <span class="fixed-w" id="val-tof" style="min-width: 48px;">0</span>
+                    <span class="stat-unit">mm</span>
+                </div>
+    
+                <div class="stat-line"></div>
+    
+                <!-- 电池 -->
+                <div class="stat-item">
+                    <i id="icon-bat" class="fa-solid fa-battery-full stat-icon"></i>
+                    <span class="fixed-w" id="val-volt">0.0</span>
+                    <span class="stat-unit">V</span>
+                </div>
+            </div>
+        </div>
+
+
+        <!-- === 右侧区域：操作按钮 === -->
+        <div class="nav-right">
+            <!-- 连接按钮 (主操作) -->
+            <button id="btn-connect" class="btn-connect disconnected" onclick="toggleConnection()">
+                <i class="fa-solid fa-link"></i>
+                <span>连接串口</span>
+            </button>
+
+            <!-- 工具按钮组 -->
+            <div class="tool-btn-wrap">
+                <button class="btn-icon" onclick="openModal()"><i class="fa-regular fa-compass"></i></button>
+                <div class="tooltip">校准磁力计</div>
+            </div>
+
+            <div class="tool-btn-wrap">
+                <button class="btn-icon"><i class="fa-solid fa-fan"></i></button>
+                <div class="tooltip">电机检测</div>
+            </div>
+
+            <div class="tool-btn-wrap">
+                <button class="btn-icon"><i class="fa-solid fa-rotate-left"></i></button>
+                <div class="tooltip">重置姿态</div>
+            </div>
+
+            <div class="tool-btn-wrap">
+                <button class="btn-icon"><i class="fa-solid fa-book"></i></button>
+                <div class="tooltip">开发文档</div>
+            </div>
+        </div>
+    </nav>
+
+
+    <!-- Modal (Mag Calib) -->
+    <div class="modal-overlay" id="calib-modal">
+        <div class="modal-card">
+            <div style="padding:15px; border-bottom:1px solid #eee; display:flex; justify-content:space-between; font-weight:bold;">
+                <span>磁力计校准</span><i class="fa-solid fa-times" style="cursor:pointer;" onclick="closeModal()"></i>
+            </div>
+            <div id="mag-render" style="flex:1;"></div>
+            <div style="padding:15px; border-top:1px solid #eee;">
+                <div style="display:flex; justify-content:space-between; font-size:12px; margin-bottom:5px;"><span>进度</span><span id="mag-txt" style="color:var(--primary)">0%</span></div>
+                <div style="height:6px; background:#eee; border-radius:3px; overflow:hidden;"><div id="mag-bar" style="width:0%; height:100%; background:var(--primary);"></div></div>
+            </div>
+        </div>
+    </div>
+
+    <!-- 模拟脚本 -->
+    <script>
+        // 1. 连接按钮逻辑
+        const btn = document.getElementById('btn-connect');
+        let isConnected = false;
+        function toggleConnection() {
+            if(!isConnected) {
+                btn.className = 'btn-connect connecting';
+                btn.innerHTML = '<i class="fa-solid fa-circle-notch fa-spin"></i><span>连接中...</span>';
+                setTimeout(() => {
+                    isConnected = true;
+                    btn.className = 'btn-connect connected';
+                    btn.innerHTML = '<div class="dot-glow"></div><span>已连接</span>';
+                    btn.onmouseenter = () => { if(isConnected) btn.innerHTML = '<i class="fa-solid fa-link-slash"></i><span>断开连接</span>'; };
+                    btn.onmouseleave = () => { if(isConnected) btn.innerHTML = '<div class="dot-glow"></div><span>已连接</span>'; };
+                }, 1500);
+            } else {
+                isConnected = false;
+                btn.onmouseenter = null; btn.onmouseleave = null;
+                btn.className = 'btn-connect disconnected';
+                btn.innerHTML = '<i class="fa-solid fa-link"></i><span>连接串口</span>';
+            }
+        }
+
+        // 2. 模拟数据更新
+        setInterval(() => {
+            let raw = 1200 + Math.sin(Date.now()/1000)*800 + (Math.random()*100-50);
+            if(Math.random()>0.95) raw=20; 
+            let val = Math.max(0, Math.floor(raw));
+            document.getElementById('val-tof').innerText = val;
+            const boxT = document.getElementById('box-tof'); boxT.className='stat-item';
+            if(val<100) boxT.classList.add('tof-danger'); else if(val>1800) boxT.classList.add('tof-far'); else boxT.classList.add('tof-normal');
+        }, 200);
+
+        setInterval(() => {
+            let temp = 42 + Math.random()*5;
+            document.getElementById('val-temp').innerText = temp.toFixed(1);
+            const box = document.getElementById('box-temp'); box.className='stat-item';
+            if(temp>45) box.classList.add('temp-hot'); else box.classList.add('temp-normal');
+        }, 1000);
+
+        setInterval(() => {
+            let press = 1013 + (Math.random()-0.5)*4;
+            document.getElementById('val-press').innerText = press.toFixed(0);
+            const deg = (press-1013)*10;
+            document.getElementById('icon-press').style.transform = `translateZ(0) rotate(${deg}deg)`;
+        }, 800);
+
+        let v=24.2, d=true;
+        setInterval(()=>{
+            if(d){v-=0.1; if(v<19)d=false;}else{v+=0.5; if(v>25.2)d=true;}
+            document.getElementById('val-volt').innerText = v.toFixed(1);
+            const i=document.getElementById('icon-bat');
+            const p=(v-19)/6.2;
+            i.className='fa-solid stat-icon'; i.style.color=''; i.style.animation='';
+            if(p>0.8) i.classList.add('fa-battery-full'); else if(p>0.6) i.classList.add('fa-battery-three-quarters'); else if(p>0.4) i.classList.add('fa-battery-half'); else if(p>0.1) i.classList.add('fa-battery-quarter'); else i.classList.add('fa-battery-empty');
+            if(p>0.5) i.style.color='var(--success)'; else if(p>0.2) i.style.color='var(--warning)'; else i.classList.add('bat-low');
+        }, 1000);
+
+        // Modal 3D Logic
+        let r,s,c,cloud,pts=[],run=false;
+        function openModal(){ document.getElementById('calib-modal').classList.add('active'); setTimeout(init3D,200); }
+        function closeModal(){ document.getElementById('calib-modal').classList.remove('active'); run=false; }
+        function init3D(){
+            if(r){run=true;pts=[];return;}
+            const d=document.getElementById('mag-render');
+            s=new THREE.Scene(); s.background=new THREE.Color(0xfafafa);
+            c=new THREE.PerspectiveCamera(50,d.clientWidth/d.clientHeight,0.1,100); c.position.z=3.5;
+            r=new THREE.WebGLRenderer({antialias:true}); r.setSize(d.clientWidth,d.clientHeight);
+            d.appendChild(r.domElement);
+            s.add(new THREE.Mesh(new THREE.SphereGeometry(1.5,12,12), new THREE.MeshBasicMaterial({color:0xddd, wireframe:true})));
+            cloud=new THREE.Points(new THREE.BufferGeometry(), new THREE.PointsMaterial({color:0x2563eb, size:0.1})); s.add(cloud);
+            run=true; animate();
+        }
+        function animate(){
+            if(!run)return; requestAnimationFrame(animate); s.rotation.y+=0.01;
+            if(pts.length<1500){
+                const u=Math.random(),v=Math.random(),t=2*Math.PI*u,p=Math.acos(2*v-1),R=1.5;
+                pts.push(R*Math.sin(p)*Math.cos(t),R*Math.sin(p)*Math.sin(t),R*Math.cos(p));
+                cloud.geometry.setAttribute('position',new THREE.Float32BufferAttribute(pts,3));
+                const pct=Math.min(Math.floor(pts.length/3/500*100),100);
+                document.getElementById('mag-txt').innerText=pct+'%'; document.getElementById('mag-bar').style.width=pct+'%';
+            }
+            r.render(s,c);
+        }
+    </script>
+</body>
+</html>

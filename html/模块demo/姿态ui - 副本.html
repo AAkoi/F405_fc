@@ -1,0 +1,238 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Nano HUD Final</title>
+    
+    <style>
+        :root {
+            --primary: #2196F3;
+            --bar-bg: rgba(0, 0, 0, 0.1);
+            --text-main: #34495e;
+            --text-sub: #7f8c8d;
+            --font-mono: 'Consolas', monospace;
+        }
+
+        body {
+            margin: 0; padding: 50px;
+            background: #eef2f5; 
+            font-family: 'Segoe UI', sans-serif;
+        }
+
+        /* 主容器：无背景，点击交互 */
+        .att-nano-widget {
+            width: 160px;
+            height: 140px;
+            position: relative;
+            cursor: pointer;
+            user-select: none;
+        }
+
+        /* 视图层公共样式 */
+        .view-layer {
+            position: absolute;
+            top: 0; left: 0; width: 100%; height: 100%;
+            transition: all 0.4s cubic-bezier(0.34, 1.56, 0.64, 1);
+            display: flex; flex-direction: column; justify-content: center;
+        }
+
+        /* === 状态 A: 线性视图 === */
+        .view-linear {
+            opacity: 1;
+            transform: scale(1) rotateY(0deg);
+            gap: 12px;
+            z-index: 2;
+        }
+
+        .linear-row { display: flex; flex-direction: column; gap: 3px; }
+        .row-head { display: flex; justify-content: space-between; align-items: baseline; }
+        .lbl { font-size: 11px; font-weight: 600; color: var(--text-sub); text-transform: uppercase; }
+        .val { font-family: var(--font-mono); font-size: 12px; font-weight: 700; color: var(--text-main); }
+
+        .bar-track {
+            height: 4px; background: var(--bar-bg); border-radius: 2px;
+            position: relative; overflow: hidden;
+        }
+        .center-mark {
+            position: absolute; left: 50%; top: 0; bottom: 0; width: 1px; 
+            background: rgba(0,0,0,0.15); z-index: 1;
+        }
+        .bar-fill {
+            position: absolute; height: 100%; background: var(--primary); 
+            border-radius: 2px; transition: all 0.1s;
+        }
+
+        /* === 状态 B: 3D 视图 === */
+        .view-3d {
+            opacity: 0;
+            transform: scale(0.5) rotateY(90deg);
+            pointer-events: none;
+            align-items: center;
+            z-index: 1;
+        }
+
+        #att-canvas {
+            width: 90px; height: 90px;
+            border-radius: 50%;
+            background: #ddd;
+            box-shadow: 0 4px 10px rgba(0,0,0,0.15);
+        }
+        
+        /* 3D视图下的数值条 */
+        .data-3d-row {
+            margin-top: 8px;
+            display: flex; gap: 8px; justify-content: center;
+            font-size: 10px; color: var(--text-main); font-family: var(--font-mono);
+            background: rgba(255,255,255,0.6);
+            padding: 3px 8px; border-radius: 12px;
+            backdrop-filter: blur(2px);
+        }
+        .d-item { display: flex; gap: 2px; }
+        .d-lbl { color: #999; transform: scale(0.9); }
+        .d-val { font-weight: 700; }
+
+        /* === 激活状态控制 === */
+        .att-nano-widget.show-3d .view-linear {
+            opacity: 0; transform: scale(0.8) rotateY(-90deg); pointer-events: none;
+        }
+        .att-nano-widget.show-3d .view-3d {
+            opacity: 1; transform: scale(1) rotateY(0deg); pointer-events: auto;
+        }
+
+    </style>
+</head>
+<body>
+
+    <!-- 组件 -->
+    <div class="att-nano-widget" onclick="toggleWidget(this)" title="点击切换 线性/3D 视图">
+        
+        <!-- 线性层 -->
+        <div class="view-layer view-linear">
+            <!-- Roll -->
+            <div class="linear-row">
+                <div class="row-head">
+                    <span class="lbl">Roll</span>
+                    <span class="val" id="txt-r">0.0°</span>
+                </div>
+                <div class="bar-track">
+                    <div class="center-mark"></div>
+                    <div class="bar-fill" id="bar-r"></div>
+                </div>
+            </div>
+            <!-- Pitch -->
+            <div class="linear-row">
+                <div class="row-head">
+                    <span class="lbl">Pitch</span>
+                    <span class="val" id="txt-p">0.0°</span>
+                </div>
+                <div class="bar-track">
+                    <div class="center-mark"></div>
+                    <div class="bar-fill" id="bar-p"></div>
+                </div>
+            </div>
+            <!-- Yaw -->
+            <div class="linear-row">
+                <div class="row-head">
+                    <span class="lbl">Yaw</span>
+                    <span class="val" id="txt-y">0°</span>
+                </div>
+                <div class="bar-track">
+                    <div class="bar-fill" id="bar-y" style="width:0%"></div>
+                </div>
+            </div>
+        </div>
+
+        <!-- 3D 层 -->
+        <div class="view-layer view-3d">
+            <canvas id="att-canvas" width="180" height="180"></canvas>
+            <div class="data-3d-row">
+                <div class="d-item"><span class="d-lbl">R</span><span class="d-val" id="val3d-r">0</span></div>
+                <div class="d-item"><span class="d-lbl">P</span><span class="d-val" id="val3d-p">0</span></div>
+                <!-- 增加 Yaw，并用蓝色区分 -->
+                <div class="d-item" style="color:var(--primary)"><span class="d-lbl" style="color:var(--primary)">Y</span><span class="d-val" id="val3d-y">0</span></div>
+            </div>
+        </div>
+
+    </div>
+
+    <script>
+        // 切换
+        function toggleWidget(el) { el.classList.toggle('show-3d'); }
+
+        // 线性条逻辑
+        function setCenterBar(id, val, range) {
+            const bar = document.getElementById(id);
+            const clamp = Math.max(-range, Math.min(range, val));
+            const pct = (Math.abs(clamp) / range) * 50; 
+            bar.style.width = pct + '%';
+            bar.style.left = (clamp >= 0) ? '50%' : (50 - pct) + '%';
+        }
+
+        // 3D 绘制
+        const cvs = document.getElementById('att-canvas');
+        const ctx = cvs.getContext('2d');
+        const w = 180, h = 180;
+
+        function drawBall(r, p) {
+            ctx.clearRect(0,0,w,h);
+            ctx.save();
+            ctx.beginPath(); ctx.arc(w/2, h/2, w/2, 0, Math.PI*2); ctx.clip();
+            
+            ctx.translate(w/2, h/2);
+            ctx.rotate(-r * Math.PI/180);
+            ctx.translate(0, p * 2);
+
+            ctx.fillStyle='#4FC3F7'; ctx.fillRect(-100,-100,200,100);
+            ctx.fillStyle='#8D6E63'; ctx.fillRect(-100,0,200,100);
+            ctx.strokeStyle='white'; ctx.lineWidth=3;
+            ctx.beginPath(); ctx.moveTo(-90,0); ctx.lineTo(90,0); ctx.stroke();
+            
+            ctx.fillStyle='rgba(255,255,255,0.8)';
+            for(let i=20; i<=90; i+=20) {
+                let y = -i*2; ctx.fillRect(-15, y-1, 30, 2);
+                y = i*2; ctx.fillRect(-15, y-1, 30, 2);
+            }
+            ctx.restore();
+
+            ctx.strokeStyle='#FFD700'; ctx.lineWidth=3; ctx.beginPath();
+            ctx.moveTo(w/2-30, h/2); ctx.lineTo(w/2-10, h/2);
+            ctx.moveTo(w/2+30, h/2); ctx.lineTo(w/2+10, h/2);
+            ctx.moveTo(w/2, h/2); ctx.arc(w/2, h/2, 2, 0, Math.PI*2);
+            ctx.stroke();
+            ctx.strokeStyle='rgba(0,0,0,0.1)'; ctx.lineWidth=2;
+            ctx.beginPath(); ctx.arc(w/2, h/2, w/2-1, 0, Math.PI*2); ctx.stroke();
+        }
+
+        // 模拟循环
+        let t = 0;
+        function loop() {
+            requestAnimationFrame(loop);
+            t += 0.02;
+            const r = Math.sin(t)*35;
+            const p = Math.cos(t*0.6)*25;
+            const y = Math.abs((t*20)%360);
+
+            // Update Linear
+            document.getElementById('txt-r').innerText = r.toFixed(1) + '°';
+            document.getElementById('txt-p').innerText = p.toFixed(1) + '°';
+            document.getElementById('txt-y').innerText = y.toFixed(0) + '°';
+            setCenterBar('bar-r', r, 90);
+            setCenterBar('bar-p', p, 90);
+            document.getElementById('bar-y').style.width = (y/360)*100 + '%';
+
+            // Update 3D
+            const widget = document.querySelector('.att-nano-widget');
+            if(widget.classList.contains('show-3d')) {
+                drawBall(r, p);
+                document.getElementById('val3d-r').innerText = r.toFixed(0);
+                document.getElementById('val3d-p').innerText = p.toFixed(0);
+                // 更新 Yaw
+                document.getElementById('val3d-y').innerText = y.toFixed(0);
+            }
+        }
+        loop();
+
+    </script>
+</body>
+</html>

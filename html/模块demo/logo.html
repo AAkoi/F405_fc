@@ -1,0 +1,150 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Aero V3 Ultimate</title>
+    <style>
+        body {
+            background-color: #eef2f6; /* 上位机背景 */
+            font-family: 'Segoe UI', Roboto, sans-serif;
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            justify-content: center;
+            min-height: 100vh;
+            gap: 40px;
+        }
+
+        .showcase {
+            background: white;
+            padding: 15px 30px;
+            border-radius: 16px;
+            display: flex;
+            align-items: center;
+            gap: 15px;
+            box-shadow: 0 10px 25px -5px rgba(0, 0, 0, 0.1);
+            min-width: 320px;
+        }
+
+        .logo-text { font-weight: 800; font-size: 20px; color: #1e293b; letter-spacing: 0.5px; }
+        
+        .label { font-size: 12px; color: #64748b; margin-bottom: 8px; font-weight: 700; }
+        .row { display: flex; flex-direction: column; }
+
+        /* Logo 容器基础样式 */
+        .brand-icon {
+            width: 38px; height: 38px;
+            border-radius: 10px; /* 稍微圆润一点 */
+            display: flex; align-items: center; justify-content: center;
+            box-shadow: 0 4px 10px rgba(37, 99, 235, 0.25); /* 投影 */
+            position: relative;
+            overflow: hidden;
+        }
+
+        /* --- 方案 1: Electric Sky (电光渐变) --- */
+        .icon-electric {
+            /* 45度角：从 亮蓝 到 电光青，打破沉闷 */
+            background: linear-gradient(135deg, #1d4ed8 0%, #2563eb 40%, #06b6d4 100%);
+        }
+
+        /* --- 方案 2: Deep Horizon (深邃视界) --- */
+        .icon-deep {
+            /* 垂直渐变：模拟天空，上深下浅，更有厚重感 */
+            background: linear-gradient(180deg, #3b82f6 0%, #1e40af 100%);
+            border: 1px solid rgba(255,255,255,0.1); /* 微弱边框增加质感 */
+        }
+
+        /* --- 方案 3: Tech Glass (科技琉璃) --- */
+        .icon-glass {
+            background: #2563eb;
+            /* 内部高光模拟玻璃质感 */
+            box-shadow: inset 0 1px 0 rgba(255,255,255,0.4), 
+                        0 4px 10px rgba(37, 99, 235, 0.3);
+        }
+        /* 增加一个内部光泽层 */
+        .gloss {
+            position: absolute; top: -50%; left: -50%; width: 200%; height: 200%;
+            background: radial-gradient(circle at 50% 0%, rgba(255,255,255,0.2) 0%, transparent 60%);
+        }
+
+    </style>
+</head>
+<body>
+
+    <!-- 方案 1 -->
+    <div class="row">
+        <div class="label">V3.1: Electric Sky (电光渐变 - 推荐)</div>
+        <div class="showcase">
+            <div class="brand-icon icon-electric">
+                <!-- SVG: 犀利的飞行轨迹 -->
+                <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="white" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+                    <!-- 核心芯片点 -->
+                    <circle cx="12" cy="12" r="2" fill="white" stroke="none"/>
+                    <!-- X型机臂 (短小精悍) -->
+                    <path d="M10 10 L6 6" stroke-opacity="0.7"/>
+                    <path d="M14 10 L18 6" stroke-opacity="0.7"/>
+                    <path d="M10 14 L6 18" stroke-opacity="0.7"/>
+                    <path d="M14 14 L18 18" stroke-opacity="0.7"/>
+                    <!-- 动态旋翼 (更加犀利的圆弧，代表高速旋转) -->
+                    <path d="M3 6 C3 4 7 4 7 6" stroke-width="1.8"/>
+                    <path d="M17 6 C17 4 21 4 21 6" stroke-width="1.8"/>
+                    <path d="M3 18 C3 20 7 20 7 18" stroke-width="1.8"/>
+                    <path d="M17 18 C17 20 21 20 21 18" stroke-width="1.8"/>
+                </svg>
+            </div>
+            <div class="logo-text">AERO</div>
+        </div>
+    </div>
+
+    <!-- 方案 2 -->
+    <div class="row">
+        <div class="label">V3.2: Deep Horizon (深邃稳重)</div>
+        <div class="showcase">
+            <div class="brand-icon icon-deep">
+                <!-- SVG: 连贯的线条 -->
+                <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="white" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+                    <!-- 连贯的机身线条 -->
+                    <path d="M12 12m-2 0a2 2 0 1 0 4 0a2 2 0 1 0 -4 0" fill="white" fill-opacity="0.2"/>
+                    <path d="M12 12m-1 0a1 1 0 1 0 2 0a1 1 0 1 0 -2 0" fill="white"/>
+                    <!-- 旋翼 (用完整的椭圆暗示旋转平面) -->
+                    <path d="M4.5 4.5 L9 9"/>
+                    <ellipse cx="4.5" cy="4.5" rx="2.5" ry="1" transform="rotate(-45 4.5 4.5)"/>
+                    
+                    <path d="M19.5 4.5 L15 9"/>
+                    <ellipse cx="19.5" cy="4.5" rx="2.5" ry="1" transform="rotate(45 19.5 4.5)"/>
+                    
+                    <path d="M4.5 19.5 L9 15"/>
+                    <ellipse cx="4.5" cy="19.5" rx="2.5" ry="1" transform="rotate(45 4.5 19.5)"/>
+                    
+                    <path d="M19.5 19.5 L15 15"/>
+                    <ellipse cx="19.5" cy="19.5" rx="2.5" ry="1" transform="rotate(-45 19.5 19.5)"/>
+                </svg>
+            </div>
+            <div class="logo-text">AERO</div>
+        </div>
+    </div>
+
+    <!-- 方案 3 -->
+    <div class="row">
+        <div class="label">V3.3: Abstract Speed (极简速度)</div>
+        <div class="showcase">
+            <div class="brand-icon icon-glass">
+                <div class="gloss"></div> <!-- 顶部高光 -->
+                <!-- SVG: 极其抽象的旋转感 -->
+                <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="white" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round">
+                    <!-- 中心 -->
+                    <rect x="10" y="10" width="4" height="4" rx="1" fill="white"/>
+                    <!-- 只有四个代表桨叶的弧形，没有机臂，强调"气动" -->
+                    <path d="M6 4c2 0 3 2 3 3"/>
+                    <path d="M18 4c-2 0-3 2-3 3"/>
+                    <path d="M6 20c2 0 3-2 3-3"/>
+                    <path d="M18 20c-2 0-3-2-3-3"/>
+                </svg>
+            </div>
+            <div class="logo-text">AERO</div>
+        </div>
+    </div>
+
+</body>
+</html>

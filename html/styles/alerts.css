@@ -1,0 +1,187 @@
+﻿/* ========= Alerts ========= */
+.toast-container {
+    position: absolute;
+    top: 12px;
+    right: 12px;
+    display: flex;
+    flex-direction: column;
+    gap: 8px;
+    z-index: 20;
+    pointer-events: none;
+    max-width: 240px;
+}
+
+.toast-card {
+    width: 300px;
+    max-width: 240px;
+    background: rgba(255, 255, 255, 0.9);
+    backdrop-filter: blur(8px);
+    border-radius: 8px;
+    padding: 12px 16px;
+    box-shadow: 0 10px 30px -5px rgba(0, 0, 0, 0.15);
+    display: flex;
+    align-items: flex-start;
+    gap: 12px;
+    pointer-events: auto;
+    border-left: 4px solid #ccc;
+    transform: translateX(120%);
+    transition: transform 0.3s cubic-bezier(0.16, 1, 0.3, 1), opacity 0.3s;
+}
+
+.toast-enter {
+    transform: translateX(0);
+}
+
+.t-info { border-left-color: var(--alert-info); }
+.t-success { border-left-color: var(--alert-success); }
+.t-warn { border-left-color: var(--alert-warn); }
+.t-error { border-left-color: var(--alert-error); }
+
+.t-icon { margin-top: 2px; display: flex; justify-content: center; align-items: center; }
+.t-content { flex: 1; display: flex; flex-direction: column; gap: 2px; }
+.t-title { font-size: 13px; font-weight: 700; color: #1e293b; }
+.t-msg { font-size: 12px; color: #64748b; line-height: 1.4; }
+
+.hud-alert-container {
+    position: fixed;
+    top: 40px;
+    left: 50%;
+    transform: translateX(-50%) translateY(-100px);
+    z-index: 1100;
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    transition: transform 0.3s cubic-bezier(0.34, 1.56, 0.64, 1);
+}
+
+.hud-alert-container.active {
+    transform: translateX(-50%) translateY(0);
+}
+
+.hud-badge {
+    background: rgba(239, 68, 68, 0.95);
+    color: #fff;
+    padding: 8px 24px;
+    border-radius: 30px;
+    box-shadow: 0 4px 15px rgba(239, 68, 68, 0.4);
+    display: flex;
+    align-items: center;
+    gap: 10px;
+    font-weight: 700;
+    font-size: 14px;
+    border: 2px solid #fff;
+}
+
+.hud-icon { animation: hud-blink 1s infinite; }
+@keyframes hud-blink { 50% { opacity: 0.4; } }
+
+.modal-overlay {
+    position: fixed;
+    top: 0;
+    left: 0;
+    width: 100%;
+    height: 100%;
+    background: rgba(15, 23, 42, 0.4);
+    backdrop-filter: blur(4px);
+    z-index: 2000;
+    display: flex;
+    justify-content: center;
+    align-items: center;
+    opacity: 0;
+    pointer-events: none;
+    transition: opacity 0.2s;
+}
+
+.modal-overlay.active {
+    opacity: 1;
+    pointer-events: auto;
+}
+
+.error-card {
+    width: 400px;
+    background: #fff;
+    border-radius: 16px;
+    box-shadow: 0 20px 50px rgba(0, 0, 0, 0.2);
+    overflow: hidden;
+    transform: scale(0.9);
+    transition: transform 0.2s;
+    border: 1px solid var(--alert-error);
+}
+
+.modal-overlay.active .error-card {
+    transform: scale(1);
+}
+
+.ec-header {
+    background: #fef2f2;
+    padding: 20px;
+    display: flex;
+    align-items: center;
+    gap: 16px;
+    border-bottom: 1px solid #fee2e2;
+}
+
+.ec-icon-box {
+    width: 48px;
+    height: 48px;
+    background: #fff;
+    border-radius: 12px;
+    display: flex;
+    justify-content: center;
+    align-items: center;
+    color: var(--alert-error);
+    box-shadow: 0 4px 6px rgba(239, 68, 68, 0.1);
+}
+
+.ec-title-group { display: flex; flex-direction: column; }
+.ec-title { font-size: 16px; font-weight: 800; color: #7f1d1d; text-transform: uppercase; }
+.ec-subtitle { font-size: 12px; color: #b91c1c; font-weight: 600; }
+
+.ec-body {
+    padding: 24px;
+    display: flex;
+    flex-direction: column;
+    gap: 16px;
+}
+
+.ec-msg {
+    font-size: 14px;
+    color: #334155;
+    line-height: 1.5;
+}
+
+.error-code-box {
+    background: #f8fafc;
+    border: 1px dashed #cbd5e1;
+    padding: 12px;
+    border-radius: 6px;
+    font-family: 'JetBrains Mono', monospace;
+    font-size: 12px;
+    color: #475569;
+    display: flex;
+    justify-content: space-between;
+}
+
+.ec-actions {
+    padding: 16px 24px;
+    background: #f8fafc;
+    border-top: 1px solid #e2e8f0;
+    display: flex;
+    justify-content: flex-end;
+    gap: 12px;
+}
+
+.alert-btn {
+    padding: 8px 16px;
+    border-radius: 6px;
+    font-size: 13px;
+    font-weight: 600;
+    cursor: pointer;
+    border: none;
+    transition: all 0.2s;
+}
+
+.alert-btn-ghost { background: transparent; color: #64748b; }
+.alert-btn-ghost:hover { background: #e2e8f0; }
+.alert-btn-danger { background: var(--alert-error); color: white; box-shadow: 0 2px 4px rgba(239, 68, 68, 0.3); }
+.alert-btn-danger:hover { background: #dc2626; }

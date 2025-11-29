@@ -1,0 +1,396 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>AERO VISUALIZER Pro - Concept Demo</title>
+    <style>
+        :root {
+            --bg-color: #121214;
+            --panel-bg: #1e1e24;
+            --text-main: #e1e1e6;
+            --text-dim: #a8a8b3;
+            --accent: #8257e5;
+            --success: #04d361;
+            --danger: #f75a68;
+            --warning: #fba94c;
+            --border: #29292e;
+            --glass: rgba(30, 30, 36, 0.8);
+        }
+
+        * { margin: 0; padding: 0; box-sizing: border-box; font-family: 'Segoe UI', Roboto, Helvetica, Arial, sans-serif; }
+        
+        body {
+            background-color: var(--bg-color);
+            color: var(--text-main);
+            height: 100vh;
+            display: flex;
+            flex-direction: column;
+            overflow: hidden;
+            transition: all 0.3s;
+        }
+
+        /* --- 顶部导航栏 (优化点：层级与状态) --- */
+        header {
+            height: 60px;
+            background: var(--panel-bg);
+            border-bottom: 1px solid var(--border);
+            display: flex;
+            align-items: center;
+            padding: 0 20px;
+            justify-content: space-between;
+        }
+        .logo { font-weight: 800; font-size: 1.2rem; letter-spacing: 1px; display: flex; align-items: center; gap: 10px; }
+        .logo span { color: var(--accent); }
+        
+        .status-bar { display: flex; gap: 24px; align-items: center; }
+        .status-item { display: flex; flex-direction: column; align-items: flex-end; }
+        .status-label { font-size: 0.7rem; color: var(--text-dim); text-transform: uppercase; }
+        .status-value { font-family: 'Courier New', monospace; font-weight: bold; }
+        
+        /* 电池高亮优化 */
+        .battery-level { color: var(--success); font-size: 1.1rem; }
+        .battery-low { color: var(--danger); animation: blink 1s infinite; }
+
+        .connect-btn {
+            background: var(--accent);
+            color: white;
+            border: none;
+            padding: 8px 16px;
+            border-radius: 4px;
+            font-weight: 600;
+            cursor: pointer;
+        }
+
+        /* --- 主布局 (三栏式) --- */
+        .main-container {
+            flex: 1;
+            display: grid;
+            grid-template-columns: 300px 1fr 300px;
+            gap: 1px;
+            background: var(--border); /* 用于分割线 */
+        }
+        .panel { background: var(--bg-color); padding: 16px; display: flex; flex-direction: column; gap: 16px; overflow-y: auto; }
+        .center-stage { background: #09090a; position: relative; display: flex; align-items: center; justify-content: center; overflow: hidden; }
+
+        /* --- 左侧栏：传感器融合 (优化点：Sparklines) --- */
+        .card {
+            background: var(--panel-bg);
+            border-radius: 8px;
+            padding: 12px;
+            border: 1px solid var(--border);
+        }
+        .card-header { display: flex; justify-content: space-between; margin-bottom: 8px; font-size: 0.85rem; color: var(--text-dim); font-weight: 600; }
+        
+        .data-row { display: flex; align-items: center; justify-content: space-between; margin-bottom: 6px; font-family: 'Courier New', monospace; font-size: 0.9rem; }
+        .axis-label { color: var(--accent); width: 20px; }
+        
+        /* 迷你走势图容器 */
+        .sparkline-container {
+            height: 30px;
+            width: 100%;
+            background: rgba(0,0,0,0.2);
+            position: relative;
+            margin-top: 4px;
+            border-radius: 4px;
+            overflow: hidden;
+        }
+        .sparkline-canvas { width: 100%; height: 100%; display: block; }
+
+        /* ToF 传感器视觉化 */
+        .tof-bar-bg { height: 6px; background: #333; border-radius: 3px; overflow: hidden; margin-top: 8px; }
+        .tof-bar-fill { height: 100%; width: 80%; background: var(--warning); transition: width 0.1s; }
+
+        /* --- 中央舞台：3D视图 (优化点：悬浮工具与安全警告) --- */
+        /* 网格背景模拟 */
+        .grid-floor {
+            position: absolute; width: 200%; height: 200%;
+            background-image: 
+                linear-gradient(var(--border) 1px, transparent 1px),
+                linear-gradient(90deg, var(--border) 1px, transparent 1px);
+            background-size: 40px 40px;
+            transform: perspective(500px) rotateX(60deg);
+            opacity: 0.3;
+        }
+
+        /* 模拟无人机 */
+        .drone-mockup {
+            width: 100px; height: 100px;
+            background: rgba(130, 87, 229, 0.2);
+            border: 2px solid var(--accent);
+            position: relative;
+            transform: rotate(45deg);
+            box-shadow: 0 0 30px rgba(130, 87, 229, 0.3);
+            transition: transform 0.1s;
+        }
+        .drone-arm { position: absolute; width: 140%; height: 2px; background: var(--text-dim); top: 50%; left: -20%; }
+        .drone-arm.cross { transform: rotate(90deg); }
+        .prop { width: 30px; height: 30px; border-radius: 50%; border: 1px dashed var(--text-dim); position: absolute; animation: spin 0.1s linear infinite; }
+        
+        /* 悬浮工具栏 */
+        .floating-tools {
+            position: absolute; bottom: 20px; left: 50%; transform: translateX(-50%);
+            background: var(--glass); padding: 8px; border-radius: 20px;
+            display: flex; gap: 10px; border: 1px solid var(--border);
+            backdrop-filter: blur(10px);
+        }
+        .tool-btn { background: transparent; border: 1px solid transparent; color: var(--text-main); padding: 6px 12px; border-radius: 12px; cursor: pointer; font-size: 0.8rem; }
+        .tool-btn:hover { background: rgba(255,255,255,0.1); }
+        .tool-btn.active { background: var(--accent); color: white; }
+
+        /* 安全警告层 (核心交互) */
+        .safety-overlay {
+            position: absolute; top: 0; left: 0; right: 0; bottom: 0;
+            border: 0px solid var(--danger);
+            pointer-events: none;
+            transition: border-width 0.2s;
+            display: flex; flex-direction: column; justify-content: space-between; align-items: center; padding: 20px;
+        }
+        .armed-badge {
+            background: var(--danger); color: white; padding: 5px 15px; font-weight: bold; border-radius: 4px;
+            opacity: 0; transform: translateY(-20px); transition: all 0.3s; letter-spacing: 2px;
+        }
+        
+        /* ARMED 状态样式 */
+        body.is-armed .safety-overlay { border-width: 4px; animation: pulse-border 2s infinite; }
+        body.is-armed .armed-badge { opacity: 1; transform: translateY(0); }
+        body.is-armed .drone-mockup { box-shadow: 0 0 50px rgba(247, 90, 104, 0.5); border-color: var(--danger); }
+
+        /* --- 右侧栏：控制与输出 (优化点：电机条与隐藏设置) --- */
+        .rc-visualizer {
+            display: flex; justify-content: center; gap: 20px; padding: 10px 0;
+        }
+        .stick-area {
+            width: 100px; height: 100px; border: 1px solid var(--border); border-radius: 50%;
+            position: relative; background: rgba(0,0,0,0.2);
+        }
+        .stick-dot {
+            width: 10px; height: 10px; background: var(--accent); border-radius: 50%;
+            position: absolute; top: 50%; left: 50%; transform: translate(-50%, -50%);
+            transition: all 0.1s;
+        }
+
+        /* 电机输出条 (新增功能) */
+        .motor-outputs { display: flex; justify-content: space-between; height: 100px; align-items: flex-end; gap: 8px; }
+        .motor-bar-wrapper { flex: 1; display: flex; flex-direction: column; align-items: center; height: 100%; justify-content: flex-end; }
+        .motor-bar { width: 100%; background: var(--accent); border-radius: 4px 4px 0 0; min-height: 5%; transition: height 0.1s; }
+        .motor-label { font-size: 0.7rem; color: var(--text-dim); margin-top: 4px; }
+
+        /* 隐藏的危险设置 */
+        .settings-trigger { margin-top: auto; padding: 10px; text-align: center; color: var(--text-dim); font-size: 0.8rem; cursor: pointer; border-top: 1px solid var(--border); }
+        .settings-trigger:hover { color: var(--text-main); }
+
+        /* --- 动画 Keyframes --- */
+        @keyframes spin { 100% { transform: rotate(360deg); } }
+        @keyframes blink { 50% { opacity: 0.5; } }
+        @keyframes pulse-border { 0% { border-color: rgba(247, 90, 104, 0.4); } 50% { border-color: rgba(247, 90, 104, 1); } 100% { border-color: rgba(247, 90, 104, 0.4); } }
+
+    </style>
+</head>
+<body>
+
+    <header>
+        <div class="logo">
+            <span>◆</span> AERO VISUALIZER <span>PRO</span>
+        </div>
+        <div class="status-bar">
+            <div class="status-item">
+                <span class="status-label">BATTERY</span>
+                <span class="status-value battery-level">12.4 V</span>
+            </div>
+            <div class="status-item">
+                <span class="status-label">LINK QUALITY</span>
+                <span class="status-value">98 %</span>
+            </div>
+            <div class="status-item">
+                <span class="status-label">MODE</span>
+                <span class="status-value" style="color: var(--accent)">STABILIZE</span>
+            </div>
+            <button class="connect-btn" onclick="toggleConnect()">CONNECTED</button>
+        </div>
+    </header>
+
+    <div class="main-container">
+        
+        <aside class="panel left-panel">
+            <div class="card">
+                <div class="card-header">IMU - GYROSCOPE (deg/s)</div>
+                <div class="data-row"><span class="axis-label" style="color:#f75a68">X</span> <span>0.02</span></div>
+                <div class="data-row"><span class="axis-label" style="color:#04d361">Y</span> <span>-0.01</span></div>
+                <div class="data-row"><span class="axis-label" style="color:#3b82f6">Z</span> <span>0.00</span></div>
+                <div class="sparkline-container">
+                    <canvas id="gyroCanvas" class="sparkline-canvas"></canvas>
+                </div>
+            </div>
+
+            <div class="card">
+                <div class="card-header">IMU - ACCELEROMETER (g)</div>
+                <div class="data-row"><span class="axis-label">X</span> <span>0.00</span></div>
+                <div class="data-row"><span class="axis-label">Y</span> <span>0.00</span></div>
+                <div class="data-row"><span class="axis-label">Z</span> <span>1.00</span></div>
+                <div class="sparkline-container">
+                    <canvas id="accCanvas" class="sparkline-canvas"></canvas>
+                </div>
+            </div>
+
+            <div class="card">
+                <div class="card-header">SENSORS - ToF LIDAR</div>
+                <div class="data-row"><span>DISTANCE</span> <span>1082 mm</span></div>
+                <div class="tof-bar-bg">
+                    <div class="tof-bar-fill" style="width: 60%;"></div>
+                </div>
+            </div>
+        </aside>
+
+        <section class="center-stage">
+            <div class="grid-floor"></div>
+            
+            <div class="drone-mockup" id="droneModel">
+                <div class="drone-arm"></div>
+                <div class="drone-arm cross"></div>
+                <div class="prop" style="top:-15px; left:-15px"></div>
+                <div class="prop" style="top:-15px; right:-15px"></div>
+                <div class="prop" style="bottom:-15px; left:-15px"></div>
+                <div class="prop" style="bottom:-15px; right:-15px"></div>
+                <div style="position:absolute; top:-10px; left:50%; transform:translateX(-50%); width:0; height:0; border-left:5px solid transparent; border-right:5px solid transparent; border-bottom:10px solid var(--accent);"></div>
+            </div>
+
+            <div class="safety-overlay">
+                <div class="armed-badge">⚠ SYSTEM ARMED ⚠</div>
+                <div></div>
+            </div>
+
+            <div class="floating-tools">
+                <button class="tool-btn" onclick="alert('Demo: 重置视角')">Reset View</button>
+                <button class="tool-btn active" onclick="this.classList.toggle('active')">Follow</button>
+                <button class="tool-btn" onclick="this.classList.toggle('active')">Show Trail</button>
+                <button class="tool-btn" style="border: 1px solid var(--danger); color:var(--danger)" onclick="toggleArm()">TOGGLE ARM (Test)</button>
+            </div>
+        </section>
+
+        <aside class="panel right-panel">
+            <div class="card">
+                <div class="card-header">RC INPUT (Mode 2)</div>
+                <div class="rc-visualizer">
+                    <div class="stick-area">
+                        <div class="stick-dot" id="stickLeft"></div>
+                    </div>
+                    <div class="stick-area">
+                        <div class="stick-dot" id="stickRight"></div>
+                    </div>
+                </div>
+                <div style="font-size: 0.7rem; color: var(--text-dim); text-align: center; margin-top:5px;">
+                    <span id="rc-status-text">CONNECTED</span>
+                </div>
+            </div>
+
+            <div class="card" style="flex:1">
+                <div class="card-header">MOTOR OUTPUTS (PWM)</div>
+                <div class="motor-outputs">
+                    <div class="motor-bar-wrapper"><div class="motor-bar" style="height: 20%"></div><span class="motor-label">M1</span></div>
+                    <div class="motor-bar-wrapper"><div class="motor-bar" style="height: 20%"></div><span class="motor-label">M2</span></div>
+                    <div class="motor-bar-wrapper"><div class="motor-bar" style="height: 20%"></div><span class="motor-label">M3</span></div>
+                    <div class="motor-bar-wrapper"><div class="motor-bar" style="height: 20%"></div><span class="motor-label">M4</span></div>
+                </div>
+            </div>
+
+            <div class="settings-trigger" onclick="alert('安全提示：\n敏感设置（如反转轴向、校准）已移至二级菜单，防止飞行中误触。')">
+                ⚙ Advanced Settings / Calibration
+            </div>
+        </aside>
+
+    </div>
+
+    <script>
+        // 1. 模拟数据波动 (Sparklines)
+        const gyroCanvas = document.getElementById('gyroCanvas');
+        const accCanvas = document.getElementById('accCanvas');
+        const ctxG = gyroCanvas.getContext('2d');
+        const ctxA = accCanvas.getContext('2d');
+        
+        // 设置画布分辨率
+        function resizeCanvas(canvas) {
+            canvas.width = canvas.offsetWidth;
+            canvas.height = canvas.offsetHeight;
+        }
+        resizeCanvas(gyroCanvas);
+        resizeCanvas(accCanvas);
+
+        let gyroData = new Array(50).fill(15);
+        let accData = new Array(50).fill(15);
+
+        function drawSparkline(ctx, data, color) {
+            const w = ctx.canvas.width;
+            const h = ctx.canvas.height;
+            ctx.clearRect(0, 0, w, h);
+            ctx.beginPath();
+            ctx.moveTo(0, h/2);
+            
+            for(let i=0; i<data.length; i++) {
+                const x = (i / (data.length - 1)) * w;
+                const y = h/2 - data[i]; // 简单偏移
+                ctx.lineTo(x, y);
+            }
+            ctx.strokeStyle = color;
+            ctx.lineWidth = 2;
+            ctx.stroke();
+        }
+
+        // 2. 模拟主循环
+        let time = 0;
+        function loop() {
+            time += 0.1;
+
+            // 生成随机噪点数据
+            const noise = () => (Math.random() - 0.5) * 10;
+            gyroData.shift();
+            gyroData.push(noise());
+            
+            accData.shift();
+            accData.push(noise() * 0.5); // 加速度计通常更平滑
+
+            drawSparkline(ctxG, gyroData, '#3b82f6'); // 蓝色波形
+            drawSparkline(ctxA, accData, '#04d361'); // 绿色波形
+
+            // 模拟电机条跳动
+            const bars = document.querySelectorAll('.motor-bar');
+            bars.forEach(bar => {
+                const height = document.body.classList.contains('is-armed') 
+                    ? 20 + Math.random() * 30 + (Math.sin(time)*10) // 解锁后转速高
+                    : 0; // 锁定后停转
+                bar.style.height = height + '%';
+            });
+
+            // 模拟无人机轻微晃动
+            const drone = document.getElementById('droneModel');
+            drone.style.transform = `rotate(45deg) rotateX(${Math.sin(time)*5}deg) rotateY(${Math.cos(time)*5}deg)`;
+
+            requestAnimationFrame(loop);
+        }
+
+        // 3. 交互逻辑
+        function toggleArm() {
+            document.body.classList.toggle('is-armed');
+        }
+
+        function toggleConnect() {
+            const btn = document.querySelector('.connect-btn');
+            if(btn.innerText === "CONNECTED") {
+                btn.innerText = "DISCONNECT";
+                btn.style.background = "#29292e";
+            } else {
+                btn.innerText = "CONNECTED";
+                btn.style.background = "#8257e5";
+            }
+        }
+
+        loop();
+        
+        // 窗口调整
+        window.addEventListener('resize', () => {
+            resizeCanvas(gyroCanvas);
+            resizeCanvas(accCanvas);
+        });
+    </script>
+</body>
+</html>

@@ -1,0 +1,699 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Aero Visualizer - Pro Instrument</title>
+    <!-- 引入 Three.js -->
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/three.js/r128/three.min.js"></script>
+    <!-- 引入 FontAwesome 图标 -->
+    <link href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0/css/all.min.css" rel="stylesheet">
+    
+    <style>
+        :root {
+            --primary: #2196F3;
+            --bg-color: #f0f2f5;
+            --card-bg: #ffffff;
+            --text-main: #2c3e50;
+            --text-sub: #95a5a6;
+            --danger: #ff4757;
+            --warning: #ffa502;
+            --success: #2ed573;
+            --radius: 12px;
+        }
+
+        body {
+            margin: 0;
+            overflow: hidden;
+            font-family: 'Segoe UI', Roboto, Helvetica, Arial, sans-serif;
+            background: var(--bg-color);
+            color: var(--text-main);
+            height: 100vh;
+            display: flex;
+            flex-direction: column;
+        }
+
+        /* 顶部导航 */
+        header {
+            height: 50px;
+            background: var(--card-bg);
+            border-bottom: 1px solid #e1e8ed;
+            display: flex;
+            align-items: center;
+            justify-content: space-between;
+            padding: 0 20px;
+            z-index: 10;
+        }
+        .brand {
+            font-weight: 800;
+            font-size: 18px;
+            letter-spacing: 0.5px;
+            color: var(--text-main);
+            display: flex; align-items: center; gap: 8px;
+        }
+
+        /* 主布局 */
+        .layout {
+            display: flex;
+            flex: 1;
+            height: calc(100vh - 50px);
+        }
+
+        /* 左侧主视图 (模拟无人机) */
+        .main-viewport {
+            flex: 1;
+            background: #eef2f5;
+            position: relative;
+            overflow: hidden;
+            display: flex;
+            justify-content: center;
+            align-items: center;
+        }
+        .grid-bg {
+            position: absolute;
+            width: 200%; height: 200%;
+            background-image: 
+                linear-gradient(rgba(0,0,0,0.05) 1px, transparent 1px),
+                linear-gradient(90deg, rgba(0,0,0,0.05) 1px, transparent 1px);
+            background-size: 50px 50px;
+            transform: perspective(500px) rotateX(60deg);
+        }
+        /* 简单的 HTML 无人机模型 */
+        .drone-model {
+            width: 120px; height: 120px;
+            background: #34495e;
+            border-radius: 15px;
+            position: relative;
+            transform-style: preserve-3d;
+            box-shadow: 0 30px 60px rgba(0,0,0,0.2);
+            transition: transform 0.1s; /* 这里主要靠 JS 驱动 */
+        }
+        .drone-arm {
+            position: absolute; background: #95a5a6;
+            top: 50%; left: 50%; transform: translate(-50%, -50%);
+        }
+
+        /* 右侧边栏 */
+        .sidebar {
+            width: 300px;
+            background: var(--bg-color);
+            padding: 15px;
+            display: flex;
+            flex-direction: column;
+            gap: 15px;
+            border-left: 1px solid #e1e8ed;
+            overflow-y: auto;
+        }
+
+        /* 通用卡片样式 */
+        .card {
+            background: var(--card-bg);
+            border-radius: var(--radius);
+            padding: 15px;
+            box-shadow: 0 4px 12px rgba(0,0,0,0.04);
+            position: relative;
+        }
+
+        .card-header {
+            font-size: 11px;
+            font-weight: 700;
+            text-transform: uppercase;
+            color: var(--text-sub);
+            margin-bottom: 10px;
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+        }
+
+        /* --- 1. 真 3D 姿态仪卡片 --- */
+        .att-card-body {
+            display: flex;
+            align-items: center;
+            gap: 15px;
+        }
+
+        /* 仪表容器 */
+        .instrument-container {
+            width: 80px;
+            height: 80px;
+            border-radius: 50%;
+            position: relative;
+            background: #000;
+            overflow: hidden;
+            border: 3px solid #fff;
+            box-shadow: 0 5px 15px rgba(0,0,0,0.2);
+            flex-shrink: 0;
+        }
+        
+        /* 这里的 Canvas 由 Three.js 生成 */
+        #att-canvas {
+            width: 100%;
+            height: 100%;
+            display: block;
+        }
+
+        /* 静态 HUD 覆盖层 (黄色小飞机) */
+        .instrument-hud {
+            position: absolute;
+            top: 0; left: 0; width: 100%; height: 100%;
+            pointer-events: none;
+            z-index: 5;
+            display: flex; justify-content: center; align-items: center;
+        }
+        .hud-wing-left, .hud-wing-right {
+            width: 25px; height: 2px; background: #ffeb3b;
+            position: absolute; box-shadow: 0 1px 2px rgba(0,0,0,0.5);
+        }
+        .hud-wing-left { left: 8px; }
+        .hud-wing-right { right: 8px; }
+        .hud-center {
+            width: 4px; height: 4px; background: #ffeb3b;
+            border-radius: 50%; box-shadow: 0 1px 2px rgba(0,0,0,0.5);
+        }
+
+        /* 姿态数据文字 */
+        .att-data-grid {
+            flex: 1;
+            display: grid;
+            grid-template-columns: 1fr 1fr;
+            gap: 8px;
+        }
+        .att-item { display: flex; flex-direction: column; }
+        .att-label { font-size: 10px; color: var(--text-sub); font-weight: 600; }
+        .att-val { font-family: 'Consolas', monospace; font-size: 14px; font-weight: 700; color: var(--text-main); }
+        .att-val small { font-size: 10px; color: #ccc; }
+
+        /* --- 2. 激光测距条 (Laser ToF) --- */
+        .tof-header-row {
+            display: flex; justify-content: space-between; align-items: baseline;
+        }
+        .tof-val-large {
+            font-family: 'Consolas', monospace;
+            font-size: 24px; font-weight: 800; color: var(--text-main);
+            line-height: 1;
+        }
+        .tof-unit { font-size: 12px; color: var(--text-sub); margin-left: 2px; }
+        
+        .laser-track {
+            height: 8px; background: #f1f3f5; border-radius: 4px;
+            margin-top: 10px; position: relative; overflow: hidden;
+        }
+        .laser-fill {
+            height: 100%; width: 50%;
+            background: linear-gradient(90deg, #2196F3, #2ed573);
+            border-radius: 4px;
+            position: relative;
+            transition: width 0.1s linear, background 0.3s;
+        }
+        /* 激光头动画 */
+        .laser-head {
+            position: absolute; right: 0; top: 0; bottom: 0;
+            width: 10px; background: rgba(255,255,255,0.8);
+            filter: blur(2px);
+            animation: pulse 0.8s infinite alternate;
+        }
+        @keyframes pulse { from { opacity: 0.5; } to { opacity: 1; transform: scaleX(1.5); } }
+
+        /* --- 3. 磁力计校准按钮 (卡片式) --- */
+        .btn-calib {
+            width: 100%; border: none; background: white;
+            display: flex; align-items: center; gap: 12px;
+            cursor: pointer; padding: 0; text-align: left;
+        }
+        .btn-icon-box {
+            width: 40px; height: 40px; background: #e3f2fd; color: #2196F3;
+            border-radius: 10px; display: flex; align-items: center; justify-content: center;
+            font-size: 16px; transition: transform 0.2s;
+        }
+        .btn-calib:hover .btn-icon-box { transform: rotate(90deg); background: #2196F3; color: white; }
+        .btn-text-box h4 { margin: 0; font-size: 13px; color: var(--text-main); }
+        .btn-text-box p { margin: 2px 0 0; font-size: 11px; color: var(--success); }
+
+        /* --- 弹窗 Modal --- */
+        .modal {
+            position: fixed; top: 0; left: 0; width: 100%; height: 100%;
+            background: rgba(0,0,0,0.6); backdrop-filter: blur(5px);
+            z-index: 100;
+            display: none; justify-content: center; align-items: center;
+            opacity: 0; transition: opacity 0.3s;
+        }
+        .modal.active { display: flex; opacity: 1; }
+        .modal-content {
+            width: 500px; height: 550px; background: white;
+            border-radius: 16px; display: flex; flex-direction: column;
+            overflow: hidden; box-shadow: 0 20px 60px rgba(0,0,0,0.4);
+            transform: translateY(20px); transition: transform 0.3s;
+        }
+        .modal.active .modal-content { transform: translateY(0); }
+        
+        .modal-header {
+            padding: 15px 20px; border-bottom: 1px solid #eee;
+            display: flex; justify-content: space-between; align-items: center; font-weight: bold;
+        }
+        .close-btn { background: none; border: none; font-size: 20px; cursor: pointer; color: #999; }
+        
+        .modal-body { flex: 1; background: #fafafa; position: relative; }
+        .modal-footer { padding: 20px; border-top: 1px solid #eee; background: white; }
+        
+        .progress-bar { height: 6px; background: #eee; border-radius: 3px; overflow: hidden; margin-top: 8px; }
+        .progress-fill { height: 100%; background: var(--success); width: 0%; transition: width 0.3s; }
+
+    </style>
+</head>
+<body>
+
+<header>
+    <div class="brand">
+        <i class="fa-solid fa-plane-up" style="color: var(--primary);"></i>
+        AERO VISUALIZER
+    </div>
+    <div style="font-size: 12px; font-weight: 600; color: #555;">
+        <i class="fa-solid fa-wifi" style="color: var(--success); margin-right:5px;"></i> LINK: 100%
+    </div>
+</header>
+
+<div class="layout">
+    <!-- 主视口 (3D 无人机) -->
+    <div class="main-viewport">
+        <div class="grid-bg"></div>
+        <div class="drone-model" id="main-drone">
+            <div class="drone-arm" style="width:180%; height:8px;"></div>
+            <div class="drone-arm" style="width:8px; height:180%;"></div>
+            <div style="position:absolute; top:10%; left:10%; width:80%; height:80%; background:rgba(0,0,0,0.2); border-radius:50%;"></div>
+            <div style="position:absolute; top:-20px; left:50%; transform:translateX(-50%); width:0; height:0; border-left:10px solid transparent; border-right:10px solid transparent; border-bottom:20px solid #e74c3c;"></div>
+        </div>
+        
+        <div style="position:absolute; bottom:20px; left:20px; color:#333; font-family:monospace; background:rgba(255,255,255,0.7); padding:5px 10px; border-radius:6px;">
+            MODE: STABILIZE<br>GPS: 12 SAT
+        </div>
+    </div>
+
+    <!-- 侧边栏 -->
+    <div class="sidebar">
+        
+        <!-- 模块 1: 3D 航空姿态仪 (核心优化) -->
+        <div class="card">
+            <div class="card-header">
+                <span>Artificial Horizon</span>
+                <i class="fa-solid fa-earth-americas"></i>
+            </div>
+            
+            <div class="att-card-body">
+                <!-- 3D 仪表盘容器 -->
+                <div class="instrument-container">
+                    <!-- Three.js 渲染层 -->
+                    <div id="att-canvas-container" style="width:100%; height:100%;"></div>
+                    <!-- 静态 HUD 覆盖层 -->
+                    <div class="instrument-hud">
+                        <div class="hud-wing-left"></div>
+                        <div class="hud-center"></div>
+                        <div class="hud-wing-right"></div>
+                    </div>
+                </div>
+
+                <!-- 数据显示 -->
+                <div class="att-data-grid">
+                    <div class="att-item">
+                        <span class="att-label">ROLL</span>
+                        <div class="att-val" id="text-roll">0.0<small>°</small></div>
+                    </div>
+                    <div class="att-item">
+                        <span class="att-label">PITCH</span>
+                        <div class="att-val" id="text-pitch">0.0<small>°</small></div>
+                    </div>
+                    <div class="att-item" style="grid-column: span 2; border-top: 1px solid #f0f0f0; margin-top:5px; padding-top:5px; flex-direction:row; justify-content:space-between;">
+                        <span class="att-label">HEADING</span>
+                        <div class="att-val" style="color:var(--primary)" id="text-yaw">360<small>°</small></div>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <!-- 模块 2: 激光测距 (ToF) -->
+        <div class="card">
+            <div class="card-header">
+                <span>Laser Altimeter</span>
+                <i class="fa-solid fa-ruler-vertical"></i>
+            </div>
+            <div class="tof-header-row">
+                <div class="tof-val-large" id="tof-val">--</div>
+                <div class="tof-unit">MILLIMETERS</div>
+            </div>
+            <div class="laser-track">
+                <div class="laser-fill" id="laser-bar">
+                    <div class="laser-head"></div>
+                </div>
+            </div>
+        </div>
+
+        <!-- 模块 3: 传感器校准 -->
+        <div class="card">
+            <div class="card-header">
+                <span>Maintenance</span>
+            </div>
+            <button class="btn-calib" onclick="openModal()">
+                <div class="btn-icon-box"><i class="fa-solid fa-compass"></i></div>
+                <div class="btn-text-box">
+                    <h4>Mag Calibration</h4>
+                    <p>Status: Ready</p>
+                </div>
+                <i class="fa-solid fa-chevron-right" style="margin-left:auto; color:#ccc; font-size:12px;"></i>
+            </button>
+        </div>
+
+    </div>
+</div>
+
+<!-- 磁力计校准弹窗 -->
+<div class="modal" id="calib-modal">
+    <div class="modal-content">
+        <div class="modal-header">
+            <span><i class="fa-solid fa-rotate"></i> 磁力计校准</span>
+            <button class="close-btn" onclick="closeModal()">&times;</button>
+        </div>
+        <div class="modal-body" id="calib-3d-container">
+            <!-- Mag 3D Canvas Here -->
+        </div>
+        <div class="modal-footer">
+            <div style="display:flex; justify-content:space-between; margin-bottom:5px; font-size:12px;">
+                <span style="color:#666">采样点数: <b id="sample-count">0</b>/500</span>
+                <span id="calib-msg" style="color:var(--primary)">请旋转设备...</span>
+            </div>
+            <div class="progress-bar">
+                <div class="progress-fill" id="calib-progress"></div>
+            </div>
+            <div style="margin-top:15px; display:flex; justify-content:flex-end; gap:10px;">
+                <button onclick="resetMag()" style="padding:8px 15px; border:1px solid #ddd; background:#fff; border-radius:6px; cursor:pointer;">重置</button>
+                <button onclick="closeModal()" style="padding:8px 15px; border:none; background:var(--primary); color:white; border-radius:6px; cursor:pointer;">完成</button>
+            </div>
+        </div>
+    </div>
+</div>
+
+<script>
+    /* =========================================
+       PART 1: 姿态仪 (Attitude Indicator) - Three.js
+       ========================================= */
+    let attScene, attCamera, attRenderer, attSphere;
+
+    function initAttitudeIndicator() {
+        const container = document.getElementById('att-canvas-container');
+        const w = container.clientWidth;
+        const h = container.clientHeight;
+
+        attScene = new THREE.Scene();
+        
+        // 使用透视相机，FOV 45度，营造“仪表窗口”的感觉
+        attCamera = new THREE.PerspectiveCamera(45, w / h, 0.1, 100);
+        attCamera.position.z = 2.2; // 调整相机距离，控制球体在仪表中的大小
+
+        attRenderer = new THREE.WebGLRenderer({ alpha: true, antialias: true });
+        attRenderer.setSize(w, h);
+        attRenderer.setPixelRatio(window.devicePixelRatio); // 高清渲染
+        container.appendChild(attRenderer.domElement);
+
+        // --- 核心：创建姿态球纹理 ---
+        const texture = createHorizonTexture();
+        const geometry = new THREE.SphereGeometry(1, 32, 32);
+        
+        // 使用 BasicMaterial 保证颜色鲜艳，不受光照影响
+        const material = new THREE.MeshBasicMaterial({ map: texture });
+        
+        attSphere = new THREE.Mesh(geometry, material);
+        attScene.add(attSphere);
+        
+        animateAttitude();
+    }
+
+    // 动态绘制“蓝天-褐土-刻度线”纹理
+    function createHorizonTexture() {
+        const canvas = document.createElement('canvas');
+        canvas.width = 512; canvas.height = 512;
+        const ctx = canvas.getContext('2d');
+        
+        // 1. 填充背景 (上蓝下褐)
+        ctx.fillStyle = "#0077be"; // 天空蓝 (波音蓝)
+        ctx.fillRect(0, 0, 512, 256);
+        ctx.fillStyle = "#8b4513"; // 地面褐
+        ctx.fillRect(0, 256, 512, 256);
+
+        // 2. 绘制地平线
+        ctx.strokeStyle = "#ffffff";
+        ctx.lineWidth = 4;
+        ctx.beginPath();
+        ctx.moveTo(0, 256); ctx.lineTo(512, 256);
+        ctx.stroke();
+
+        // 3. 绘制俯仰刻度 (Pitch Ladder)
+        ctx.fillStyle = "#ffffff";
+        ctx.font = "bold 20px Arial";
+        ctx.textAlign = "center";
+        ctx.textBaseline = "middle";
+        ctx.lineWidth = 2;
+
+        // 绘制 +/- 10, 20, 30... 度
+        // 映射关系：90度 = 256像素高度 (从中心到顶端) -> 1度 ≈ 2.84px
+        const pxPerDeg = 256 / 90; 
+
+        for (let deg = 10; deg < 90; deg += 10) {
+            // 天空刻度
+            let y = 256 - (deg * pxPerDeg);
+            drawLadderLine(ctx, y, 60, deg);
+
+            // 地面刻度
+            y = 256 + (deg * pxPerDeg);
+            drawLadderLine(ctx, y, 60, deg);
+        }
+
+        const tex = new THREE.CanvasTexture(canvas);
+        tex.minFilter = THREE.LinearFilter; // 保证缩小时平滑
+        return tex;
+    }
+
+    function drawLadderLine(ctx, y, width, text) {
+        ctx.beginPath();
+        ctx.moveTo(256 - width/2, y);
+        ctx.lineTo(256 + width/2, y);
+        ctx.stroke();
+        // 数字
+        ctx.fillText(text, 256 + width/2 + 15, y);
+        ctx.fillText(text, 256 - width/2 - 15, y);
+    }
+
+    function animateAttitude() {
+        requestAnimationFrame(animateAttitude);
+        if (attRenderer && attScene && attCamera) {
+            attRenderer.render(attScene, attCamera);
+        }
+    }
+
+    /* =========================================
+       PART 2: 磁力计校准 (Magnetometer) - Three.js
+       ========================================= */
+    let magScene, magCamera, magRenderer, magPoints;
+    let magPointsData = [];
+    let isMagAnimating = false;
+
+    function initMag() {
+        const container = document.getElementById('calib-3d-container');
+        const w = container.clientWidth;
+        const h = container.clientHeight;
+
+        magScene = new THREE.Scene();
+        magScene.background = new THREE.Color(0xfafafa);
+
+        magCamera = new THREE.PerspectiveCamera(50, w/h, 0.1, 100);
+        magCamera.position.z = 3.5;
+
+        magRenderer = new THREE.WebGLRenderer({ antialias: true });
+        magRenderer.setSize(w, h);
+        container.innerHTML = '';
+        container.appendChild(magRenderer.domElement);
+
+        // 辅助线框球
+        const sphereGeo = new THREE.SphereGeometry(1.5, 16, 16);
+        const sphereMat = new THREE.MeshBasicMaterial({ color: 0xcccccc, wireframe: true });
+        magScene.add(new THREE.Mesh(sphereGeo, sphereMat));
+
+        // 坐标轴
+        magScene.add(new THREE.AxesHelper(2));
+
+        // 点云
+        const pGeo = new THREE.BufferGeometry();
+        const pMat = new THREE.PointsMaterial({ color: 0x2196F3, size: 0.1 });
+        magPoints = new THREE.Points(pGeo, pMat);
+        magScene.add(magPoints);
+
+        isMagAnimating = true;
+        animateMag();
+    }
+
+    function animateMag() {
+        if(!isMagAnimating) return;
+        requestAnimationFrame(animateMag);
+        
+        magScene.rotation.y += 0.005; // 缓慢自转
+        
+        // 模拟采集数据点
+        if (document.getElementById('calib-modal').classList.contains('active') && magPointsData.length < 500 * 3) {
+            addMagPoint();
+        }
+
+        magRenderer.render(magScene, magCamera);
+    }
+
+    function addMagPoint() {
+        // 生成球体表面的随机点 (模拟磁力计数据)
+        const u = Math.random();
+        const v = Math.random();
+        const theta = 2 * Math.PI * u;
+        const phi = Math.acos(2 * v - 1);
+        const r = 1.5 + (Math.random()-0.5)*0.1;
+
+        const x = r * Math.sin(phi) * Math.cos(theta);
+        const y = r * Math.sin(phi) * Math.sin(theta);
+        const z = r * Math.cos(phi);
+
+        magPointsData.push(x, y, z);
+        
+        const posAttr = new THREE.Float32BufferAttribute(magPointsData, 3);
+        magPoints.geometry.setAttribute('position', posAttr);
+
+        // 更新 UI
+        const count = magPointsData.length / 3;
+        document.getElementById('sample-count').innerText = Math.floor(count);
+        const pct = (count / 500) * 100;
+        document.getElementById('calib-progress').style.width = pct + '%';
+
+        if (count > 480) {
+            magPoints.material.color.setHex(0x2ed573); // 变绿
+            document.getElementById('calib-msg').innerText = "校准完成!";
+            document.getElementById('calib-msg').style.color = "green";
+        }
+    }
+
+    function resetMag() {
+        magPointsData = [];
+        magPoints.geometry.setAttribute('position', new THREE.Float32BufferAttribute([], 3));
+        magPoints.material.color.setHex(0x2196F3);
+        document.getElementById('calib-progress').style.width = '0%';
+        document.getElementById('sample-count').innerText = '0';
+    }
+
+    /* =========================================
+       PART 3: 逻辑控制与交互 (Integration)
+       ========================================= */
+    
+    // 初始化
+    window.onload = function() {
+        initAttitudeIndicator();
+    };
+
+    // Modal 控制
+    function openModal() {
+        document.getElementById('calib-modal').classList.add('active');
+        setTimeout(() => {
+            if (!magRenderer) initMag();
+            // 重新调整大小以免变形
+            const c = document.getElementById('calib-3d-container');
+            magCamera.aspect = c.clientWidth / c.clientHeight;
+            magCamera.updateProjectionMatrix();
+            magRenderer.setSize(c.clientWidth, c.clientHeight);
+            isMagAnimating = true;
+            animateMag();
+        }, 300);
+    }
+    function closeModal() {
+        document.getElementById('calib-modal').classList.remove('active');
+        isMagAnimating = false;
+    }
+
+    // --- 数据模拟循环 ---
+    let simRoll = 0, simPitch = 0, simYaw = 0;
+    let simDist = 1000;
+    let time = 0;
+
+    setInterval(() => {
+        time += 0.02;
+
+        // 1. 生成平滑的模拟数据
+        // Roll: 左右摇摆 +/- 30度
+        simRoll = Math.sin(time) * 30;
+        // Pitch: 上下俯仰 +/- 20度
+        simPitch = Math.cos(time * 0.5) * 20;
+        // Yaw: 持续旋转
+        simYaw = (simYaw + 0.5) % 360;
+        
+        // 距离模拟 (靠近 -> 远离)
+        simDist = 1000 + Math.sin(time * 2) * 800;
+
+        updateUI(simRoll, simPitch, simYaw, simDist);
+    }, 20); // 50 FPS
+
+    function updateUI(roll, pitch, yaw, dist) {
+        // --- 1. 更新 3D 姿态仪 ---
+        if (attSphere) {
+            // Three.js 旋转顺序默认 XYZ
+            // 航空仪表逻辑：
+            // 球体 Pitch 旋转: 绕 X 轴
+            // 球体 Roll 旋转: 绕 Z 轴 (负值，因为飞机左倾=地平线右倾)
+            // Yaw 通常不在地平仪球体上显示，或绕 Y 轴
+            
+            // 注意角度转弧度
+            const d2r = Math.PI / 180;
+            
+            // 关键：为了让地平线看起来自然，我们要旋转球体
+            // Pitch: 抬头(正) -> 球体向下转 -> rotation.x 减小? 
+            // 纹理中心是地平线。相机看 Z 轴负方向。
+            // 抬头(Pitch Up) -> 我们应该看到更多天空(蓝色) -> 蓝色在球体上半部分 -> 球体应该让上半部分向下转 -> Rotate X 正方向?
+            // 让我们试错微调：
+            attSphere.rotation.x = pitch * d2r; 
+            attSphere.rotation.z = -roll * d2r; 
+            // Yaw 这里不转动球体，只更新文字
+        }
+
+        // --- 2. 更新文字数据 ---
+        document.getElementById('text-roll').innerHTML = roll.toFixed(1) + '<small>°</small>';
+        document.getElementById('text-pitch').innerHTML = pitch.toFixed(1) + '<small>°</small>';
+        document.getElementById('text-yaw').innerHTML = Math.floor(yaw) + '<small>°</small>';
+
+        // --- 3. 更新主视图大飞机 (可选) ---
+        const mainDrone = document.getElementById('main-drone');
+        if(mainDrone) {
+            mainDrone.style.transform = `rotateX(${60 + pitch}deg) rotateZ(${45 - roll}deg) rotateY(${time*10}deg)`; 
+            // 这里为了演示效果，主视图飞机动得夸张点
+        }
+
+        // --- 4. 更新 ToF 激光条 ---
+        const dVal = Math.floor(dist);
+        document.getElementById('tof-val').innerText = dVal;
+        
+        const laserBar = document.getElementById('laser-bar');
+        let pct = (dVal / 2000) * 100;
+        if(pct > 100) pct = 100; if(pct < 0) pct = 0;
+        laserBar.style.width = pct + '%';
+        
+        // 颜色逻辑
+        if(dVal < 300) {
+            laserBar.style.background = 'linear-gradient(90deg, #ff6b81, #ff4757)'; // 红
+        } else if (dVal < 800) {
+            laserBar.style.background = 'linear-gradient(90deg, #f1c40f, #ffa502)'; // 黄
+        } else {
+            laserBar.style.background = 'linear-gradient(90deg, #2196F3, #2ed573)'; // 绿蓝
+        }
+    }
+
+    // 窗口大小适配
+    window.addEventListener('resize', () => {
+        // 适配 Attitude
+        if (attCamera && attRenderer) {
+            const c = document.getElementById('att-canvas-container');
+            attCamera.aspect = c.clientWidth / c.clientHeight;
+            attCamera.updateProjectionMatrix();
+            attRenderer.setSize(c.clientWidth, c.clientHeight);
+        }
+    });
+
+</script>
+</body>
+</html>

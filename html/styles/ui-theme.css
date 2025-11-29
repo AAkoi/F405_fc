@@ -1,0 +1,37 @@
+﻿@import url('https://fonts.googleapis.com/css2?family=JetBrains+Mono:wght@500;700;800&family=Inter:wght@400;600;700&display=swap');
+
+:root {
+    /* Telemetry palette */
+    --tele-bg: #f1f5f9;
+    --tele-card: #ffffff;
+    --tele-header: #f8fafc;
+    --tele-border: #e2e8f0;
+    --tele-text: #1e293b;
+    --tele-subtext: #64748b;
+    --tele-unit: #94a3b8;
+    --tele-x: #ef4444;
+    --tele-y: #22c55e;
+    --tele-z: #3b82f6;
+    --tele-primary: #2563eb;
+    --tele-scan: #f43f5e;
+    --tele-offline: #cbd5e1;
+
+    /* RC monitor palette */
+    --rc-primary: #2563eb;
+    --rc-primary-bg: #dbeafe;
+    --rc-danger: #ef4444;
+    --rc-danger-bg: #fee2e2;
+    --rc-offline: #cbd5e1;
+    --rc-card: #ffffff;
+    --rc-panel: #f8fafc;
+    --rc-border: #e2e8f0;
+    --rc-text: #0f172a;
+    --rc-sub: #64748b;
+    --rc-grid: #f1f5f9;
+
+    /* Alerts */
+    --alert-error: #ef4444;
+    --alert-warn: #f59e0b;
+    --alert-info: #3b82f6;
+    --alert-success: #22c55e;
+}

@@ -1,0 +1,43 @@
+﻿/* 鏍稿績鍙橀噺涓庨€氱敤鎸夐挳 */
+:root {
+    --panel-bg: #FFFFFF;
+    --text-main: #111827;
+    --text-sub: #4B5563;
+    --primary: #1E40AF;
+    --accent: #059669;
+    --danger: #DC2626;
+    --border-radius: 6px;
+    --shadow: 0 1px 3px 0 rgba(0, 0, 0, 0.1), 0 1px 2px 0 rgba(0, 0, 0, 0.06);
+}
+
+.btn {
+    background: var(--primary);
+    color: white;
+    border: none;
+    padding: 8px 16px;
+    border-radius: var(--border-radius);
+    font-weight: 600;
+    cursor: pointer;
+    transition: background-color 0.2s;
+    box-shadow: var(--shadow);
+    display: inline-flex;
+    align-items: center;
+    gap: 6px;
+    font-size: 0.9rem;
+}
+
+.btn:hover { 
+    background: #1e3a8a;
+}
+
+.btn-record {
+    background-color: var(--danger);
+}
+
+.btn-record:hover {
+    background-color: #b91c1c;
+}
+
+.hidden {
+    display: none !important;
+}

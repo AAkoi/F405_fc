@@ -1,0 +1,171 @@
+﻿/* IMU card (chart/table toggle) */
+.imu-card {
+    background: #fff;
+    border: 1px solid var(--tele-border);
+    border-radius: 10px;
+    box-shadow: 0 4px 12px rgba(0,0,0,0.04);
+    padding: 14px;
+    transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+}
+
+.imu-header {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    margin-bottom: 10px;
+    gap: 8px;
+}
+
+.imu-title {
+    font-size: 13px;
+    font-weight: 700;
+    color: var(--tele-text);
+    white-space: nowrap;
+}
+
+.sensor-select {
+    appearance: none;
+    background-color: #f1f5f9;
+    border: none;
+    border-radius: 6px;
+    padding: 4px 22px 4px 10px;
+    font-size: 12px;
+    font-weight: 600;
+    color: var(--tele-subtext);
+    cursor: pointer;
+    outline: none;
+    text-align: center;
+    transition: all 0.2s;
+    background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' fill='none' viewBox='0 0 24 24' stroke='%2364748B'%3E%3Cpath stroke-linecap='round' stroke-linejoin='round' stroke-width='2' d='M19 9l-7 7-7-7'%3E%3C/path%3E%3C/svg%3E");
+    background-repeat: no-repeat;
+    background-position: right 4px center;
+    background-size: 14px;
+    opacity: 0;
+    pointer-events: none;
+    width: 0;
+    margin: 0;
+}
+
+.imu-card.view-mode-chart .sensor-select {
+    opacity: 1;
+    pointer-events: auto;
+    width: auto;
+    margin: 0 6px;
+}
+
+.view-toggle-btn {
+    background: transparent;
+    border: 1px solid #e2e8f0;
+    border-radius: 6px;
+    width: 28px;
+    height: 28px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    cursor: pointer;
+    color: #94a3b8;
+    transition: all 0.2s;
+}
+
+.view-toggle-btn:hover {
+    border-color: #3b82f6;
+    color: #3b82f6;
+    background: #eff6ff;
+}
+
+.content-wrapper { position: relative; }
+.table-view { width: 100%; }
+.imu-card.view-mode-chart .table-view { display: none; }
+
+.data-table {
+    width: 100%;
+    border-collapse: separate;
+    border-spacing: 0 4px;
+    font-size: 12px;
+    text-align: center;
+}
+
+.data-table th {
+    color: #94a3b8;
+    font-weight: 500;
+    font-size: 11px;
+}
+
+.data-table td {
+    color: #334155;
+    font-family: 'JetBrains Mono', monospace;
+    background: #f8fafc;
+    padding: 8px 0;
+    border-radius: 4px;
+}
+
+.data-table td:first-child {
+    font-weight: 600;
+    color: #64748b;
+    background: transparent;
+    text-align: left;
+    padding-left: 4px;
+}
+
+.col-x { color: #ef4444; }
+.col-y { color: #10b981; }
+.col-z { color: #3b82f6; }
+
+.chart-view {
+    display: none;
+    flex-direction: column;
+    gap: 10px;
+    padding-top: 4px;
+    padding-bottom: 4px;
+}
+
+.imu-card.view-mode-chart .chart-view { display: flex; }
+
+.mini-chart-row { display: flex; flex-direction: column; width: 100%; }
+
+.chart-header {
+    display: flex;
+    justify-content: space-between;
+    align-items: flex-end;
+    font-size: 11px;
+    color: #64748b;
+    margin-bottom: 4px;
+    padding: 0 2px;
+}
+
+.chart-canvas-container {
+    background: #f8fafc;
+    border-radius: 6px;
+    border: 1px solid #f1f5f9;
+    width: 100%;
+    position: relative;
+    overflow: hidden;
+    height: 40px;
+    transition: height 0.3s ease;
+}
+
+.toast-enter {
+    transform: translateX(0);
+}
+
+.chart-view[data-filter="gyro"] .row-acc,
+.chart-view[data-filter="gyro"] .row-mag { display: none; }
+.chart-view[data-filter="gyro"] .row-gyro .chart-canvas-container { height: 140px; }
+
+.chart-view[data-filter="acc"] .row-gyro,
+.chart-view[data-filter="acc"] .row-mag { display: none; }
+.chart-view[data-filter="acc"] .row-acc .chart-canvas-container { height: 140px; }
+
+.chart-view[data-filter="mag"] .row-gyro,
+.chart-view[data-filter="mag"] .row-acc { display: none; }
+.chart-view[data-filter="mag"] .row-mag .chart-canvas-container { height: 140px; }
+
+.live-val {
+    font-family: 'JetBrains Mono', monospace;
+    font-weight: 700;
+    margin-left: 6px;
+    font-size: 11px;
+}
+.val-x { color: #ef4444; }
+.val-y { color: #10b981; }
+.val-z { color: #3b82f6; }
