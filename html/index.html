@@ -19,6 +19,7 @@
     <link rel="stylesheet" href="styles/layout-main-panels.css">
     <link rel="stylesheet" href="styles/layout-console.css">
     <link rel="stylesheet" href="styles/layout-hud.css">
+    <link rel="stylesheet" href="styles/att-widget.css">
     
     <!-- Icons -->
     <script src="https://unpkg.com/lucide@latest"></script>
@@ -155,23 +156,6 @@
                 </div>
 
                 <div class="card">
-                    <div class="section-header">Attitude</div>
-                    <div class="angle-row">
-                        <div class="angle-info"><span>Roll</span><span class="angle-num" id="att-r">0.0°</span></div>
-                        <div class="vis-bar-track"><div class="vis-bar-fill" id="vis-r"></div></div>
-                    </div>
-                    <div class="angle-row">
-                        <div class="angle-info"><span>Pitch</span><span class="angle-num" id="att-p">0.0°</span></div>
-                        <div class="vis-bar-track"><div class="vis-bar-fill" id="vis-p"></div></div>
-                    </div>
-                    <div class="angle-row">
-                        <div class="angle-info"><span>Yaw</span><span class="angle-num" id="att-y">0°</span></div>
-                        <div class="vis-bar-track"><div class="vis-bar-fill" id="vis-y" style="left:0"></div></div>
-                    </div>
-                </div>
-
-
-                <div class="card">
                     <div class="section-header">测距传感器</div>
                     <div class="tof-panel is-offline" id="tof-panel">
                         <div class="tof-icon">ToF</div>
@@ -208,6 +192,50 @@
             <!-- 中间 3D -->
             <section class="center-stage">
                 <div id="canvas-container"></div>
+                <div class="att-widget-container">
+                    <div class="att-nano-widget" id="att-widget" title="点击切换 线性/3D 视图">
+                        <div class="view-layer view-linear">
+                            <div class="linear-row">
+                                <div class="row-head">
+                                    <span class="lbl">Roll</span>
+                                    <span class="val" id="att-roll-text">0.0°</span>
+                                </div>
+                                <div class="bar-track">
+                                    <div class="center-mark"></div>
+                                    <div class="bar-fill" id="att-roll-bar"></div>
+                                </div>
+                            </div>
+                            <div class="linear-row">
+                                <div class="row-head">
+                                    <span class="lbl">Pitch</span>
+                                    <span class="val" id="att-pitch-text">0.0°</span>
+                                </div>
+                                <div class="bar-track">
+                                    <div class="center-mark"></div>
+                                    <div class="bar-fill" id="att-pitch-bar"></div>
+                                </div>
+                            </div>
+                            <div class="linear-row">
+                                <div class="row-head">
+                                    <span class="lbl">Yaw</span>
+                                    <span class="val" id="att-yaw-text">0°</span>
+                                </div>
+                                <div class="bar-track">
+                                    <div class="bar-fill" id="att-yaw-bar" style="width:0%"></div>
+                                </div>
+                            </div>
+                        </div>
+
+                        <div class="view-layer view-3d">
+                            <canvas id="att-canvas" width="180" height="180"></canvas>
+                            <div class="data-3d-row">
+                                <div class="d-item"><span class="d-lbl">R</span><span class="d-val" id="att-3d-roll">0</span></div>
+                                <div class="d-item"><span class="d-lbl">P</span><span class="d-val" id="att-3d-pitch">0</span></div>
+                                <div class="d-item" style="color:var(--att-primary)"><span class="d-lbl" style="color:var(--att-primary)">Y</span><span class="d-val" id="att-3d-yaw">0</span></div>
+                            </div>
+                        </div>
+                    </div>
+                </div>
                 <div class="axis-gizmo">
                     <span class="giz-x">X</span>
                     <span class="giz-y">Y</span>
@@ -580,6 +608,7 @@
     <script src="js/ui-rc-monitor.js"></script>
     <script src="js/ui-alerts.js"></script>
     <script src="js/ui-imu-card.js"></script>
+    <script src="js/attitude-widget.js"></script>
     <script src="js/serial.js"></script>
     <script src="js/motor-modal.js"></script>
     <script src="js/ui.js"></script>

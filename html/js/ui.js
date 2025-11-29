@@ -4,6 +4,7 @@ class UIManager {
         this.rcMonitor = typeof RcMonitor !== 'undefined' ? new RcMonitor() : null;
         this.alerts = typeof AlertManager !== 'undefined' ? new AlertManager() : null;
         this.imuCard = typeof ImuCard !== 'undefined' ? new ImuCard() : null;
+        this.attWidget = typeof AttitudeWidget !== 'undefined' ? new AttitudeWidget() : null;
         this.connectionState = null;
 
         this.elements = {
@@ -56,6 +57,9 @@ class UIManager {
 
         if (this.sidebar) {
             this.sidebar.updateOrientation(orientation);
+        }
+        if (this.attWidget) {
+            this.attWidget.update(orientation);
         }
 
         // 调试面板
