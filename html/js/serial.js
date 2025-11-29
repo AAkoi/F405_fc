@@ -3,6 +3,7 @@ class SerialManager {
     constructor() {
         this.port = null;
         this.reader = null;
+        this.mockInterval = null;
         this.sensorData = {
             acc: {x: 0, y: 0, z: 0},
             gyr: {x: 0, y: 0, z: 0},
@@ -10,6 +11,7 @@ class SerialManager {
             bar: {tempDeci: 0, pressurePa: 0, altDeci: 0},
             imuTempDeci: 0,
             tof: { distanceMm: null, ts: 0 },
+            bat: { voltage: null },
             // 单片机计算的姿态角（从 ATTITUDE_FULL 消息获取）
             attitude: {roll: 0, pitch: 0, yaw: 0, fromMCU: false},
             // ELRS/CRSF RC 数据（归一化）
@@ -191,6 +193,11 @@ class SerialManager {
             } else if (p.startsWith('T:')) {
                 const val = parseInt(p.slice(2).trim());
                 if (!Number.isNaN(val)) this.sensorData.imuTempDeci = val;
+            } else if (p.startsWith('VBAT:') || p.startsWith('BAT:')) {
+                const val = parseFloat(p.split(':')[1]);
+                if (!Number.isNaN(val)) {
+                    this.sensorData.bat.voltage = val;
+                }
             }
         });
 
@@ -205,12 +212,73 @@ class SerialManager {
         return this.sensorData;
     }
 
+    startMockMode() {
+        this.stopMockMode();
+        this.port = { mock: true };
+        let t = 0;
+        this.mockInterval = setInterval(() => {
+            t += 0.15;
+            const now = Date.now();
+
+            // Attitude + raw sensors
+            const roll = Math.sin(t) * 35;
+            const pitch = Math.cos(t * 0.8) * 25;
+            const yaw = ((t * 30) % 360);
+            const ax = Math.sin(t) * 0.5;
+            const ay = Math.cos(t * 0.7) * 0.5;
+            const az = 9.8 + Math.sin(t * 0.5) * 0.2;
+            const gx = Math.sin(t * 1.3) * 120;
+            const gy = Math.cos(t * 1.1) * 120;
+            const gz = Math.sin(t * 0.9) * 180;
+            const mx = Math.sin(t) * 300;
+            const my = Math.cos(t * 0.6) * 300;
+            const mz = Math.sin(t * 0.4) * 300;
+
+            this.parseLine(`ATTITUDE_FULL,${now},${roll.toFixed(2)},${pitch.toFixed(2)},${yaw.toFixed(2)},${ax.toFixed(3)},${ay.toFixed(3)},${az.toFixed(3)},${gx.toFixed(2)},${gy.toFixed(2)},${gz.toFixed(2)},${Math.round(mx)},${Math.round(my)},${Math.round(mz)}`);
+
+            // Baro + temp
+            const tempDeci = 420 + Math.sin(t * 0.4) * 15; // around 42C
+            const pressurePa = 101300 + Math.sin(t * 0.2) * 400;
+            const altDeci = 120 + Math.sin(t * 0.3) * 20;
+            this.parseLine(`BAR: ${Math.round(tempDeci)} ${Math.round(pressurePa)} ${Math.round(altDeci)}`);
+            this.parseLine(`T:${Math.round(tempDeci)}`);
+
+            // ToF distance
+            const dist = 500 + Math.sin(t * 1.5) * 400 + (Math.random() * 80 - 40);
+            this.parseLine(`TOF,${now},${Math.max(30, Math.round(dist))}`);
+
+            // RC
+            const rcRoll = Math.sin(t) * 0.5;
+            const rcPitch = Math.cos(t * 0.9) * 0.5;
+            const rcYaw = Math.sin(t * 0.7) * 0.5;
+            const rcThr = (Math.sin(t * 0.5) + 1) / 2;
+            this.parseLine(`ELRS_RC,${now},${rcRoll.toFixed(2)},${rcPitch.toFixed(2)},${rcYaw.toFixed(2)},${rcThr.toFixed(2)},0.2,0.6,0.9,0.1,90,99`);
+
+            // Battery (simple saw wave)
+            const vbat = 15.5 + Math.sin(t * 0.2) * 1.2;
+            this.parseLine(`BAT:${vbat.toFixed(2)}`);
+
+            if (this.onLine) {
+                this.onLine(`[MOCK] tick ${now}`);
+            }
+        }, 150);
+    }
+
+    stopMockMode() {
+        if (this.mockInterval) {
+            clearInterval(this.mockInterval);
+            this.mockInterval = null;
+        }
+        this.port = null;
+    }
+
     async disconnect() {
+        this.stopMockMode();
         if (this.reader) {
             await this.reader.cancel();
         }
         if (this.port) {
-            await this.port.close();
+            try { await this.port.close(); } catch (e) { /* ignore close errors */ }
         }
         this.reader = null;
         this.port = null;

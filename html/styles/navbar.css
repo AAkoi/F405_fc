@@ -1,0 +1,264 @@
+:root {
+    --nav-primary: #2563eb;
+    --nav-bg: #ffffff;
+    --nav-text: #334155;
+    --nav-sub: #94a3b8;
+    --nav-border: #e2e8f0;
+    --nav-shadow: 0 4px 6px -1px rgba(0, 0, 0, 0.05);
+    --nav-btn-size: 40px;
+}
+
+.nav-shell {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    background: var(--nav-bg);
+    padding: 0 24px;
+    border-radius: 14px;
+    box-shadow: var(--nav-shadow);
+    height: 64px;
+    position: sticky;
+    top: 0;
+    z-index: 10;
+    border: 1px solid var(--nav-border);
+}
+
+.nav-left {
+    display: flex;
+    align-items: center;
+    gap: 20px;
+}
+
+.nav-brand {
+    display: flex;
+    align-items: center;
+    gap: 10px;
+    font-weight: 800;
+    font-size: 18px;
+    color: var(--nav-text);
+    letter-spacing: 0.5px;
+    margin-right: 5px;
+}
+
+.nav-brand-icon {
+    background: var(--nav-primary);
+    color: #fff;
+    width: 32px;
+    height: 32px;
+    border-radius: 8px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    font-size: 16px;
+}
+
+.nav-divider {
+    width: 1px;
+    height: 24px;
+    background: #f1f5f9;
+}
+
+.nav-status-strip {
+    display: flex;
+    align-items: center;
+    gap: 20px;
+}
+
+.nav-stat {
+    display: flex;
+    align-items: center;
+    gap: 6px;
+    font-size: 14px;
+    font-weight: 700;
+    color: var(--nav-text);
+    flex-shrink: 0;
+}
+
+.nav-stat .icon {
+    font-size: 14px;
+    color: var(--nav-sub);
+    width: 16px;
+    text-align: center;
+    transition: color 0.3s, transform 0.5s cubic-bezier(0.34, 1.56, 0.64, 1);
+    backface-visibility: hidden;
+    transform: translateZ(0);
+    will-change: transform;
+}
+
+.nav-stat .unit {
+    font-size: 11px;
+    font-weight: 500;
+    color: var(--nav-sub);
+}
+
+.nav-stat .fixed-w {
+    min-width: 42px;
+    text-align: right;
+    font-family: 'Roboto Mono', 'JetBrains Mono', 'Consolas', monospace;
+    font-variant-numeric: tabular-nums;
+    display: inline-block;
+}
+
+/* TOF距离需要更宽的空间 */
+#nav-tof .fixed-w {
+    min-width: 48px;
+}
+
+/* 数值变化的平滑过渡 */
+.nav-stat .fixed-w {
+    transition: opacity 0.3s ease;
+}
+
+.nav-stat.updating .fixed-w {
+    opacity: 0.7;
+}
+
+.nav-stat + .nav-stat::before {
+    content: '';
+    width: 1px;
+    height: 14px;
+    background: var(--nav-border);
+    display: inline-block;
+    margin-right: 14px;
+}
+
+.nav-right {
+    display: flex;
+    align-items: center;
+    gap: 12px;
+}
+
+.nav-btn-connect {
+    height: 38px;
+    padding: 0 18px;
+    border: none;
+    border-radius: 8px;
+    font-size: 13px;
+    font-weight: 700;
+    cursor: pointer;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    gap: 8px;
+    transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+    position: relative;
+    overflow: hidden;
+    min-width: 120px;
+}
+
+.nav-btn-connect.disconnected {
+    background: var(--nav-primary);
+    color: #fff;
+    box-shadow: 0 4px 10px rgba(37, 99, 235, 0.2);
+}
+
+.nav-btn-connect.disconnected:hover {
+    background: #1d4ed8;
+    transform: translateY(-1px);
+}
+
+.nav-btn-connect.connecting {
+    background: #e2e8f0;
+    color: var(--nav-sub);
+    pointer-events: none;
+    box-shadow: none;
+}
+
+.nav-btn-connect.connected {
+    background: #dcfce7;
+    color: #15803d;
+    box-shadow: none;
+    border: 1px solid #bbf7d0;
+}
+
+.nav-btn-connect.connected:hover {
+    background: #fee2e2;
+    color: #b91c1c;
+    border-color: #fecaca;
+}
+
+.dot-glow {
+    width: 6px;
+    height: 6px;
+    background: #22c55e;
+    border-radius: 50%;
+    box-shadow: 0 0 0 rgba(34, 197, 94, 0.4);
+    animation: nav-pulse-green 2s infinite;
+}
+
+@keyframes nav-pulse-green {
+    0% { box-shadow: 0 0 0 0 rgba(34, 197, 94, 0.7); }
+    70% { box-shadow: 0 0 0 6px rgba(34, 197, 94, 0); }
+    100% { box-shadow: 0 0 0 0 rgba(34, 197, 94, 0); }
+}
+
+.nav-tool {
+    position: relative;
+}
+
+.nav-icon-btn {
+    width: var(--nav-btn-size);
+    height: var(--nav-btn-size);
+    background: transparent;
+    border: 1px solid transparent;
+    border-radius: 8px;
+    color: var(--nav-sub);
+    font-size: 16px;
+    cursor: pointer;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    transition: all 0.2s;
+}
+
+.nav-icon-btn:hover {
+    background: #f8fafc;
+    color: var(--nav-primary);
+    border-color: #f1f5f9;
+}
+
+.nav-tool:hover .nav-icon-rotate { animation: nav-spin 1s infinite cubic-bezier(0.68, -0.55, 0.27, 1.55); }
+.nav-tool:hover .nav-icon-fan { animation: nav-spin-fan 0.6s infinite linear; }
+.nav-tool:hover .nav-icon-reset { animation: nav-spin-reverse 0.6s ease; }
+.nav-tool:hover .nav-icon-book { animation: nav-bounce 0.6s infinite alternate; }
+.nav-icon-spin { animation: nav-spin 1s linear infinite; }
+
+@keyframes nav-spin { 0% { transform: rotate(0deg); } 100% { transform: rotate(360deg); } }
+@keyframes nav-spin-fan { 0% { transform: rotate(0deg); } 100% { transform: rotate(360deg); } }
+@keyframes nav-spin-reverse { 0% { transform: rotate(0deg); } 100% { transform: rotate(-360deg); } }
+@keyframes nav-bounce { 0% { transform: translateY(0); } 100% { transform: translateY(-3px); } }
+
+.nav-tooltip {
+    position: absolute;
+    top: 110%;
+    left: 50%;
+    transform: translateX(-50%);
+    background: #0f172a;
+    color: #fff;
+    padding: 4px 8px;
+    border-radius: 4px;
+    font-size: 11px;
+    white-space: nowrap;
+    opacity: 0;
+    pointer-events: none;
+    transition: all 0.2s;
+    z-index: 20;
+}
+
+.nav-tool:hover .nav-tooltip {
+    opacity: 1;
+    transform: translateX(-50%) translateY(4px);
+}
+
+.nav-stat.tof-danger .icon { color: #ef4444; animation: nav-rapid-pulse 0.5s infinite; }
+.nav-stat.tof-far .icon { color: #8b5cf6; }
+.nav-stat.tof-normal .icon { color: var(--nav-primary); }
+.nav-stat.temp-hot .icon { color: #ef4444; animation: nav-shake 0.5s infinite; }
+.nav-stat.temp-normal .icon { color: #f59e0b; }
+.nav-stat.bat-good .icon { color: #10b981; }
+.nav-stat.bat-warn .icon { color: #f59e0b; }
+.nav-stat.bat-low .icon { color: #ef4444; animation: nav-rapid-pulse 1s infinite; }
+.nav-stat.press-anim .icon { transition: transform 0.5s cubic-bezier(0.34, 1.56, 0.64, 1); }
+
+@keyframes nav-rapid-pulse { 0% { opacity: 1; transform: scale(1); } 50% { opacity: 0.5; transform: scale(0.9); } 100% { opacity: 1; transform: scale(1); } }
+@keyframes nav-shake { 0% { transform: rotate(0deg); } 25% { transform: rotate(10deg); } 75% { transform: rotate(-10deg); } 100% { transform: rotate(0deg); } }

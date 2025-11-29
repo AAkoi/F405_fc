@@ -28,6 +28,10 @@ class DroneVisualizerApp {
             this.throttleIntervalMs = 200;
             
             this.init();
+
+            // Expose mock helpers for UI testing
+            window.startMockSerial = () => this.startMockSerialMode();
+            window.stopMockSerial = () => this.stopMockSerialMode();
         } catch (error) {
             console.error('[App] Initialization error:', error);
             alert('应用初始化失败: ' + error.message);
@@ -93,18 +97,45 @@ class DroneVisualizerApp {
             });
         }
 
+        // Axis invert toggle
+        const axisBtn = document.getElementById('axisInvertBtn');
+        const axisPop = document.getElementById('axisInvertPop');
+        if (axisBtn && axisPop) {
+            axisBtn.addEventListener('click', (e) => {
+                e.preventDefault();
+                const isActive = axisPop.classList.contains('active');
+                this.uiManager.toggleAxisInvertPanel(!isActive);
+            });
+            document.addEventListener('click', (e) => {
+                if (!axisPop.contains(e.target) && !axisBtn.contains(e.target)) {
+                    this.uiManager.toggleAxisInvertPanel(false);
+                }
+            });
+        }
+
     }
 
     async connectSerial() {
         try {
+            const connectBtn = document.getElementById('connectBtn');
+            if (connectBtn) {
+                connectBtn.classList.remove('disconnected', 'connected');
+                connectBtn.classList.add('connecting');
+                connectBtn.innerHTML = '<i data-lucide="loader-2" class="nav-icon-spin"></i><span>连接中...</span>';
+                if (typeof lucide !== 'undefined') {
+                    lucide.createIcons();
+                }
+            }
+
             await this.serialManager.connect();
             this.uiManager.setConnectionStatus(true);
             
-            const connectBtn = document.getElementById('connectBtn');
             if (connectBtn) {
-                connectBtn.innerHTML = '<span class="status-dot"></span><span>断开连接</span>';
-                connectBtn.classList.remove('btn-primary');
-                connectBtn.classList.add('btn-danger', 'connected');
+                connectBtn.innerHTML = '<div class="dot-glow"></div><span>已连接</span>';
+                connectBtn.classList.remove('disconnected', 'connecting');
+                connectBtn.classList.add('connected');
+                connectBtn.onmouseenter = () => { connectBtn.innerHTML = '<i data-lucide="link-off"></i><span>断开连接</span>'; if (typeof lucide !== 'undefined') lucide.createIcons(); };
+                connectBtn.onmouseleave = () => { connectBtn.innerHTML = '<div class="dot-glow"></div><span>已连接</span>'; if (typeof lucide !== 'undefined') lucide.createIcons(); };
                 // Re-initialize icons
                 if (typeof lucide !== 'undefined') {
                     lucide.createIcons();
@@ -137,9 +168,11 @@ class DroneVisualizerApp {
         this.uiManager.setConnectionStatus(false);
         const connectBtn = document.getElementById('connectBtn');
         if (connectBtn) {
-            connectBtn.innerHTML = '<span class="status-dot"></span><span>连接串口</span>';
-            connectBtn.classList.remove('btn-danger', 'connected');
-            connectBtn.classList.add('btn-primary');
+            connectBtn.innerHTML = '<i data-lucide="link"></i><span>连接串口</span>';
+            connectBtn.classList.remove('connected', 'connecting');
+            connectBtn.classList.add('disconnected');
+            connectBtn.onmouseenter = null;
+            connectBtn.onmouseleave = null;
             // Re-initialize icons
             if (typeof lucide !== 'undefined') {
                 lucide.createIcons();
@@ -151,6 +184,52 @@ class DroneVisualizerApp {
             recordBtn.innerHTML = '<i data-lucide="circle-dot"></i> 开始录制';
         }
         this.appendConsoleLine('Serial port closed.', 'log-sys');
+    }
+
+    startMockSerialMode() {
+        this.serialManager.startMockMode();
+        this.uiManager.setConnectionStatus(true);
+
+        const connectBtn = document.getElementById('connectBtn');
+        if (connectBtn) {
+            connectBtn.innerHTML = '<div class="dot-glow"></div><span>模拟中</span>';
+            connectBtn.classList.remove('disconnected', 'connecting');
+            connectBtn.classList.add('connected');
+            connectBtn.onmouseenter = () => { connectBtn.innerHTML = '<i data-lucide="link-off"></i><span>退出模拟</span>'; if (typeof lucide !== 'undefined') lucide.createIcons(); };
+            connectBtn.onmouseleave = () => { connectBtn.innerHTML = '<div class="dot-glow"></div><span>模拟中</span>'; if (typeof lucide !== 'undefined') lucide.createIcons(); };
+            if (typeof lucide !== 'undefined') lucide.createIcons();
+        }
+
+        const recordBtn = document.getElementById('recordBtn');
+        if (recordBtn) {
+            recordBtn.style.display = 'inline-flex';
+        }
+
+        this.appendConsoleLine('[MOCK] 模拟串口已启动', 'log-sys');
+    }
+
+    stopMockSerialMode() {
+        this.serialManager.stopMockMode();
+        this.uiManager.setConnectionStatus(false);
+
+        const connectBtn = document.getElementById('connectBtn');
+        if (connectBtn) {
+            connectBtn.innerHTML = '<i data-lucide="link"></i><span>连接串口</span>';
+            connectBtn.classList.remove('connected', 'connecting');
+            connectBtn.classList.add('disconnected');
+            connectBtn.onmouseenter = null;
+            connectBtn.onmouseleave = null;
+            if (typeof lucide !== 'undefined') lucide.createIcons();
+        }
+
+        const recordBtn = document.getElementById('recordBtn');
+        if (recordBtn) {
+            recordBtn.style.display = 'none';
+            recordBtn.innerHTML = '<i data-lucide="circle-dot"></i> 开始录制';
+            if (typeof lucide !== 'undefined') lucide.createIcons();
+        }
+
+        this.appendConsoleLine('[MOCK] 模拟串口已停止', 'log-sys');
     }
 
     toggleRecording() {

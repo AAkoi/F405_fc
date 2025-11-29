@@ -20,6 +20,9 @@
     <link rel="stylesheet" href="styles/layout-console.css">
     <link rel="stylesheet" href="styles/layout-hud.css">
     <link rel="stylesheet" href="styles/att-widget.css">
+    <link rel="stylesheet" href="styles/navbar.css">
+    <link rel="stylesheet" href="styles/axis-invert.css">
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
     
     <!-- Icons -->
     <script src="https://unpkg.com/lucide@latest"></script>
@@ -32,33 +35,70 @@
 
     <div class="app-shell">
         <!-- 顶部导航 -->
-        <nav class="top-bar">
-            <div class="brand">
-                <div class="brand-icon"><svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="3"><path d="M12 2L2 7l10 5 10-5-10-5zM2 17l10 5 10-5M2 12l10 5 10-5"/></svg></div>
-                <span>AERO VISUALIZER</span>
-            </div>
-
-            <div class="status-strip">
-                <div class="vital-item">
-                    <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><rect x="1" y="6" width="18" height="12" rx="2" ry="2"></rect><line x1="23" y1="13" x2="23" y2="11"></line></svg>
-                    <span class="vital-val" id="val-imu-temp">--</span>°C
+        <nav class="nav-shell">
+            <div class="nav-left">
+                <div class="nav-brand">
+                    <div class="nav-brand-icon">
+                        <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="white" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+                            <circle cx="12" cy="12" r="2" fill="white" stroke="none"></circle>
+                            <path d="M10 10 L6 6" stroke-opacity="0.7"></path>
+                            <path d="M14 10 L18 6" stroke-opacity="0.7"></path>
+                            <path d="M10 14 L6 18" stroke-opacity="0.7"></path>
+                            <path d="M14 14 L18 18" stroke-opacity="0.7"></path>
+                            <path d="M3 6 C3 4 7 4 7 6" stroke-width="1.8"></path>
+                            <path d="M17 6 C17 4 21 4 21 6" stroke-width="1.8"></path>
+                            <path d="M3 18 C3 20 7 20 7 18" stroke-width="1.8"></path>
+                            <path d="M17 18 C17 20 21 20 21 18" stroke-width="1.8"></path>
+                        </svg>
+                    </div>
+                    <span>AERO</span>
                 </div>
-                <div class="vital-item" style="border-left:1px solid var(--border); padding-left:16px;">
-                    <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M5 12.55a11 11 0 0 1 14.08 0"></path><path d="M1.42 9a16 16 0 0 1 21.16 0"></path><path d="M8.53 16.11a6 6 0 0 1 6.95 0"></path><line x1="12" y1="20" x2="12.01" y2="20"></line></svg>
-                    <span class="vital-val" id="status-text">Disconnected</span>
+                <div class="nav-divider"></div>
+                <div class="nav-status-strip">
+                    <div class="nav-stat" id="nav-temp">
+                        <i class="fa-solid fa-temperature-half icon"></i>
+                        <span class="fixed-w" id="nav-temp-val">--</span><span class="unit">°C</span>
+                    </div>
+                    <div class="nav-stat" id="nav-press">
+                        <i class="fa-solid fa-gauge-high icon press-anim" id="nav-press-icon"></i>
+                        <span class="fixed-w" id="nav-press-val">--</span><span class="unit">hPa</span>
+                    </div>
+                    <div class="nav-stat" id="nav-tof">
+                        <i class="fa-solid fa-ruler-vertical icon"></i>
+                        <span class="fixed-w" id="nav-tof-val">--</span><span class="unit">mm</span>
+                    </div>
+                    <div class="nav-stat" id="nav-bat">
+                        <i class="fa-solid fa-battery-full icon" id="nav-bat-icon"></i>
+                        <span class="fixed-w" id="nav-bat-val">--</span><span class="unit">V</span>
+                    </div>
                 </div>
             </div>
-
-            <button id="connectBtn" class="btn btn-primary">
-                <span class="status-dot" id="status-dot"></span>
-                <span>连接串口</span>
-            </button>
-            <div class="tool-actions">
+            <div class="nav-right">
+                <button id="connectBtn" class="nav-btn-connect disconnected">
+                    <i data-lucide="link"></i>
+                    <span>连接串口</span>
+                </button>
                 <button id="recordBtn" class="btn btn-danger hidden"><i data-lucide="circle-dot"></i> 开始录制</button>
-                <button id="magCalibBtn" class="btn btn-ghost" onclick="openMagCalibModal()"><i data-lucide="compass"></i></button>
-                <button id="motorTestBtn" class="btn btn-ghost"><i data-lucide="fan"></i></button>
-                <button id="resetAttitudeBtn" class="btn btn-ghost" onclick="resetAttitude()"><i data-lucide="rotate-ccw"></i></button>
-                <button class="btn btn-ghost" onclick="window.open('api_documentation.html', '_blank')"><i data-lucide="book-open"></i></button>
+                <div class="nav-tool">
+                    <button id="magCalibBtn" class="nav-icon-btn" onclick="openMagCalibModal()"><i data-lucide="compass" class="nav-icon-rotate"></i></button>
+                    <div class="nav-tooltip">磁力计校准</div>
+                </div>
+                <div class="nav-tool">
+                    <button id="motorTestBtn" class="nav-icon-btn"><i data-lucide="fan" class="nav-icon-fan"></i></button>
+                    <div class="nav-tooltip">电机测试</div>
+                </div>
+                <div class="nav-tool">
+                    <button id="resetAttitudeBtn" class="nav-icon-btn" onclick="resetAttitude()"><i data-lucide="rotate-ccw" class="nav-icon-reset"></i></button>
+                    <div class="nav-tooltip">重置姿态</div>
+                </div>
+                <div class="nav-tool">
+                    <button class="nav-icon-btn" onclick="window.open('api_documentation.html', '_blank')"><i data-lucide="book" class="nav-icon-book"></i></button>
+                    <div class="nav-tooltip">开发文档</div>
+                </div>
+                <div class="nav-tool">
+                    <button class="nav-icon-btn" id="axisInvertBtn"><i data-lucide="sliders-horizontal"></i></button>
+                    <div class="nav-tooltip">Axis Invert</div>
+                </div>
             </div>
         </nav>
 
@@ -155,38 +195,6 @@
                     </div>
                 </div>
 
-                <div class="card">
-                    <div class="section-header">测距传感器</div>
-                    <div class="tof-panel is-offline" id="tof-panel">
-                        <div class="tof-icon">ToF</div>
-                        <div class="tof-data">
-                            <div class="tof-label">
-                                DISTANCE
-                            </div>
-                            <div class="tof-val-group">
-                                <span class="tof-val" id="tof-val">--</span>
-                                <span class="tof-unit">mm</span>
-                            </div>
-                            <div class="tof-bar-bg">
-                                <div class="tof-bar-fill" id="tof-bar"></div>
-                            </div>
-                        </div>
-                    </div>
-                </div>
-
-                <div class="card">
-                    <div class="section-header">Environment</div>
-                    <div class="sensor-grid">
-                        <div class="env-item">
-                            <span class="env-l">Temp</span>
-                            <span class="env-v"><span id="val-temp">--</span>°C</span>
-                        </div>
-                        <div class="env-item">
-                            <span class="env-l">Pressure</span>
-                            <span class="env-v"><span id="val-baro">--</span>hPa</span>
-                        </div>
-                    </div>
-                </div>
             </aside>
 
             <!-- 中间 3D -->
@@ -242,6 +250,11 @@
                     <span class="giz-z">Z</span>
                 </div>
                 <div class="toast-container canvas-toast" id="toast-container"></div>
+                <div class="axis-invert-pop" id="axisInvertPop">
+                    <label><input type="checkbox" id="invertRoll"> Roll</label>
+                    <label><input type="checkbox" id="invertPitch"> Pitch</label>
+                    <label><input type="checkbox" id="invertYaw" checked> Yaw</label>
+                </div>
             </section>
 
             <!-- 右侧 RC -->
@@ -292,14 +305,6 @@
                     </div>
                 </div>
 
-                <div class="card">
-                    <div class="section-header">Axis Invert</div>
-                    <div class="axis-invert-row">
-                        <label><input type="checkbox" id="invertRoll"> Roll</label>
-                        <label><input type="checkbox" id="invertPitch"> Pitch</label>
-                        <label><input type="checkbox" id="invertYaw" checked> Yaw</label>
-                    </div>
-                </div>
             </aside>
         </div>
     </div>

@@ -8,8 +8,8 @@ class UIManager {
         this.connectionState = null;
 
         this.elements = {
-            statusText: document.getElementById('status-text'),
-            statusDot: document.getElementById('status-dot')
+            statusText: null,
+            statusDot: null
         };
 
         // 初始化为断开状态
@@ -72,12 +72,7 @@ class UIManager {
     }
 
     setConnectionStatus(connected) {
-        if (this.elements.statusText) {
-            this.elements.statusText.innerText = connected ? "Connected" : "Disconnected";
-        }
-        if (this.elements.statusDot) {
-            this.elements.statusDot.style.backgroundColor = connected ? "#2ecc71" : "#e74c3c";
-        }
+        // 状态文本已移除，连接状态由按钮显示
 
         // 断开时同步 UI 状态
         if (!connected) {
@@ -102,5 +97,11 @@ class UIManager {
         if (this.rcMonitor) {
             this.rcMonitor.update(rc);
         }
+    }
+
+    toggleAxisInvertPanel(show) {
+        const panel = document.getElementById('axisInvertPop');
+        if (!panel) return;
+        panel.classList.toggle('active', show);
     }
 }

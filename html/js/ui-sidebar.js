@@ -4,22 +4,20 @@ class TelemetrySidebar {
             gyro: null,
             acc: null,
             mag: null,
-            attitude: {
-                roll: document.getElementById('att-r'),
-                pitch: document.getElementById('att-p'),
-                yaw: document.getElementById('att-y'),
-                rollBar: document.getElementById('vis-r'),
-                pitchBar: document.getElementById('vis-p'),
-                yawBar: document.getElementById('vis-y')
-            },
+            attitude: null,
             env: {
-                temp: document.getElementById('val-temp'),
-                baro: document.getElementById('val-baro')
+                temp: document.getElementById('nav-temp-val'),
+                baro: document.getElementById('nav-press-val'),
+                baroIcon: document.getElementById('nav-press-icon')
             },
             tof: {
-                panel: document.getElementById('tof-panel'),
-                value: document.getElementById('tof-val'),
-                bar: document.getElementById('tof-bar')
+                item: document.getElementById('nav-tof'),
+                value: document.getElementById('nav-tof-val')
+            },
+            battery: {
+                item: document.getElementById('nav-bat'),
+                icon: document.getElementById('nav-bat-icon'),
+                value: document.getElementById('nav-bat-val')
             }
         };
 
@@ -32,18 +30,40 @@ class TelemetrySidebar {
     updateSensors(sensorData) {
         if (!sensorData) return;
 
-        // Environment
+        // Environment - Temperature
         const tempC = (sensorData.bar && typeof sensorData.bar.tempDeci === 'number')
             ? sensorData.bar.tempDeci / 10
             : (typeof sensorData.imuTempDeci === 'number' ? sensorData.imuTempDeci / 10 : null);
         if (this.nodes.env.temp && tempC !== null) {
             this.nodes.env.temp.innerText = tempC.toFixed(1);
+            const tempBox = document.getElementById('nav-temp');
+            if (tempBox) {
+                tempBox.classList.remove('temp-hot', 'temp-normal');
+                tempBox.classList.add(tempC > 45 ? 'temp-hot' : 'temp-normal');
+            }
         }
+        
+        // Barometer - Pressure with rotation animation
         const pressHpa = (sensorData.bar && typeof sensorData.bar.pressurePa === 'number')
             ? sensorData.bar.pressurePa / 100
             : null;
         if (this.nodes.env.baro && pressHpa !== null) {
-            this.nodes.env.baro.innerText = pressHpa.toFixed(1);
+            this.nodes.env.baro.innerText = pressHpa.toFixed(0);
+        }
+        if (this.nodes.env.baroIcon && pressHpa !== null) {
+            const deg = (pressHpa - 1013) * 10;
+            this.nodes.env.baroIcon.style.transform = `translateZ(0) rotate(${deg}deg)`;
+            
+            // Add press-anim class for smooth animation
+            const pressBox = document.getElementById('nav-press');
+            if (pressBox && !pressBox.classList.contains('press-anim')) {
+                pressBox.classList.add('press-anim');
+            }
+        }
+
+        // Battery (if provided)
+        if (sensorData.bat && typeof sensorData.bat.voltage === 'number') {
+            this.updateBattery(sensorData.bat.voltage);
         }
 
         // ToF (optional)
@@ -61,60 +81,79 @@ class TelemetrySidebar {
     }
 
     updateOrientation(orientation) {
-        if (!orientation) return;
-        const { roll, pitch } = orientation;
-        const yaw = this.normalizeYaw(orientation.yaw);
-
-        if (this.nodes.attitude.roll) {
-            this.nodes.attitude.roll.innerText = `${roll.toFixed(1)}°`;
-        }
-        if (this.nodes.attitude.pitch) {
-            this.nodes.attitude.pitch.innerText = `${pitch.toFixed(1)}°`;
-        }
-        if (this.nodes.attitude.yaw) {
-            this.nodes.attitude.yaw.innerText = `${yaw.toFixed(0)}°`;
-        }
-
-        // Bars
-        this.setCenteredBar(this.nodes.attitude.rollBar, roll, 60);
-        this.setCenteredBar(this.nodes.attitude.pitchBar, pitch, 60);
-        if (this.nodes.attitude.yawBar) {
-            const pct = Math.max(0, Math.min(1, yaw / 360));
-            this.nodes.attitude.yawBar.style.width = `${pct * 100}%`;
-            this.nodes.attitude.yawBar.style.left = '0';
-        }
+        // Attitude UI handled elsewhere
+        if (!orientation || !this.nodes.attitude) return;
     }
 
     setConnectionState(connected) {
-        if (!connected && this.nodes.tof.panel) {
-            this.nodes.tof.panel.classList.add('is-offline');
-            if (this.nodes.tof.value) this.nodes.tof.value.innerText = '--';
+        if (!connected) {
+            this.setTofState(null);
             this.lastTofTs = 0;
         }
     }
 
     updateTof(distanceMm, ts = Date.now()) {
-        if (!this.nodes.tof.panel) return;
-        this.nodes.tof.panel.classList.remove('is-offline');
         this.lastTofTs = ts;
-
-        const d = Math.max(0, distanceMm);
-        if (this.nodes.tof.value) {
-            this.nodes.tof.value.innerText = d.toFixed(0);
-        }
-        if (this.nodes.tof.bar) {
-            const pct = Math.min(1, d / 2000); // assume 0-2m range
-            this.nodes.tof.bar.style.transform = `scaleX(${pct})`;
-            this.nodes.tof.bar.style.backgroundColor = d < 300 ? '#ef4444' : '#f43f5e';
-        }
+        this.setTofState(distanceMm);
     }
 
     checkTofTimeout() {
-        if (!this.nodes.tof.panel) return;
         if (this.lastTofTs === 0) return;
         if (Date.now() - this.lastTofTs > this.tofTimeoutMs) {
-            this.nodes.tof.panel.classList.add('is-offline');
-            if (this.nodes.tof.value) this.nodes.tof.value.innerText = '--';
+            this.setTofState(null);
+        }
+    }
+
+    setTofState(distanceMm) {
+        const item = this.nodes.tof.item;
+        const valNode = this.nodes.tof.value;
+        if (!item || !valNode) return;
+
+        item.classList.remove('tof-danger', 'tof-far', 'tof-normal');
+        if (distanceMm === null || Number.isNaN(distanceMm)) {
+            valNode.innerText = '--';
+            return;
+        }
+        const d = Math.max(0, distanceMm);
+        valNode.innerText = d.toFixed(0);
+        if (d < 100) {
+            item.classList.add('tof-danger');
+        } else if (d > 1800) {
+            item.classList.add('tof-far');
+        } else {
+            item.classList.add('tof-normal');
+        }
+    }
+
+    updateBattery(voltage) {
+        const item = this.nodes.battery.item;
+        const icon = this.nodes.battery.icon;
+        const valNode = this.nodes.battery.value;
+        if (!item || !icon || !valNode) return;
+
+        valNode.innerText = voltage.toFixed(1);
+        item.classList.remove('bat-good', 'bat-warn', 'bat-low');
+
+        if (voltage <= 0) {
+            valNode.innerText = '--';
+            return;
+        }
+
+        if (voltage >= 16.0) {
+            item.classList.add('bat-good');
+            icon.className = 'fa-solid fa-battery-full icon';
+        } else if (voltage >= 15.0) {
+            item.classList.add('bat-good');
+            icon.className = 'fa-solid fa-battery-three-quarters icon';
+        } else if (voltage >= 14.0) {
+            item.classList.add('bat-warn');
+            icon.className = 'fa-solid fa-battery-half icon';
+        } else if (voltage >= 13.0) {
+            item.classList.add('bat-warn');
+            icon.className = 'fa-solid fa-battery-quarter icon';
+        } else {
+            item.classList.add('bat-low');
+            icon.className = 'fa-solid fa-battery-empty icon';
         }
     }
 
