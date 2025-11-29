@@ -1,0 +1,132 @@
+.motor-mini-card {
+    background: transparent;
+    border: none;
+    box-shadow: none;
+    width: 100%;
+    margin-top: 12px;
+}
+
+.micro-widget {
+    width: 100%;
+    background: #ffffff;
+    border-radius: 8px;
+    padding: 10px;
+    box-shadow: 0 2px 4px rgba(0,0,0,0.05);
+    border: 1.5px solid transparent;
+    transition: all 0.3s;
+    user-select: none;
+    position: relative;
+}
+
+.micro-widget.armed {
+    border-color: #ef4444;
+    box-shadow: 0 0 10px rgba(239, 68, 68, 0.2);
+    animation: motor-breathe 2s infinite;
+}
+
+@keyframes motor-breathe {
+    50% { box-shadow: 0 0 15px rgba(239, 68, 68, 0.4); }
+}
+
+.micro-widget .header {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    margin-bottom: 8px;
+}
+
+.micro-widget .title {
+    font-size: 10px;
+    font-weight: 800;
+    color: #94a3b8;
+    letter-spacing: 0.5px;
+    text-transform: uppercase;
+}
+
+.micro-widget .status-badge {
+    font-size: 9px;
+    padding: 2px 6px;
+    border-radius: 4px;
+    background: #f1f5f9;
+    color: #94a3b8;
+    font-weight: 700;
+}
+
+.micro-widget.armed .status-badge {
+    background: #ef4444;
+    color: #fff;
+}
+
+.micro-widget .motors-grid {
+    display: flex;
+    justify-content: space-between;
+    gap: 4px;
+    height: 80px;
+}
+
+.micro-widget .motor-col {
+    flex: 1;
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    height: 100%;
+}
+
+.micro-widget .micro-prop {
+    width: 14px;
+    height: 14px;
+    opacity: 0.2;
+    background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 24 24' fill='none' stroke='%23000' stroke-width='3' stroke-linecap='round' stroke-linejoin='round'%3E%3Cpath d='M12 12c0-3 2.5-5 5-5 3 0 5 2 5 5 0 3-2 5-5 5-2.5 0-5-2-5-5z'/%3E%3Cpath d='M12 12c0 3-2.5 5-5 5-3 0-5-2-5-5 0-3 2-5 5-5 2.5 0 5 2 5 5z'/%3E%3C/svg%3E");
+    background-size: cover;
+    margin-bottom: 4px;
+}
+
+.micro-widget .motor-col.spinning .micro-prop {
+    opacity: 1;
+    animation: motor-spin 0.2s linear infinite;
+}
+
+.micro-widget .bar-track {
+    flex: 1;
+    width: 100%;
+    background: #f1f5f9;
+    border-radius: 3px;
+    position: relative;
+    overflow: hidden;
+    display: flex;
+    justify-content: center;
+    align-items: flex-end;
+}
+
+.micro-widget .bar-fill {
+    position: absolute;
+    bottom: 0;
+    left: 0;
+    width: 100%;
+    height: 0%;
+    background: #3b82f6;
+    border-radius: 2px;
+    transition: height 0.1s, background-color 0.2s;
+    z-index: 1;
+    opacity: 0.8;
+}
+
+.micro-widget .motor-id {
+    z-index: 2;
+    font-size: 9px;
+    font-weight: 800;
+    color: rgba(0,0,0,0.3);
+    margin-bottom: 2px;
+    pointer-events: none;
+    mix-blend-mode: multiply;
+}
+
+.micro-widget .pwm-val {
+    font-family: 'Consolas', monospace;
+    font-size: 9px;
+    color: #475569;
+    margin-top: 3px;
+    font-weight: 600;
+}
+
+@keyframes motor-spin { 100% { transform: rotate(360deg); } }

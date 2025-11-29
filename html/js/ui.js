@@ -5,6 +5,7 @@ class UIManager {
         this.alerts = typeof AlertManager !== 'undefined' ? new AlertManager() : null;
         this.imuCard = typeof ImuCard !== 'undefined' ? new ImuCard() : null;
         this.attWidget = typeof AttitudeWidget !== 'undefined' ? new AttitudeWidget() : null;
+        this.motorMini = typeof MotorOutputMini !== 'undefined' ? new MotorOutputMini() : null;
         this.connectionState = null;
 
         this.elements = {
@@ -96,6 +97,9 @@ class UIManager {
     updateRC(rc) {
         if (this.rcMonitor) {
             this.rcMonitor.update(rc);
+        }
+        if (this.motorMini && this.rcMonitor) {
+            this.motorMini.update(rc, this.rcMonitor.getArmState());
         }
     }
 

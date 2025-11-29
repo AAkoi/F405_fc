@@ -1,0 +1,201 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+    <meta charset="UTF-8">
+    <link href="https://cdn.jsdelivr.net/npm/remixicon@3.5.0/fonts/remixicon.css" rel="stylesheet">
+    <style>
+        /* AERO 主题变量 */
+        :root {
+            --primary-blue: #1890ff; /* 截图中的蓝色 */
+            --bg-color: #ffffff;     /* 卡片背景 */
+            --text-main: #333333;
+            --text-secondary: #999999;
+            --border-color: #f0f0f0;
+            --log-bg: #ffffff;       /* 日志背景纯白 */
+            --log-font: "JetBrains Mono", "SF Mono", Consolas, monospace;
+        }
+
+        /* 竖屏终端容器 - 适配侧边栏尺寸 */
+        .vertical-console {
+            width: 100%;           /* 宽度填满父容器 */
+            height: 100%;          /* 高度填满 */
+            min-height: 500px;     /* 最小高度保护 */
+            background: var(--bg-color);
+            border-radius: 8px;    /* 圆角 */
+            box-shadow: 0 2px 8px rgba(0,0,0,0.05); /* 轻微投影 */
+            display: flex;
+            flex-direction: column;
+            overflow: hidden;
+            border: 1px solid var(--border-color);
+            font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif;
+        }
+
+        /* 1. 顶部标题栏 (极简) */
+        .console-header {
+            height: 40px;
+            padding: 0 12px;
+            border-bottom: 1px solid var(--border-color);
+            display: flex;
+            align-items: center;
+            justify-content: space-between;
+            background: #fafafa;
+            flex-shrink: 0;
+        }
+        .header-title {
+            font-size: 12px;
+            font-weight: 700;
+            color: #555;
+            display: flex;
+            align-items: center;
+            gap: 6px;
+        }
+        .header-btn {
+            background: none;
+            border: 1px solid #e0e0e0;
+            border-radius: 4px;
+            padding: 2px 8px;
+            font-size: 11px;
+            color: #666;
+            cursor: pointer;
+            transition: all 0.2s;
+        }
+        .header-btn:hover { color: var(--primary-blue); border-color: var(--primary-blue); background: #f0f7ff; }
+
+        /* 2. 消息流区域 (核心) */
+        .log-viewport {
+            flex: 1; /* 占据剩余所有空间 */
+            overflow-y: auto;
+            overflow-x: hidden; /* 防止横向滚动条破坏布局 */
+            padding: 10px;
+            background: var(--log-bg);
+            font-family: var(--log-font);
+            font-size: 11px; /* 稍微调小字体以适应竖屏宽度 */
+            line-height: 1.5;
+            word-break: break-all; /* 关键：强制长数据换行，防止撑开 */
+        }
+
+        /* 滚动条美化 */
+        .log-viewport::-webkit-scrollbar { width: 4px; }
+        .log-viewport::-webkit-scrollbar-thumb { background: #ddd; border-radius: 2px; }
+        .log-viewport::-webkit-scrollbar-track { background: transparent; }
+
+        /* 单行日志样式 */
+        .log-entry { margin-bottom: 2px; }
+        
+        /* 颜色定义 (复刻截图) */
+        .ts { color: var(--text-secondary); margin-right: 4px; user-select: none; }
+        .tag { font-weight: bold; margin-right: 4px; }
+        
+        /* [mock] 灰色 */
+        .tag-mock { color: #aaa; font-style: italic; }
+        
+        /* [throttle] 灰色忽略行 */
+        .log-skip { color: #b0b0b0; font-style: italic; }
+        
+        /* 数据高亮 (Aero Blue) */
+        .data-key { color: var(--primary-blue); font-weight: 500; }
+        .data-val { color: var(--text-main); }
+
+        /* 3. 底部控制条 (紧凑型) */
+        .console-footer {
+            padding: 8px 12px;
+            border-top: 1px solid var(--border-color);
+            background: #fff;
+            display: flex;
+            flex-wrap: wrap; /* 允许换行以适应极窄屏幕 */
+            gap: 12px;
+            font-size: 11px;
+            color: #666;
+            flex-shrink: 0;
+        }
+        
+        .footer-check {
+            display: flex;
+            align-items: center;
+            gap: 4px;
+            cursor: pointer;
+            user-select: none;
+        }
+        .footer-check input { accent-color: var(--primary-blue); }
+
+    </style>
+</head>
+<body style="background: #f0f2f5; padding: 20px; height: 90vh;">
+
+    <div class="vertical-console">
+        
+        <div class="console-header">
+            <div class="header-title">
+                <i class="ri-terminal-line"></i> SERIAL OUTPUT
+            </div>
+            <button class="header-btn" onclick="clearLogs()">Clear</button>
+        </div>
+
+        <div class="log-viewport" id="logContainer">
+            <div class="log-entry" style="color:#aaa; font-style:italic;">Console ready. Waiting for connection...</div>
+            <div class="log-entry"><span class="ts">[19:54:10]</span><span class="tag-mock">[MOCK]</span>模拟串口已启动</div>
+            
+            <div class="log-entry log-skip"><span class="tag">[throttle]</span>skipped 7 lines</div>
+            <div class="log-entry">
+                <span class="ts">[19:54:11]</span>
+                <span class="data-key">ATTITUDE_FULL</span>,
+                <span class="data-val">1764417251014, 10.34, 24.28, 9.00, 0.148</span>
+            </div>
+            <div class="log-entry log-skip"><span class="tag">[throttle]</span>skipped 13 lines</div>
+            <div class="log-entry">
+                <span class="ts">[19:54:11]</span>
+                <span class="data-key">ATTITUDE_FULL</span>,
+                <span class="data-val">1764417251314, 19.76, 22.17, 18.00, 0.282</span>
+            </div>
+             <div class="log-entry log-skip"><span class="tag">[throttle]</span>skipped 13 lines</div>
+        </div>
+
+        <div class="console-footer">
+            <label class="footer-check"><input type="checkbox" checked> Auto-Scroll</label>
+            <label class="footer-check"><input type="checkbox" checked> Time</label>
+            <label class="footer-check"><input type="checkbox"> Throttle</label>
+        </div>
+
+    </div>
+    <script>
+        // 简单的模拟脚本，让它动起来
+        const container = document.getElementById('logContainer');
+        
+        function addLine() {
+            const now = new Date();
+            const timeStr = `[${now.getHours()}:${now.getMinutes()}:${now.getSeconds()}]`;
+            
+            // 随机生成 "skipped" 或 "Data"
+            const isSkip = Math.random() > 0.5;
+
+            const div = document.createElement('div');
+            div.className = "log-entry";
+
+            if (isSkip) {
+                div.classList.add('log-skip');
+                div.innerHTML = `<span class="tag">[throttle]</span>skipped 13 lines`;
+            } else {
+                // 模拟一串长数据，测试换行
+                const longData = Math.random().toString().slice(2) + ", " + Math.random().toString().slice(2) + ", " + Math.random().toString().slice(2);
+                div.innerHTML = `
+                    <span class="ts">${timeStr}</span>
+                    <span class="data-key">ATTITUDE_FULL</span>,
+                    <span class="data-val">${Date.now()}, ${longData}</span>
+                `;
+            }
+
+            container.appendChild(div);
+            
+            // 自动滚动逻辑
+            if(container.children.length > 50) container.removeChild(container.firstChild); // 限制行数
+            container.scrollTop = container.scrollHeight;
+        }
+
+        setInterval(addLine, 500); // 0.5秒刷新一次
+
+        function clearLogs() {
+            container.innerHTML = '<div class="log-entry" style="color:#aaa;">Logs cleared.</div>';
+        }
+    </script>
+</body>
+</html>
