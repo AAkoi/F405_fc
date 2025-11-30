@@ -1,13 +1,17 @@
 ﻿/* Main layout */
 .main-layout {
     display: grid;
-    grid-template-columns: 280px 1fr 320px;
+    grid-template-columns: 320px 1fr 300px;
+    grid-template-areas: "rc center sensors";
     gap: 16px;
     padding: 16px;
     flex: 1;
     min-height: 0;
     align-items: stretch;
 }
+
+.sidebar-col.sidebar-rc { grid-area: rc; }
+.sidebar-col.sidebar-sensor { grid-area: sensors; }
 
 .sidebar-col {
     display: flex;
@@ -57,6 +61,7 @@
 
 /* Center stage */
 .center-stage {
+    grid-area: center;
     position: relative;
     border: 1px solid var(--border);
     border-radius: 12px;

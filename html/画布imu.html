@@ -1,0 +1,288 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+    <meta charset="UTF-8">
+    <title>Aero Integrated HUD</title>
+    <style>
+        /* --- 环境模拟 --- */
+        body { margin: 0; background: #eef2f5; display: flex; justify-content: center; align-items: center; height: 100vh; overflow: hidden; font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif; }
+        .canvas-bg { position: absolute; width: 100%; height: 100%; pointer-events: none; background-image: radial-gradient(#cbd5e1 1px, transparent 1px); background-size: 20px 20px; opacity: 0.3; }
+
+        /* ========================================= */
+        /* === Aero Swiss HUD (上位机深度适配版) === */
+        /* ========================================= */
+        
+        .aero-hud {
+            position: absolute;
+            /* 推荐位置：画布左上角，避开中间的无人机 */
+            top: 20px; left: 280px; 
+            
+            width: 240px; /* 宽度适中，不占地 */
+            display: flex; flex-direction: column; gap: 16px;
+            pointer-events: none; /* 鼠标穿透 */
+            z-index: 100;
+        }
+
+        /* 单个模块容器 */
+        .hud-module {
+            display: flex;
+            flex-direction: column;
+            position: relative;
+        }
+
+        /* 模块标题 (模仿你左侧栏的小标题风格) */
+        .module-header {
+            font-size: 10px;
+            font-weight: 700;
+            color: #94A3B8; /* 浅灰，不抢眼 */
+            text-transform: uppercase;
+            letter-spacing: 0.5px;
+            margin-bottom: 2px;
+            display: flex; align-items: center; gap: 4px;
+        }
+        /* 装饰性小圆点 */
+        .module-header::before { content: ''; display: block; width: 4px; height: 4px; border-radius: 50%; background: #CBD5E1; }
+
+        /* 内容区域：图表 + 数值 */
+        .module-content {
+            display: flex;
+            align-items: center;
+            height: 36px; /* 紧凑高度 */
+        }
+
+        /* 图表区 */
+        .chart-area {
+            flex: 1;
+            height: 100%;
+            position: relative;
+            /* 极淡的右边框分隔线 */
+            border-right: 1px solid rgba(0,0,0,0.06);
+            margin-right: 8px;
+        }
+        canvas { display: block; width: 100%; height: 100%; }
+
+        /* 数值区 (紧凑排列) */
+        .stat-panel {
+            display: flex;
+            flex-direction: column;
+            justify-content: space-between;
+            height: 100%;
+            min-width: 60px;
+        }
+
+        .stat-row {
+            display: flex;
+            align-items: baseline;
+            justify-content: flex-end;
+            line-height: 1;
+        }
+
+        /* 轴标 (X Y Z) */
+        .axis-tag {
+            font-size: 8px;
+            font-weight: 800;
+            margin-right: 4px;
+            opacity: 0.7;
+        }
+
+        /* 数值 */
+        .num-val {
+            font-family: 'Roboto Mono', 'Menlo', monospace; /* 工业字体 */
+            font-size: 10px;
+            font-weight: 600;
+            color: #334155; /* 深灰，确保清晰 */
+            width: 36px;    /* 固定宽度对齐 */
+            text-align: right;
+        }
+
+        /* === 颜色体系 (完全对应你的无人机轴向) === */
+        /* X: Red */
+        .c-x .axis-tag { color: #EF4444; }
+        .c-x .num-val { color: #475569; } /* 数值保持深灰，更专业 */
+        
+        /* Y: Green */
+        .c-y .axis-tag { color: #10B981; }
+        .c-y .num-val { color: #475569; }
+
+        /* Z: Blue */
+        .c-z .axis-tag { color: #3B82F6; }
+        .c-z .num-val { color: #475569; }
+
+    </style>
+</head>
+<body>
+
+<div class="canvas-bg"></div>
+
+<!-- HUD 组件 -->
+<div class="aero-hud">
+    
+    <!-- Gyroscope -->
+    <div class="hud-module">
+        <div class="module-header">Gyroscope</div>
+        <div class="module-content">
+            <div class="chart-area"><canvas id="cvs-g"></canvas></div>
+            <div class="stat-panel">
+                <div class="stat-row c-x"><span class="axis-tag">X</span><span class="num-val" id="v-g-x">0.0</span></div>
+                <div class="stat-row c-y"><span class="axis-tag">Y</span><span class="num-val" id="v-g-y">0.0</span></div>
+                <div class="stat-row c-z"><span class="axis-tag">Z</span><span class="num-val" id="v-g-z">0.0</span></div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Accelerometer -->
+    <div class="hud-module">
+        <div class="module-header">Accelerometer</div>
+        <div class="module-content">
+            <div class="chart-area"><canvas id="cvs-a"></canvas></div>
+            <div class="stat-panel">
+                <div class="stat-row c-x"><span class="axis-tag">X</span><span class="num-val" id="v-a-x">0.00</span></div>
+                <div class="stat-row c-y"><span class="axis-tag">Y</span><span class="num-val" id="v-a-y">0.00</span></div>
+                <div class="stat-row c-z"><span class="axis-tag">Z</span><span class="num-val" id="v-a-z">1.00</span></div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Magnetometer -->
+    <div class="hud-module">
+        <div class="module-header">Magnetometer</div>
+        <div class="module-content">
+            <div class="chart-area"><canvas id="cvs-m"></canvas></div>
+            <div class="stat-panel">
+                <div class="stat-row c-x"><span class="axis-tag">X</span><span class="num-val" id="v-m-x">0</span></div>
+                <div class="stat-row c-y"><span class="axis-tag">Y</span><span class="num-val" id="v-m-y">0</span></div>
+                <div class="stat-row c-z"><span class="axis-tag">Z</span><span class="num-val" id="v-m-z">0</span></div>
+            </div>
+        </div>
+    </div>
+
+</div>
+
+<script>
+    // --- 朴实无华的高级绘图类 ---
+    class AeroChart {
+        constructor(id) {
+            this.canvas = document.getElementById(id);
+            this.ctx = this.canvas.getContext('2d');
+            this.data = [[], [], []];
+            
+            // 颜色定义 (对应 Red, Green, Blue)
+            this.colors = [
+                '239, 68, 68',  // #EF4444
+                '16, 185, 129', // #10B981
+                '59, 130, 246'  // #3B82F6
+            ];
+            this.maxPoints = 50; 
+            
+            new ResizeObserver(() => this.resize()).observe(this.canvas.parentElement);
+        }
+
+        resize() {
+            const rect = this.canvas.parentElement.getBoundingClientRect();
+            const dpr = window.devicePixelRatio || 1;
+            this.canvas.width = rect.width * dpr;
+            this.canvas.height = rect.height * dpr;
+            this.ctx.scale(dpr, dpr);
+            this.width = rect.width;
+            this.height = rect.height;
+        }
+
+        update(vals) {
+            vals.forEach((v, i) => {
+                this.data[i].push(v);
+                if(this.data[i].length > this.maxPoints) this.data[i].shift();
+            });
+            this.draw();
+        }
+
+        draw() {
+            const { ctx, width, height, data } = this;
+            ctx.clearRect(0, 0, width, height);
+
+            const flat = data.flat();
+            if(!flat.length) return;
+            
+            // 自动缩放 + 留白
+            let min = Math.min(...flat), max = Math.max(...flat);
+            if(min === max) { min -= 1; max += 1; }
+            const range = max - min;
+            const pad = range * 0.15;
+
+            // 绘制逻辑：使用 multiply 混合模式实现色彩叠加
+            ctx.globalCompositeOperation = 'multiply';
+
+            data.forEach((line, i) => {
+                if(line.length < 2) return;
+                
+                const rgb = this.colors[i];
+                const step = width / (this.maxPoints - 1);
+                
+                ctx.beginPath();
+                // 面积图：从底部开始
+                ctx.moveTo(0, height);
+
+                line.forEach((val, idx) => {
+                    const x = idx * step;
+                    const y = height - ((val - (min - pad)) / (range + pad*2) * height);
+                    ctx.lineTo(x, y);
+                });
+
+                ctx.lineTo(width, height);
+                ctx.closePath();
+
+                // 填充：非常淡的颜色，不抢视线
+                ctx.fillStyle = `rgba(${rgb}, 0.1)`; 
+                ctx.fill();
+
+                // 描边：顶部线条加深，保证精确感
+                ctx.beginPath();
+                line.forEach((val, idx) => {
+                    const x = idx * step;
+                    const y = height - ((val - (min - pad)) / (range + pad*2) * height);
+                    if(idx===0) ctx.moveTo(x, y); else ctx.lineTo(x, y);
+                });
+                ctx.strokeStyle = `rgba(${rgb}, 0.8)`;
+                ctx.lineWidth = 1.5;
+                ctx.lineJoin = 'round';
+                ctx.stroke();
+            });
+
+            ctx.globalCompositeOperation = 'source-over';
+        }
+    }
+
+    // --- 数据驱动 ---
+    const charts = {
+        g: new AeroChart('cvs-g'),
+        a: new AeroChart('cvs-a'),
+        m: new AeroChart('cvs-m')
+    };
+
+    const setTxt = (type, data, fixed) => {
+        document.getElementById(`v-${type}-x`).innerText = data[0].toFixed(fixed);
+        document.getElementById(`v-${type}-y`).innerText = data[1].toFixed(fixed);
+        document.getElementById(`v-${type}-z`).innerText = data[2].toFixed(fixed);
+    };
+
+    let t = 0;
+    function loop() {
+        requestAnimationFrame(loop);
+        t += 0.05;
+
+        const dGyro = [Math.sin(t)*15, Math.cos(t)*15 + 5, Math.sin(t*2)*8];
+        const dAcc = [Math.random()*0.05, Math.random()*0.05, 1.0];
+        const dMag = [120, -60, 10];
+
+        setTxt('g', dGyro, 1);
+        setTxt('a', dAcc, 2);
+        setTxt('m', dMag, 0);
+
+        charts.g.update(dGyro);
+        charts.a.update(dAcc);
+        charts.m.update(dMag);
+    }
+    loop();
+
+</script>
+</body>
+</html>

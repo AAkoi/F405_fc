@@ -1,0 +1,306 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+    <meta charset="UTF-8">
+    <title>IMU Attitude Visualizer</title>
+    <style>
+        /* --- 全局字体与背景 (模拟你的环境) --- */
+        body {
+            background-color: #F3F4F6;
+            font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Helvetica, Arial, sans-serif;
+            display: flex;
+            justify-content: center;
+            padding-top: 50px;
+            margin: 0;
+        }
+
+        /* --- 卡片容器 (复用你的 imu-card 样式) --- */
+        .imu-card {
+            width: 280px; /* 更加小巧 */
+            background: white;
+            border-radius: 12px;
+            box-shadow: 0 4px 6px -1px rgba(0, 0, 0, 0.1), 0 2px 4px -1px rgba(0, 0, 0, 0.06);
+            padding: 16px;
+            box-sizing: border-box;
+            display: flex;
+            flex-direction: column;
+            gap: 12px;
+            transition: all 0.3s ease;
+        }
+
+        /* --- 顶部标题 --- */
+        .header-row {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+        }
+
+        .card-title {
+            font-size: 13px;
+            font-weight: 700;
+            color: #475569;
+            text-transform: uppercase;
+            letter-spacing: 0.5px;
+        }
+
+        /* 状态指示点 (装饰) */
+        .status-dot {
+            width: 8px; height: 8px;
+            background-color: #10B981;
+            border-radius: 50%;
+            box-shadow: 0 0 4px #10B981;
+        }
+
+        /* --- 3D 姿态球容器 --- */
+        .canvas-wrapper {
+            position: relative;
+            width: 100%;
+            padding-top: 100%; /* 1:1 宽高比 */
+            border-radius: 50%; /* 圆形遮罩 */
+            background: #f1f5f9;
+            overflow: hidden;
+            box-shadow: inset 0 2px 6px rgba(0,0,0,0.1);
+            border: 2px solid #E2E8F0;
+        }
+
+        canvas {
+            position: absolute;
+            top: 0; left: 0;
+            width: 100%; height: 100%;
+            display: block;
+        }
+
+        /* 中心十字准星 (覆盖在 Canvas 上) */
+        .crosshair {
+            position: absolute;
+            top: 50%; left: 50%;
+            transform: translate(-50%, -50%);
+            width: 40%; height: 40%;
+            pointer-events: none;
+            z-index: 10;
+        }
+
+        /* --- 底部数据栏 (复用你的配色风格) --- */
+        .data-row {
+            display: flex;
+            justify-content: space-between;
+            background: #F8FAFC;
+            padding: 8px 12px;
+            border-radius: 8px;
+            border: 1px solid #F1F5F9;
+        }
+
+        .data-item {
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            line-height: 1.2;
+        }
+
+        .label {
+            font-size: 10px;
+            font-weight: 600;
+            color: #94A3B8;
+        }
+
+        .value {
+            font-family: 'Menlo', 'Monaco', monospace;
+            font-size: 13px;
+            font-weight: 700;
+        }
+
+        /* 颜色定义 (与你原代码一致) */
+        .col-x { color: #EF4444; } /* Roll - Red */
+        .col-y { color: #10B981; } /* Pitch - Green */
+        .col-z { color: #3B82F6; } /* Yaw - Blue */
+
+    </style>
+</head>
+<body>
+
+<div class="imu-card">
+    
+    <!-- 头部 -->
+    <div class="header-row">
+        <div class="card-title">Attitude / HUD</div>
+        <div class="status-dot"></div>
+    </div>
+
+    <!-- 3D 姿态球区域 -->
+    <div class="canvas-wrapper">
+        <canvas id="horizonCanvas"></canvas>
+        
+        <!-- 纯 CSS 绘制的十字准星 (比 Canvas 绘制更清晰) -->
+        <svg class="crosshair" viewBox="0 0 100 100" fill="none" stroke="#FFD700" stroke-width="3" stroke-linecap="round">
+            <!-- 左翼 -->
+            <path d="M 10 50 L 35 50" />
+            <!-- 右翼 -->
+            <path d="M 65 50 L 90 50" />
+            <!-- 中心点 -->
+            <circle cx="50" cy="50" r="2" fill="#FFD700" stroke="none"/>
+            <!-- 顶部指示标 -->
+            <path d="M 50 25 L 50 35" stroke="rgba(255,255,255,0.5)" />
+        </svg>
+    </div>
+
+    <!-- 底部数据 -->
+    <div class="data-row">
+        <div class="data-item">
+            <span class="label">ROLL</span>
+            <span class="value col-x" id="val-roll">0.0°</span>
+        </div>
+        <div class="data-item">
+            <span class="label">PITCH</span>
+            <span class="value col-y" id="val-pitch">0.0°</span>
+        </div>
+        <div class="data-item">
+            <span class="label">YAW</span>
+            <span class="value col-z" id="val-yaw">0°</span>
+        </div>
+    </div>
+
+</div>
+
+<script>
+    class HorizonWidget {
+        constructor(canvasId) {
+            this.canvas = document.getElementById(canvasId);
+            this.ctx = this.canvas.getContext('2d');
+            
+            // 颜色配置 (适应你的亮色主题)
+            this.colors = {
+                sky: '#60A5FA',    // 比较柔和的天空蓝
+                ground: '#78716C', // 暖灰色代表地面
+                line: '#FFFFFF',   // 刻度线颜色
+                text: 'rgba(255,255,255,0.9)'
+            };
+
+            // 自动调整大小
+            this.resizeObserver = new ResizeObserver(() => this.resize());
+            this.resizeObserver.observe(this.canvas.parentElement);
+            this.resize(); // 初始化
+        }
+
+        resize() {
+            const parent = this.canvas.parentElement;
+            const size = parent.getBoundingClientRect().width;
+            const dpr = window.devicePixelRatio || 1;
+
+            // 设置高分屏尺寸
+            this.canvas.width = size * dpr;
+            this.canvas.height = size * dpr;
+            this.ctx.scale(dpr, dpr);
+            
+            this.width = size;
+            this.height = size;
+            this.radius = size / 2;
+        }
+
+        draw(roll, pitch) {
+            const { ctx, width, height, radius, colors } = this;
+            const cx = width / 2;
+            const cy = height / 2;
+
+            ctx.clearRect(0, 0, width, height);
+            
+            ctx.save();
+            
+            // 1. 创建圆形裁剪区域
+            ctx.beginPath();
+            ctx.arc(cx, cy, radius, 0, Math.PI * 2);
+            ctx.clip();
+
+            // 2. 变换坐标系 (旋转 Roll, 平移 Pitch)
+            ctx.translate(cx, cy);
+            ctx.rotate(-roll * Math.PI / 180); // 负号是因为 Canvas 顺时针旋转
+            const pitchOffset = pitch * (radius / 45); // 假设 45度 移动一个半径距离
+            ctx.translate(0, pitchOffset);
+
+            // 3. 绘制天和地
+            // 天空 (大矩形覆盖)
+            ctx.fillStyle = colors.sky;
+            ctx.fillRect(-width*2, -height*2, width*4, height*2); // 上半部分
+            
+            // 地面 (大矩形覆盖)
+            ctx.fillStyle = colors.ground;
+            ctx.fillRect(-width*2, 0, width*4, height*2); // 下半部分
+
+            // 地平线
+            ctx.strokeStyle = colors.line;
+            ctx.lineWidth = 2;
+            ctx.beginPath();
+            ctx.moveTo(-width*2, 0);
+            ctx.lineTo(width*2, 0);
+            ctx.stroke();
+
+            // 4. 绘制刻度线 (Pitch Lines)
+            ctx.lineWidth = 1;
+            ctx.font = '10px monospace';
+            ctx.textAlign = 'center';
+            ctx.textBaseline = 'middle';
+            ctx.fillStyle = colors.text;
+
+            // 每 10 度画一条线
+            for (let i = -90; i <= 90; i += 10) {
+                if (i === 0) continue; // 跳过地平线
+                
+                const y = -i * (radius / 45); // 计算Y轴位置
+                const isMajor = i % 30 === 0;
+                const w = isMajor ? 40 : 20; // 长短线
+                
+                // 只有在视野内的线才绘制 (优化性能)
+                if (y + pitchOffset > -radius && y + pitchOffset < radius) {
+                    ctx.beginPath();
+                    ctx.moveTo(-w/2, y);
+                    ctx.lineTo(w/2, y);
+                    ctx.stroke();
+                    
+                    // 文字
+                    if (isMajor) {
+                        ctx.fillText(Math.abs(i), -w/2 - 10, y);
+                        ctx.fillText(Math.abs(i), w/2 + 10, y);
+                    }
+                }
+            }
+
+            ctx.restore();
+        }
+    }
+
+    // --- 初始化 ---
+    const horizon = new HorizonWidget('horizonCanvas');
+    
+    // 获取 DOM 元素用于更新数值
+    const elRoll = document.getElementById('val-roll');
+    const elPitch = document.getElementById('val-pitch');
+    const elYaw = document.getElementById('val-yaw');
+
+    // --- 模拟数据循环 (整合到你的系统中只需调用 horizon.draw) ---
+    let t = 0;
+    function loop() {
+        requestAnimationFrame(loop);
+        t += 0.02;
+
+        // 生成模拟数据
+        const r = Math.sin(t) * 40;       // Roll: -40 ~ 40
+        const p = Math.sin(t * 0.5) * 30; // Pitch: -30 ~ 30
+        const y = (t * 20) % 360;         // Yaw: 0 ~ 360
+
+        // 1. 绘制图形
+        horizon.draw(r, p);
+
+        // 2. 更新文字 (保留一位小数)
+        elRoll.innerText = r.toFixed(1) + '°';
+        elPitch.innerText = p.toFixed(1) + '°';
+        // Yaw 通常显示为正整数 0-360
+        let yawDisplay = Math.abs(y).toFixed(0);
+        elYaw.innerText = yawDisplay.padStart(3, '0') + '°';
+    }
+
+    // 启动
+    loop();
+
+</script>
+
+</body>
+</html>

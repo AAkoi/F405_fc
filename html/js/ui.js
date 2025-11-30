@@ -28,6 +28,9 @@ class UIManager {
         if (this.imuCard) {
             this.imuCard.update(sensorData);
         }
+        if (window.updateAeroHud) {
+            window.updateAeroHud(sensorData);
+        }
 
         // 将原始数据提供给校准模块（仅在包含传感器数据时）
         if (updateType === 'attitude' || updateType === 'sensor') {

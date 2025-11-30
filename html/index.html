@@ -31,6 +31,121 @@
     <!-- Three.js 核心库 -->
     <script src="https://cdnjs.cloudflare.com/ajax/libs/three.js/r128/three.min.js"></script>
     <script src="https://cdn.jsdelivr.net/npm/three@0.128.0/examples/js/controls/OrbitControls.js"></script>
+    <style>
+        .aero-hud-panel {
+            position: absolute;
+            top: 170px;
+            left: 12px;
+            width: 220px;
+            padding: 4px 0;
+            border-radius: 12px;
+            background: transparent;
+            border: none;
+            box-shadow: none;
+            overflow: hidden;
+            z-index: 11;
+            pointer-events: none;
+        }
+
+        .aero-hud-panel .canvas-bg {
+            display: none;
+        }
+
+        .aero-hud-panel .aero-hud {
+            position: relative;
+            z-index: 1;
+            display: flex;
+            flex-direction: column;
+            gap: 4px;
+        }
+
+        .aero-hud-panel .hud-module {
+            display: flex;
+            flex-direction: column;
+            padding: 4px 6px;
+            border-radius: 8px;
+            background: transparent;
+            border: none;
+            box-shadow: none;
+        }
+
+        .aero-hud-panel .module-header {
+            font-size: 10px;
+            font-weight: 700;
+            color: #94a3b8;
+            text-transform: uppercase;
+            letter-spacing: 0.5px;
+            margin-bottom: 2px;
+            display: flex;
+            align-items: center;
+            gap: 4px;
+        }
+
+        .aero-hud-panel .module-header::before {
+            content: '';
+            display: block;
+            width: 4px;
+            height: 4px;
+            border-radius: 50%;
+            background: #cbd5e1;
+        }
+
+        .aero-hud-panel .module-content {
+            display: flex;
+            align-items: center;
+            height: 60px;
+        }
+
+        .aero-hud-panel .chart-area {
+            flex: 1;
+            position: relative;
+            border-right: 1px solid rgba(148, 163, 184, 0.25);
+            margin-right: 6px;
+            min-height: 44px;
+        }
+
+        .aero-hud-panel .chart-area canvas {
+            width: 100%;
+            height: 100%;
+            display: block;
+        }
+
+        .aero-hud-panel .stat-panel {
+            display: flex;
+            flex-direction: column;
+            justify-content: space-between;
+            height: 100%;
+            min-width: 64px;
+        }
+
+        .aero-hud-panel .stat-row {
+            display: flex;
+            align-items: baseline;
+            justify-content: flex-end;
+            line-height: 1;
+            font-size: 12px;
+        }
+
+        .aero-hud-panel .axis-tag {
+            font-size: 8px;
+            font-weight: 800;
+            margin-right: 4px;
+            opacity: 0.7;
+        }
+
+        .aero-hud-panel .num-val {
+            font-family: 'JetBrains Mono', 'Menlo', monospace;
+            font-size: 12px;
+            font-weight: 600;
+            color: #334155;
+            width: 40px;
+            text-align: right;
+        }
+
+        .aero-hud-panel .c-x .axis-tag { color: #ef4444; }
+        .aero-hud-panel .c-y .axis-tag { color: #10b981; }
+        .aero-hud-panel .c-z .axis-tag { color: #3b82f6; }
+    </style>
 </head>
 <body>
 
@@ -105,8 +220,8 @@
 
         <!-- 主布局 -->
         <div class="main-layout">
-            <!-- 左侧 Telemetry -->
-            <aside class="sidebar-col">
+            <!-- 传感器数据面板 -->
+            <aside class="sidebar-col sidebar-sensor">
                 <div class="card imu-card" id="imu-card">
                     <div class="imu-header">
                         <div class="imu-title">IMU 原始数据</div>
@@ -245,6 +360,44 @@
                         </div>
                     </div>
                 </div>
+                <div class="aero-hud-panel" id="aeroHudPanel">
+                    <div class="canvas-bg"></div>
+                    <div class="aero-hud">
+                        <div class="hud-module">
+                            <div class="module-header">Gyroscope</div>
+                            <div class="module-content">
+                                <div class="chart-area"><canvas id="cvs-g"></canvas></div>
+                                <div class="stat-panel">
+                                    <div class="stat-row c-x"><span class="axis-tag">X</span><span class="num-val" id="v-g-x">0.0</span></div>
+                                    <div class="stat-row c-y"><span class="axis-tag">Y</span><span class="num-val" id="v-g-y">0.0</span></div>
+                                    <div class="stat-row c-z"><span class="axis-tag">Z</span><span class="num-val" id="v-g-z">0.0</span></div>
+                                </div>
+                            </div>
+                        </div>
+                        <div class="hud-module">
+                            <div class="module-header">Accelerometer</div>
+                            <div class="module-content">
+                                <div class="chart-area"><canvas id="cvs-a"></canvas></div>
+                                <div class="stat-panel">
+                                    <div class="stat-row c-x"><span class="axis-tag">X</span><span class="num-val" id="v-a-x">0.00</span></div>
+                                    <div class="stat-row c-y"><span class="axis-tag">Y</span><span class="num-val" id="v-a-y">0.00</span></div>
+                                    <div class="stat-row c-z"><span class="axis-tag">Z</span><span class="num-val" id="v-a-z">1.00</span></div>
+                                </div>
+                            </div>
+                        </div>
+                        <div class="hud-module">
+                            <div class="module-header">Magnetometer</div>
+                            <div class="module-content">
+                                <div class="chart-area"><canvas id="cvs-m"></canvas></div>
+                                <div class="stat-panel">
+                                    <div class="stat-row c-x"><span class="axis-tag">X</span><span class="num-val" id="v-m-x">0</span></div>
+                                    <div class="stat-row c-y"><span class="axis-tag">Y</span><span class="num-val" id="v-m-y">0</span></div>
+                                    <div class="stat-row c-z"><span class="axis-tag">Z</span><span class="num-val" id="v-m-z">0</span></div>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                </div>
                 <div class="axis-gizmo">
                     <span class="giz-x">X</span>
                     <span class="giz-y">Y</span>
@@ -258,8 +411,8 @@
                 </div>
             </section>
 
-            <!-- 右侧 RC -->
-            <aside class="sidebar-col">
+            <!-- RC 输入面板 -->
+            <aside class="sidebar-col sidebar-rc">
                 <div class="monitor-card offline" id="rc-monitor">
                     <div class="card-header">
                         <div class="header-title">RC INPUT</div>
@@ -349,26 +502,45 @@
                     </div>
                 </div>
 
+                <div class="console-drawer" id="console-drawer">
+                    <div class="console-header">
+                        <div style="display:flex;align-items:center;gap:8px;font-weight:700">
+                            <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><polyline points="4 17 10 11 4 5"></polyline><line x1="12" y1="19" x2="20" y2="19"></line></svg>
+                            SERIAL OUTPUT
+                        </div>
+                        <div class="console-ops">
+                            <label class="opt-label"><input type="checkbox" id="chk-scroll" checked> Auto-Scroll</label>
+                            <label class="opt-label"><input type="checkbox" id="chk-ts" checked> Time</label>
+                            <label class="opt-label"><input type="checkbox" id="chk-throttle" checked> Throttle</label>
+                            <button class="btn btn-ghost" id="mockBtn" style="padding:0 8px; min-height:24px; line-height:24px; white-space:nowrap;">模拟数据</button>
+                            <button class="btn btn-ghost" style="padding:0 8px; min-height:24px; line-height:24px; white-space:nowrap;" onclick="document.getElementById('console-body').innerHTML = '';">Clear</button>
+                        </div>
+                    </div>
+                    <div class="console-body" id="console-body">
+                        <div class="log-line"><span class="log-sys">Console ready. Waiting for connection...</span></div>
+                    </div>
+                </div>
+
             </aside>
         </div>
     </div>
 
     <!-- 底部串口输出 -->
-    <div class="console-drawer closed" id="console-drawer">
+    <div class="console-drawer closed" id="console-drawer-legacy" style="display:none">
         <div class="console-header">
             <div style="display:flex;align-items:center;gap:8px;font-weight:700">
                 <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><polyline points="4 17 10 11 4 5"></polyline><line x1="12" y1="19" x2="20" y2="19"></line></svg>
                 SERIAL OUTPUT
             </div>
             <div class="console-ops">
-                <label class="opt-label"><input type="checkbox" id="chk-scroll" checked> Auto-Scroll</label>
-                <label class="opt-label"><input type="checkbox" id="chk-ts" checked> Time</label>
-                <label class="opt-label"><input type="checkbox" id="chk-throttle" checked> Throttle</label>
-                <button class="btn btn-ghost" id="mockBtn" style="padding:0 8px; min-height:24px; line-height:24px; white-space:nowrap;">模拟数据</button>
+                <label class="opt-label"><input type="checkbox" id="chk-scroll-legacy" checked> Auto-Scroll</label>
+                <label class="opt-label"><input type="checkbox" id="chk-ts-legacy" checked> Time</label>
+                <label class="opt-label"><input type="checkbox" id="chk-throttle-legacy" checked> Throttle</label>
+                <button class="btn btn-ghost" id="mockBtnLegacy" style="padding:0 8px; min-height:24px; line-height:24px; white-space:nowrap;">模拟数据</button>
                 <button class="btn btn-ghost" style="padding:0 8px; min-height:24px; line-height:24px; white-space:nowrap;" onclick="document.getElementById('console-body').innerHTML = '';">Clear</button>
             </div>
         </div>
-        <div class="console-body" id="console-body">
+        <div class="console-body" id="console-body-legacy">
             <div class="log-line"><span class="log-sys">Console ready. Waiting for connection...</span></div>
         </div>
     </div>
@@ -670,6 +842,139 @@
     <script src="js/scene.js"></script>
     <script src="js/drone.js"></script>
     <script src="js/app.js"></script>
+    <script>
+        document.addEventListener('DOMContentLoaded', () => {
+            // 平滑面积图，参考 IMU 原始数据的动态范围与缓冲，避免尖峰
+            class SmoothAreaChart {
+                constructor(id) {
+                    this.canvas = document.getElementById(id);
+                    this.ctx = this.canvas?.getContext('2d');
+                    this.data = [[], [], []];
+                    this.maxPoints = 80;
+                    this.colors = [
+                        '239, 68, 68',
+                        '16, 185, 129',
+                        '59, 130, 246'
+                    ];
+                    this.rangeMin = null;
+                    this.rangeMax = null;
+                    this.rangeLerp = 0.2; // 平滑范围，抑制尖峰
+                    this.minSpan = 1;
+                    this.lastVals = [0, 0, 0];
+                    if (this.canvas && window.ResizeObserver) {
+                        new ResizeObserver(() => this.resize()).observe(this.canvas.parentElement);
+                    }
+                    this.resize();
+                }
+                resize() {
+                    if (!this.ctx || !this.canvas || !this.canvas.parentElement) return;
+                    const rect = this.canvas.parentElement.getBoundingClientRect();
+                    const dpr = window.devicePixelRatio || 1;
+                    this.canvas.width = rect.width * dpr;
+                    this.canvas.height = rect.height * dpr;
+                    this.ctx.setTransform(dpr, 0, 0, dpr, 0, 0);
+                    this.width = rect.width;
+                    this.height = rect.height;
+                }
+                update(vals = []) {
+                    vals.forEach((v, i) => {
+                        const num = Number.isFinite(v) ? v : 0;
+                        // 低通滤波，减少突变尖峰
+                        const smooth = this.lastVals[i] + (num - this.lastVals[i]) * 0.35;
+                        this.lastVals[i] = smooth;
+                        this.data[i].push(smooth);
+                        if (this.data[i].length > this.maxPoints) this.data[i].shift();
+                    });
+                    this.updateRange();
+                    this.draw();
+                }
+                updateRange() {
+                    const all = this.data.flat();
+                    if (!all.length) return;
+                    let max = Math.max(...all);
+                    let min = Math.min(...all);
+                    if (max === min) {
+                        max += 0.1;
+                        min -= 0.1;
+                    }
+                    const span = Math.max(Math.abs(max), Math.abs(min), this.minSpan);
+                    const targetMin = -span * 1.1;
+                    const targetMax = span * 1.1;
+                    if (this.rangeMin === null || this.rangeMax === null) {
+                        this.rangeMin = targetMin;
+                        this.rangeMax = targetMax;
+                    } else {
+                        this.rangeMin = this.rangeMin + this.rangeLerp * (targetMin - this.rangeMin);
+                        this.rangeMax = this.rangeMax + this.rangeLerp * (targetMax - this.rangeMax);
+                    }
+                }
+                draw() {
+                    if (!this.ctx || !this.width || !this.height) return;
+                    const { ctx, width, height, data } = this;
+                    ctx.clearRect(0, 0, width, height);
+                    if (this.rangeMin === null || this.rangeMax === null) return;
+                    const min = this.rangeMin;
+                    const max = this.rangeMax;
+                    const range = max - min;
+                    const step = width / Math.max(1, this.maxPoints - 1);
+
+                    ctx.globalCompositeOperation = 'source-over';
+                    data.forEach((line, i) => {
+                        if (line.length < 2) return;
+                        const rgb = this.colors[i];
+                        ctx.beginPath();
+                        ctx.moveTo(0, height);
+                        line.forEach((val, idx) => {
+                            const y = height - ((val - min) / range) * height;
+                            ctx.lineTo(idx * step, y);
+                        });
+                        ctx.lineTo(width, height);
+                        ctx.closePath();
+                        ctx.fillStyle = `rgba(${rgb}, 0.08)`; // 更低透明度，避免叠加成灰
+                        ctx.fill();
+
+                        ctx.beginPath();
+                        line.forEach((val, idx) => {
+                            const y = height - ((val - min) / range) * height;
+                            if (idx === 0) ctx.moveTo(0, y);
+                            else ctx.lineTo(idx * step, y);
+                        });
+                        ctx.strokeStyle = `rgba(${rgb}, 0.95)`;
+                        ctx.lineWidth = 1.6;
+                        ctx.lineJoin = 'round';
+                        ctx.stroke();
+                    });
+                }
+            }
+
+            const charts = {
+                g: new SmoothAreaChart('cvs-g'),
+                a: new SmoothAreaChart('cvs-a'),
+                m: new SmoothAreaChart('cvs-m')
+            };
+
+            const setTxt = (type, data, fixed) => {
+                if(!data) return;
+                ['x', 'y', 'z'].forEach((axis, idx) => {
+                    const el = document.getElementById(`v-${type}-${axis}`);
+                    if(!el) return;
+                    const val = data[idx];
+                    el.innerText = Number.isFinite(val) ? val.toFixed(fixed) : '--';
+                });
+            };
+
+            window.updateAeroHud = (sensorData) => {
+                if(!sensorData) return;
+                const gyr = sensorData.gyr ? [sensorData.gyr.x, sensorData.gyr.y, sensorData.gyr.z] : null;
+                const acc = sensorData.acc ? [sensorData.acc.x, sensorData.acc.y, sensorData.acc.z] : null;
+                const mag = sensorData.mag ? [sensorData.mag.x, sensorData.mag.y, sensorData.mag.z] : null;
+
+                if(gyr) { setTxt('g', gyr, 1); charts.g && charts.g.update(gyr); }
+                if(acc) { setTxt('a', acc, 2); charts.a && charts.a.update(acc); }
+                if(mag) { setTxt('m', mag, 0); charts.m && charts.m.update(mag); }
+            };
+        });
+    </script>
     <script>
         // Console drawer toggle + resize (min/max clamp)
         document.addEventListener('DOMContentLoaded', () => {

@@ -9,8 +9,9 @@
     flex-direction: column;
     overflow: hidden;
     transition: border-color 0.3s;
-    max-width: 320px;
-    margin-left: auto;
+    max-width: 100%;
+    min-width: 0;
+    margin: 0;
 }
 
 .card-header {
@@ -82,15 +83,15 @@
 .gimbals-wrapper {
     padding: 14px 12px;
     display: grid;
-    grid-template-columns: repeat(2, minmax(120px, 1fr));
+    grid-template-columns: repeat(2, minmax(130px, 1fr));
     gap: 12px;
     background: #fff;
 }
 
 .gimbal-unit {
     position: relative;
-    width: 130px;
-    height: 130px;
+    width: 140px;
+    height: 140px;
     border: 1px solid var(--rc-border);
     border-radius: 50%;
     background-image: linear-gradient(var(--rc-grid) 1px, transparent 1px), linear-gradient(90deg, var(--rc-grid) 1px, transparent 1px);

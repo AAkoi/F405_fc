@@ -2,6 +2,7 @@
     position: absolute;
     top: 12px;
     left: 12px;
+    width: 220px;
     z-index: 12;
     pointer-events: auto;
 }
@@ -12,7 +13,7 @@
     --att-text-main: #34495e;
     --att-text-sub: #7f8c8d;
     --att-font-mono: 'Consolas', monospace;
-    width: 160px;
+    width: 220px;
     height: 140px;
     position: relative;
     cursor: pointer;
