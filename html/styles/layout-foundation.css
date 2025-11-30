@@ -16,7 +16,9 @@
     --text-unit: #94a3b8;
 }
 
-* { box-sizing: border-box; }
+* {
+    box-sizing: border-box;
+}
 
 body {
     margin: 0;
@@ -28,7 +30,8 @@ body {
 .app-shell {
     display: flex;
     flex-direction: column;
-    min-height: 100vh;
+    height: 100vh;
+    overflow: hidden;
 }
 
 /* Top bar */
@@ -114,26 +117,34 @@ body {
     color: var(--text-main);
 }
 
-.btn:hover { transform: translateY(-1px); }
-.btn:active { transform: translateY(0); }
-
-.btn-primary { 
-    background: var(--primary); 
-    color: #fff; 
-    box-shadow: 0 1px 2px rgba(37,99,235,0.3); 
-    border-color: var(--primary); 
+.btn:hover {
+    transform: translateY(-1px);
 }
-.btn-primary:hover { background: #1d4ed8; }
 
-.btn-danger { 
-    background: var(--danger); 
-    color: #fff; 
+.btn:active {
+    transform: translateY(0);
+}
+
+.btn-primary {
+    background: var(--primary);
+    color: #fff;
+    box-shadow: 0 1px 2px rgba(37, 99, 235, 0.3);
+    border-color: var(--primary);
+}
+
+.btn-primary:hover {
+    background: #1d4ed8;
+}
+
+.btn-danger {
+    background: var(--danger);
+    color: #fff;
 }
 
 /* 宸ュ叿鎸夐挳鏍峰紡 */
-.btn-ghost { 
+.btn-ghost {
     position: relative;
-    width: 36px; 
+    width: 36px;
     height: 36px;
     padding: 0;
     background: var(--bg-card);
@@ -142,16 +153,16 @@ body {
     justify-content: center;
 }
 
-.btn-ghost:hover { 
-    color: var(--primary); 
+.btn-ghost:hover {
+    color: var(--primary);
     background: #f1f5f9;
     border-color: #cbd5e1;
     transform: translateY(-1px);
 }
 
-.btn-ghost:active { 
-    background: #e2e8f0; 
-    transform: scale(0.96); 
+.btn-ghost:active {
+    background: #e2e8f0;
+    transform: scale(0.96);
 }
 
 /* 鐢垫満鎸夐挳鐗规畩鏍峰紡 - 鎮仠鏃舵樉绀哄嵄闄╄壊 */
@@ -168,7 +179,7 @@ body {
     border-radius: 50%;
     background: #fff;
     opacity: 0.5;
-    box-shadow: 0 0 4px rgba(255,255,255,0.5);
+    box-shadow: 0 0 4px rgba(255, 255, 255, 0.5);
 }
 
 .btn.connected .status-dot,
