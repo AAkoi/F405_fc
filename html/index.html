@@ -1,10 +1,11 @@
 <!DOCTYPE html>
 <html lang="zh-CN">
+
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>Pro Drone Visualizer</title>
-    
+
     <!-- 样式文件 -->
     <link rel="stylesheet" href="styles/main-base.css">
     <link rel="stylesheet" href="styles/mag-calibration.css">
@@ -24,7 +25,7 @@
     <link rel="stylesheet" href="styles/axis-invert.css">
     <link rel="stylesheet" href="styles/motor-output-mini.css">
     <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
-    
+
     <!-- Icons -->
     <script src="https://unpkg.com/lucide@latest"></script>
 
@@ -142,11 +143,20 @@
             text-align: right;
         }
 
-        .aero-hud-panel .c-x .axis-tag { color: #ef4444; }
-        .aero-hud-panel .c-y .axis-tag { color: #10b981; }
-        .aero-hud-panel .c-z .axis-tag { color: #3b82f6; }
+        .aero-hud-panel .c-x .axis-tag {
+            color: #ef4444;
+        }
+
+        .aero-hud-panel .c-y .axis-tag {
+            color: #10b981;
+        }
+
+        .aero-hud-panel .c-z .axis-tag {
+            color: #3b82f6;
+        }
     </style>
 </head>
+
 <body>
 
     <div class="app-shell">
@@ -155,7 +165,8 @@
             <div class="nav-left">
                 <div class="nav-brand">
                     <div class="nav-brand-icon">
-                        <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="white" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+                        <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="white" stroke-width="2"
+                            stroke-linecap="round" stroke-linejoin="round">
                             <circle cx="12" cy="12" r="2" fill="white" stroke="none"></circle>
                             <path d="M10 10 L6 6" stroke-opacity="0.7"></path>
                             <path d="M14 10 L18 6" stroke-opacity="0.7"></path>
@@ -196,19 +207,23 @@
                 </button>
                 <button id="recordBtn" class="btn btn-danger hidden"><i data-lucide="circle-dot"></i> 开始录制</button>
                 <div class="nav-tool">
-                    <button id="magCalibBtn" class="nav-icon-btn" onclick="openMagCalibModal()"><i data-lucide="compass" class="nav-icon-rotate"></i></button>
+                    <button id="magCalibBtn" class="nav-icon-btn" onclick="openMagCalibModal()"><i data-lucide="compass"
+                            class="nav-icon-rotate"></i></button>
                     <div class="nav-tooltip">磁力计校准</div>
                 </div>
                 <div class="nav-tool">
-                    <button id="motorTestBtn" class="nav-icon-btn"><i data-lucide="fan" class="nav-icon-fan"></i></button>
+                    <button id="motorTestBtn" class="nav-icon-btn"><i data-lucide="fan"
+                            class="nav-icon-fan"></i></button>
                     <div class="nav-tooltip">电机测试</div>
                 </div>
                 <div class="nav-tool">
-                    <button id="resetAttitudeBtn" class="nav-icon-btn" onclick="resetAttitude()"><i data-lucide="rotate-ccw" class="nav-icon-reset"></i></button>
+                    <button id="resetAttitudeBtn" class="nav-icon-btn" onclick="resetAttitude()"><i
+                            data-lucide="rotate-ccw" class="nav-icon-reset"></i></button>
                     <div class="nav-tooltip">重置姿态</div>
                 </div>
                 <div class="nav-tool">
-                    <button class="nav-icon-btn" onclick="window.open('api_documentation.html', '_blank')"><i data-lucide="book" class="nav-icon-book"></i></button>
+                    <button class="nav-icon-btn" onclick="window.open('api_documentation.html', '_blank')"><i
+                            data-lucide="book" class="nav-icon-book"></i></button>
                     <div class="nav-tooltip">开发文档</div>
                 </div>
                 <div class="nav-tool">
@@ -220,97 +235,92 @@
 
         <!-- 主布局 -->
         <div class="main-layout">
-            <!-- 传感器数据面板 -->
             <aside class="sidebar-col sidebar-sensor">
-                <div class="card imu-card" id="imu-card">
-                    <div class="imu-header">
-                        <div class="imu-title">IMU 原始数据</div>
-                        <select id="sensorSelector" class="sensor-select">
-                            <option value="all">全部</option>
-                            <option value="gyro">陀螺仪</option>
-                            <option value="acc">加速度计</option>
-                            <option value="mag">磁力计</option>
-                        </select>
-                        <button class="view-toggle-btn" id="toggleBtn" title="切换图表/表格">
-                            <svg id="icon-chart" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
-                                <polyline points="22 12 18 12 15 21 9 3 6 12 2 12"></polyline>
-                            </svg>
-                            <svg id="icon-table" width="16" height="16" style="display:none;" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
-                                <line x1="8" y1="6" x2="21" y2="6"></line>
-                                <line x1="8" y1="12" x2="21" y2="12"></line>
-                                <line x1="8" y1="18" x2="21" y2="18"></line>
-                                <line x1="3" y1="6" x2="3.01" y2="6"></line>
-                                <line x1="3" y1="12" x2="3.01" y2="12"></line>
-                                <line x1="3" y1="18" x2="3.01" y2="18"></line>
-                            </svg>
-                        </button>
-                    </div>
+                <div class="aero-console-module">
 
-                    <div class="content-wrapper">
-                        <div class="table-view">
-                            <table class="data-table">
-                                <thead>
-                                    <tr>
-                                        <th style="width: 20%"></th>
-                                        <th class="col-x">X</th>
-                                        <th class="col-y">Y</th>
-                                        <th class="col-z">Z</th>
-                                    </tr>
-                                </thead>
-                                <tbody>
-                                    <tr><td>GYRO</td><td id="t-g-x">0</td><td id="t-g-y">0</td><td id="t-g-z">0</td></tr>
-                                    <tr><td>ACC</td><td id="t-a-x">0</td><td id="t-a-y">0</td><td id="t-a-z">0</td></tr>
-                                    <tr><td>MAG</td><td id="t-m-x">0</td><td id="t-m-y">0</td><td id="t-m-z">0</td></tr>
-                                </tbody>
-                            </table>
+                    <!-- 1. Timeline -->
+                    <div class="glass-panel event-container">
+                        <div class="panel-header">
+                            <div class="panel-title">
+                                <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor"
+                                    stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round">
+                                    <circle cx="12" cy="12" r="10" />
+                                    <polyline points="12 6 12 12 16 14" />
+                                </svg>
+                                Timeline
+                            </div>
+                            <span class="badge-count" id="event-count">0</span>
                         </div>
-
-                        <div class="chart-view" id="chartViewContainer" data-filter="all">
-                            <div class="mini-chart-row row-gyro">
-                                <div class="chart-header">
-                                    <span style="font-weight:600;">GYRO</span>
-                                    <div>
-                                        <span class="live-val val-x" id="c-g-x">0</span>
-                                        <span class="live-val val-y" id="c-g-y">0</span>
-                                        <span class="live-val val-z" id="c-g-z">0</span>
-                                    </div>
-                                </div>
-                                <div class="chart-canvas-container">
-                                    <canvas id="canvas-gyro"></canvas>
-                                </div>
-                            </div>
-
-                            <div class="mini-chart-row row-acc">
-                                <div class="chart-header">
-                                    <span style="font-weight:600;">ACC</span>
-                                    <div>
-                                        <span class="live-val val-x" id="c-a-x">0</span>
-                                        <span class="live-val val-y" id="c-a-y">0</span>
-                                        <span class="live-val val-z" id="c-a-z">0</span>
-                                    </div>
-                                </div>
-                                <div class="chart-canvas-container">
-                                    <canvas id="canvas-acc"></canvas>
-                                </div>
-                            </div>
-
-                            <div class="mini-chart-row row-mag">
-                                <div class="chart-header">
-                                    <span style="font-weight:600;">MAG</span>
-                                    <div>
-                                        <span class="live-val val-x" id="c-m-x">0</span>
-                                        <span class="live-val val-y" id="c-m-y">0</span>
-                                        <span class="live-val val-z" id="c-m-z">0</span>
-                                    </div>
-                                </div>
-                                <div class="chart-canvas-container">
-                                    <canvas id="canvas-mag"></canvas>
-                                </div>
-                            </div>
+                        <div class="event-list" id="event-list">
+                            <div class="empty-state">No system events recorded.</div>
                         </div>
                     </div>
+
+                    <!-- 2. Console -->
+                    <div class="glass-panel terminal-container">
+                        <div class="panel-header">
+                            <div class="panel-title">
+                                <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor"
+                                    stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round">
+                                    <polyline points="4 17 10 11 4 5" />
+                                    <line x1="12" y1="19" x2="20" y2="19" />
+                                </svg>
+                                Console
+                            </div>
+                            <div class="term-toolbar">
+                                <button class="term-btn sim-btn" id="btn-sim" onclick="AeroConsole.toggleSim()">⚡
+                                    Sim</button>
+                                <button class="term-btn active" id="btn-ts"
+                                    onclick="AeroConsole.toggleTs()">Time</button>
+                                <button class="term-btn active" id="btn-pause"
+                                    onclick="AeroConsole.togglePause()">Run</button>
+                                <button class="term-btn active" id="btn-scroll"
+                                    onclick="AeroConsole.toggleAutoScroll()">Auto</button>
+                                <button class="term-btn" onclick="AeroConsole.clearTerm()">Clr</button>
+                            </div>
+                        </div>
+
+                        <div class="term-body" id="term-body">
+                            <div class="log-entry"><span class="log-ts">--:--:--</span><span class="log-txt"
+                                    style="color:#94a3b8">Terminal ready...</span></div>
+                        </div>
+
+                        <!-- 抽屉 -->
+                        <div class="drawer-header" onclick="AeroConsole.toggleDrawer(this)">
+                            <span class="drawer-title">Quick Actions</span>
+                            <svg class="drawer-icon" width="16" height="16" viewBox="0 0 24 24" fill="none"
+                                stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round">
+                                <path d="M6 9l6 6 6-6" />
+                            </svg>
+                        </div>
+                        <div class="drawer-content" id="drawer-content">
+                            <div class="drawer-grid">
+                                <div class="preset-chip" onclick="AeroConsole.quickSend('status')">STATUS</div>
+                                <div class="preset-chip" onclick="AeroConsole.quickSend('version')">VER</div>
+                                <div class="preset-chip" onclick="AeroConsole.quickSend('dump')">DUMP</div>
+                                <div class="preset-chip" onclick="AeroConsole.quickSend('tasks')">TASKS</div>
+                                <div class="preset-chip" onclick="AeroConsole.quickSend('gps')">GPS</div>
+                                <div class="preset-chip" onclick="AeroConsole.quickSend('imu')">IMU</div>
+                                <div class="preset-chip danger" onclick="AeroConsole.quickSend('reboot')">REBOOT</div>
+                                <div class="preset-chip danger" onclick="AeroConsole.quickSend('reset')">RESET</div>
+                            </div>
+                        </div>
+
+                        <!-- 底部输入区 -->
+                        <div class="input-bar">
+                            <input type="text" class="cmd-input" id="cmd-input" placeholder="Enter command..."
+                                onkeypress="AeroConsole.handleEnter(event)">
+                            <button class="send-btn" onclick="AeroConsole.sendCommand()">
+                                <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"
+                                    stroke-linecap="round" stroke-linejoin="round">
+                                    <line x1="22" y1="2" x2="11" y2="13"></line>
+                                    <polygon points="22 2 15 22 11 13 2 9 22 2"></polygon>
+                                </svg>
+                            </button>
+                        </div>
+                    </div>
+
                 </div>
-
             </aside>
 
             <!-- 中间 3D -->
@@ -353,9 +363,13 @@
                         <div class="view-layer view-3d">
                             <canvas id="att-canvas" width="180" height="180"></canvas>
                             <div class="data-3d-row">
-                                <div class="d-item"><span class="d-lbl">R</span><span class="d-val" id="att-3d-roll">0</span></div>
-                                <div class="d-item"><span class="d-lbl">P</span><span class="d-val" id="att-3d-pitch">0</span></div>
-                                <div class="d-item" style="color:var(--att-primary)"><span class="d-lbl" style="color:var(--att-primary)">Y</span><span class="d-val" id="att-3d-yaw">0</span></div>
+                                <div class="d-item"><span class="d-lbl">R</span><span class="d-val"
+                                        id="att-3d-roll">0</span></div>
+                                <div class="d-item"><span class="d-lbl">P</span><span class="d-val"
+                                        id="att-3d-pitch">0</span></div>
+                                <div class="d-item" style="color:var(--att-primary)"><span class="d-lbl"
+                                        style="color:var(--att-primary)">Y</span><span class="d-val"
+                                        id="att-3d-yaw">0</span></div>
                             </div>
                         </div>
                     </div>
@@ -368,9 +382,12 @@
                             <div class="module-content">
                                 <div class="chart-area"><canvas id="cvs-g"></canvas></div>
                                 <div class="stat-panel">
-                                    <div class="stat-row c-x"><span class="axis-tag">X</span><span class="num-val" id="v-g-x">0.0</span></div>
-                                    <div class="stat-row c-y"><span class="axis-tag">Y</span><span class="num-val" id="v-g-y">0.0</span></div>
-                                    <div class="stat-row c-z"><span class="axis-tag">Z</span><span class="num-val" id="v-g-z">0.0</span></div>
+                                    <div class="stat-row c-x"><span class="axis-tag">X</span><span class="num-val"
+                                            id="v-g-x">0.0</span></div>
+                                    <div class="stat-row c-y"><span class="axis-tag">Y</span><span class="num-val"
+                                            id="v-g-y">0.0</span></div>
+                                    <div class="stat-row c-z"><span class="axis-tag">Z</span><span class="num-val"
+                                            id="v-g-z">0.0</span></div>
                                 </div>
                             </div>
                         </div>
@@ -379,9 +396,12 @@
                             <div class="module-content">
                                 <div class="chart-area"><canvas id="cvs-a"></canvas></div>
                                 <div class="stat-panel">
-                                    <div class="stat-row c-x"><span class="axis-tag">X</span><span class="num-val" id="v-a-x">0.00</span></div>
-                                    <div class="stat-row c-y"><span class="axis-tag">Y</span><span class="num-val" id="v-a-y">0.00</span></div>
-                                    <div class="stat-row c-z"><span class="axis-tag">Z</span><span class="num-val" id="v-a-z">1.00</span></div>
+                                    <div class="stat-row c-x"><span class="axis-tag">X</span><span class="num-val"
+                                            id="v-a-x">0.00</span></div>
+                                    <div class="stat-row c-y"><span class="axis-tag">Y</span><span class="num-val"
+                                            id="v-a-y">0.00</span></div>
+                                    <div class="stat-row c-z"><span class="axis-tag">Z</span><span class="num-val"
+                                            id="v-a-z">1.00</span></div>
                                 </div>
                             </div>
                         </div>
@@ -390,9 +410,12 @@
                             <div class="module-content">
                                 <div class="chart-area"><canvas id="cvs-m"></canvas></div>
                                 <div class="stat-panel">
-                                    <div class="stat-row c-x"><span class="axis-tag">X</span><span class="num-val" id="v-m-x">0</span></div>
-                                    <div class="stat-row c-y"><span class="axis-tag">Y</span><span class="num-val" id="v-m-y">0</span></div>
-                                    <div class="stat-row c-z"><span class="axis-tag">Z</span><span class="num-val" id="v-m-z">0</span></div>
+                                    <div class="stat-row c-x"><span class="axis-tag">X</span><span class="num-val"
+                                            id="v-m-x">0</span></div>
+                                    <div class="stat-row c-y"><span class="axis-tag">Y</span><span class="num-val"
+                                            id="v-m-y">0</span></div>
+                                    <div class="stat-row c-z"><span class="axis-tag">Z</span><span class="num-val"
+                                            id="v-m-z">0</span></div>
                                 </div>
                             </div>
                         </div>
@@ -424,13 +447,15 @@
 
                     <div class="gimbals-wrapper">
                         <div class="gimbal-unit">
-                            <div class="axis-mark am-h"></div><div class="axis-mark am-v"></div>
+                            <div class="axis-mark am-h"></div>
+                            <div class="axis-mark am-v"></div>
                             <div class="stick-dot" id="stick-l"></div>
                             <div class="axis-label lbl-y-top">THR</div>
                             <div class="axis-label lbl-x-right">YAW</div>
                         </div>
                         <div class="gimbal-unit">
-                            <div class="axis-mark am-h"></div><div class="axis-mark am-v"></div>
+                            <div class="axis-mark am-h"></div>
+                            <div class="axis-mark am-v"></div>
                             <div class="stick-dot" id="stick-r"></div>
                             <div class="axis-label lbl-y-top">PIT</div>
                             <div class="axis-label lbl-x-right">ROL</div>
@@ -439,17 +464,69 @@
 
                     <div class="data-panel">
                         <div class="switch-grid">
-                            <div class="sw-col" id="sw1"><div class="sw-name">ARM</div><div class="led-stack"><div class="led-seg seg-h"></div><div class="led-seg seg-m"></div><div class="led-seg seg-l"></div></div></div>
-                            <div class="sw-col" id="sw2"><div class="sw-name">MODE</div><div class="led-stack"><div class="led-seg seg-h"></div><div class="led-seg seg-m"></div><div class="led-seg seg-l"></div></div></div>
-                            <div class="sw-col" id="sw3"><div class="sw-name">AUX1</div><div class="led-stack"><div class="led-seg seg-h"></div><div class="led-seg seg-m"></div><div class="led-seg seg-l"></div></div></div>
-                            <div class="sw-col" id="sw4"><div class="sw-name">AUX2</div><div class="led-stack"><div class="led-seg seg-h"></div><div class="led-seg seg-m"></div><div class="led-seg seg-l"></div></div></div>
+                            <div class="sw-col" id="sw1">
+                                <div class="sw-name">ARM</div>
+                                <div class="led-stack">
+                                    <div class="led-seg seg-h"></div>
+                                    <div class="led-seg seg-m"></div>
+                                    <div class="led-seg seg-l"></div>
+                                </div>
+                            </div>
+                            <div class="sw-col" id="sw2">
+                                <div class="sw-name">MODE</div>
+                                <div class="led-stack">
+                                    <div class="led-seg seg-h"></div>
+                                    <div class="led-seg seg-m"></div>
+                                    <div class="led-seg seg-l"></div>
+                                </div>
+                            </div>
+                            <div class="sw-col" id="sw3">
+                                <div class="sw-name">AUX1</div>
+                                <div class="led-stack">
+                                    <div class="led-seg seg-h"></div>
+                                    <div class="led-seg seg-m"></div>
+                                    <div class="led-seg seg-l"></div>
+                                </div>
+                            </div>
+                            <div class="sw-col" id="sw4">
+                                <div class="sw-name">AUX2</div>
+                                <div class="led-stack">
+                                    <div class="led-seg seg-h"></div>
+                                    <div class="led-seg seg-m"></div>
+                                    <div class="led-seg seg-l"></div>
+                                </div>
+                            </div>
                         </div>
 
                         <div class="channel-list">
-                            <div class="ch-item"><div class="ch-info"><span class="ch-name">THR</span><span class="ch-num" id="txt-thr">1000</span></div><div class="bar-container"><div class="bar-fill" id="bar-thr"></div></div></div>
-                            <div class="ch-item"><div class="ch-info"><span class="ch-name">YAW</span><span class="ch-num" id="txt-yaw">1500</span></div><div class="bar-container"><div class="bar-fill" id="bar-yaw"></div></div></div>
-                            <div class="ch-item"><div class="ch-info"><span class="ch-name">PIT</span><span class="ch-num" id="txt-pit">1500</span></div><div class="bar-container"><div class="bar-fill" id="bar-pit"></div></div></div>
-                            <div class="ch-item"><div class="ch-info"><span class="ch-name">ROL</span><span class="ch-num" id="txt-rol">1500</span></div><div class="bar-container"><div class="bar-fill" id="bar-rol"></div></div></div>
+                            <div class="ch-item">
+                                <div class="ch-info"><span class="ch-name">THR</span><span class="ch-num"
+                                        id="txt-thr">1000</span></div>
+                                <div class="bar-container">
+                                    <div class="bar-fill" id="bar-thr"></div>
+                                </div>
+                            </div>
+                            <div class="ch-item">
+                                <div class="ch-info"><span class="ch-name">YAW</span><span class="ch-num"
+                                        id="txt-yaw">1500</span></div>
+                                <div class="bar-container">
+                                    <div class="bar-fill" id="bar-yaw"></div>
+                                </div>
+                            </div>
+                            <div class="ch-item">
+                                <div class="ch-info"><span class="ch-name">PIT</span><span class="ch-num"
+                                        id="txt-pit">1500</span></div>
+                                <div class="bar-container">
+                                    <div class="bar-fill" id="bar-pit"></div>
+                                </div>
+                            </div>
+                            <div class="ch-item">
+                                <div class="ch-info"><span class="ch-name">ROL</span><span class="ch-num"
+                                        id="txt-rol">1500</span></div>
+                                <div class="bar-container">
+                                    <div class="bar-fill" id="bar-rol"></div>
+                                </div>
+                            </div>
                         </div>
                     </div>
 
@@ -502,46 +579,7 @@
                     </div>
                 </div>
 
-                <div class="console-drawer" id="console-drawer">
-                    <div class="console-header">
-                        <div style="display:flex;align-items:center;gap:8px;font-weight:700">
-                            <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><polyline points="4 17 10 11 4 5"></polyline><line x1="12" y1="19" x2="20" y2="19"></line></svg>
-                            SERIAL OUTPUT
-                        </div>
-                        <div class="console-ops">
-                            <label class="opt-label"><input type="checkbox" id="chk-scroll" checked> Auto-Scroll</label>
-                            <label class="opt-label"><input type="checkbox" id="chk-ts" checked> Time</label>
-                            <label class="opt-label"><input type="checkbox" id="chk-throttle" checked> Throttle</label>
-                            <button class="btn btn-ghost" id="mockBtn" style="padding:0 8px; min-height:24px; line-height:24px; white-space:nowrap;">模拟数据</button>
-                            <button class="btn btn-ghost" style="padding:0 8px; min-height:24px; line-height:24px; white-space:nowrap;" onclick="document.getElementById('console-body').innerHTML = '';">Clear</button>
-                        </div>
-                    </div>
-                    <div class="console-body" id="console-body">
-                        <div class="log-line"><span class="log-sys">Console ready. Waiting for connection...</span></div>
-                    </div>
-                </div>
-
             </aside>
-        </div>
-    </div>
-
-    <!-- 底部串口输出 -->
-    <div class="console-drawer closed" id="console-drawer-legacy" style="display:none">
-        <div class="console-header">
-            <div style="display:flex;align-items:center;gap:8px;font-weight:700">
-                <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><polyline points="4 17 10 11 4 5"></polyline><line x1="12" y1="19" x2="20" y2="19"></line></svg>
-                SERIAL OUTPUT
-            </div>
-            <div class="console-ops">
-                <label class="opt-label"><input type="checkbox" id="chk-scroll-legacy" checked> Auto-Scroll</label>
-                <label class="opt-label"><input type="checkbox" id="chk-ts-legacy" checked> Time</label>
-                <label class="opt-label"><input type="checkbox" id="chk-throttle-legacy" checked> Throttle</label>
-                <button class="btn btn-ghost" id="mockBtnLegacy" style="padding:0 8px; min-height:24px; line-height:24px; white-space:nowrap;">模拟数据</button>
-                <button class="btn btn-ghost" style="padding:0 8px; min-height:24px; line-height:24px; white-space:nowrap;" onclick="document.getElementById('console-body').innerHTML = '';">Clear</button>
-            </div>
-        </div>
-        <div class="console-body" id="console-body-legacy">
-            <div class="log-line"><span class="log-sys">Console ready. Waiting for connection...</span></div>
         </div>
     </div>
 
@@ -575,9 +613,9 @@
             <div class="realtime-debug">
                 <p><strong>实时姿态角：</strong></p>
                 <div style="font-family: monospace; font-size: 0.85rem;">
-                    Roll:  <span id="debug-roll">0</span>°<br>
+                    Roll: <span id="debug-roll">0</span>°<br>
                     Pitch: <span id="debug-pitch">0</span>°<br>
-                    Yaw:   <span id="debug-yaw">0</span>°
+                    Yaw: <span id="debug-yaw">0</span>°
                 </div>
             </div>
         </div>
@@ -612,7 +650,7 @@
                         <div id="calib-progress" class="progress-fill"></div>
                     </div>
                     <p class="progress-text">
-                        <span id="calib-time">0</span>s / 60s | 
+                        <span id="calib-time">0</span>s / 60s |
                         样本数: <span id="calib-samples">0</span>
                     </p>
                     <div class="mag-range">
@@ -651,7 +689,7 @@
                                 </div>
                             </div>
                         </div>
-                        
+
                         <h4>📋 复制代码到单片机</h4>
                         <pre id="calib-code" class="code-block">mag_set_calibration(
     0.0f, 0.0f, 0.0f,    // offset_x, offset_y, offset_z
@@ -668,7 +706,7 @@
                                 <i data-lucide="file-json"></i> 导出JSON
                             </button>
                         </div>
-                        
+
                         <h4>📈 校准质量</h4>
                         <div id="calib-quality" class="quality-badge">--</div>
                         <p id="calib-tips" class="calib-tips"></p>
@@ -683,7 +721,13 @@
     <!-- Alerts / Critical modal -->
     <div class="hud-alert-container" id="hud-alert">
         <div class="hud-badge">
-            <svg class="hud-icon" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><path d="M10.29 3.86L1.82 18a2 2 0 0 0 1.71 3h16.94a2 2 0 0 0 1.71-3L13.71 3.86a2 2 0 0 0-3.42 0z"></path><line x1="12" y1="9" x2="12" y2="13"></line><line x1="12" y1="17" x2="12.01" y2="17"></line></svg>
+            <svg class="hud-icon" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor"
+                stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round">
+                <path d="M10.29 3.86L1.82 18a2 2 0 0 0 1.71 3h16.94a2 2 0 0 0 1.71-3L13.71 3.86a2 2 0 0 0-3.42 0z">
+                </path>
+                <line x1="12" y1="9" x2="12" y2="13"></line>
+                <line x1="12" y1="17" x2="12.01" y2="17"></line>
+            </svg>
             <span id="hud-text">System Ready</span>
         </div>
     </div>
@@ -692,7 +736,14 @@
         <div class="error-card">
             <div class="ec-header">
                 <div class="ec-icon-box">
-                    <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M18.42 2.11A3 3 0 0 0 16.3 1.23H7.7a3 3 0 0 0-2.12.88l-4.7 4.7a3 3 0 0 0-.88 2.12v8.6a3 3 0 0 0 .88 2.12l4.7 4.7a3 3 0 0 0 2.12.88h8.6a3 3 0 0 0 2.12-.88l4.7-4.7a3 3 0 0 0 .88-2.12V8.93a3 3 0 0 0-.88-2.12z"></path><line x1="12" y1="9" x2="12" y2="13"></line><line x1="12" y1="17" x2="12.01" y2="17"></line></svg>
+                    <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"
+                        stroke-linecap="round" stroke-linejoin="round">
+                        <path
+                            d="M18.42 2.11A3 3 0 0 0 16.3 1.23H7.7a3 3 0 0 0-2.12.88l-4.7 4.7a3 3 0 0 0-.88 2.12v8.6a3 3 0 0 0 .88 2.12l4.7 4.7a3 3 0 0 0 2.12.88h8.6a3 3 0 0 0 2.12-.88l4.7-4.7a3 3 0 0 0 .88-2.12V8.93a3 3 0 0 0-.88-2.12z">
+                        </path>
+                        <line x1="12" y1="9" x2="12" y2="13"></line>
+                        <line x1="12" y1="17" x2="12.01" y2="17"></line>
+                    </svg>
                 </div>
                 <div class="ec-title-group">
                     <div class="ec-title" id="ec-title">Critical Failure</div>
@@ -701,7 +752,8 @@
             </div>
             <div class="ec-body">
                 <div class="ec-msg" id="ec-message">
-                    The IMU sensor is not responding. The system has triggered failsafe mode to prevent unstable flight behavior.
+                    The IMU sensor is not responding. The system has triggered failsafe mode to prevent unstable flight
+                    behavior.
                 </div>
                 <div class="error-code-box">
                     <span>ERR_CODE:</span>
@@ -719,15 +771,26 @@
     <div class="safety-modal modal-overlay hidden" id="motorSafetyModal">
         <div class="safety-card" id="motorSafetyCard">
             <button class="safety-close" id="motorSafetyClose">
-                <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><line x1="18" y1="6" x2="6" y2="18"></line><line x1="6" y1="6" x2="18" y2="18"></line></svg>
+                <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"
+                    stroke-linecap="round" stroke-linejoin="round">
+                    <line x1="18" y1="6" x2="6" y2="18"></line>
+                    <line x1="6" y1="6" x2="18" y2="18"></line>
+                </svg>
             </button>
-            
+
             <!-- 超大图标区 -->
             <div class="icon-wrapper">
                 <div class="wave"></div>
                 <div class="wave"></div>
                 <div class="icon-inner">
-                    <svg width="42" height="42" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><path d="M10.29 3.86L1.82 18a2 2 0 0 0 1.71 3h16.94a2 2 0 0 0 1.71-3L13.71 3.86a2 2 0 0 0-3.42 0z"></path><line x1="12" y1="9" x2="12" y2="13"></line><line x1="12" y1="17" x2="12.01" y2="17"></line></svg>
+                    <svg width="42" height="42" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"
+                        stroke-linecap="round" stroke-linejoin="round">
+                        <path
+                            d="M10.29 3.86L1.82 18a2 2 0 0 0 1.71 3h16.94a2 2 0 0 0 1.71-3L13.71 3.86a2 2 0 0 0-3.42 0z">
+                        </path>
+                        <line x1="12" y1="9" x2="12" y2="13"></line>
+                        <line x1="12" y1="17" x2="12.01" y2="17"></line>
+                    </svg>
                 </div>
             </div>
 
@@ -743,7 +806,10 @@
                 <label class="checkbox-row">
                     <input type="checkbox" id="motorSafetyCheck" style="display:none">
                     <div class="custom-check">
-                        <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="4" stroke-linecap="round" stroke-linejoin="round"><polyline points="20 6 9 17 4 12"></polyline></svg>
+                        <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor"
+                            stroke-width="4" stroke-linecap="round" stroke-linejoin="round">
+                            <polyline points="20 6 9 17 4 12"></polyline>
+                        </svg>
                     </div>
                     <span class="check-text">我已确认拆除螺旋桨</span>
                 </label>
@@ -761,7 +827,11 @@
         <div class="motor-card">
             <div class="motor-header">
                 <div class="motor-title">
-                    <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="#475569" stroke-width="2"><circle cx="12" cy="12" r="10"></circle><path d="M12 16v-4"/><path d="M12 8h.01"/></svg>
+                    <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="#475569" stroke-width="2">
+                        <circle cx="12" cy="12" r="10"></circle>
+                        <path d="M12 16v-4" />
+                        <path d="M12 8h.01" />
+                    </svg>
                     电机测试 <span class="motor-badge">Test Mode</span>
                 </div>
                 <button class="motor-close" onclick="closeMotorModal()">&times;</button>
@@ -769,50 +839,102 @@
             <div class="motor-body">
                 <div class="drone-stage">
                     <svg class="drone-svg-body" viewBox="0 0 400 400" fill="none">
-                        <path d="M170 160 L60 60 L70 50 L180 150 Z" fill="#475569" stroke="#1E293B" stroke-width="2"/>
-                        <path d="M230 160 L340 60 L330 50 L220 150 Z" fill="#475569" stroke="#1E293B" stroke-width="2"/>
-                        <path d="M170 240 L60 340 L70 350 L180 250 Z" fill="#475569" stroke="#1E293B" stroke-width="2"/>
-                        <path d="M230 240 L340 340 L330 350 L220 250 Z" fill="#475569" stroke="#1E293B" stroke-width="2"/>
+                        <path d="M170 160 L60 60 L70 50 L180 150 Z" fill="#475569" stroke="#1E293B" stroke-width="2" />
+                        <path d="M230 160 L340 60 L330 50 L220 150 Z" fill="#475569" stroke="#1E293B"
+                            stroke-width="2" />
+                        <path d="M170 240 L60 340 L70 350 L180 250 Z" fill="#475569" stroke="#1E293B"
+                            stroke-width="2" />
+                        <path d="M230 240 L340 340 L330 350 L220 250 Z" fill="#475569" stroke="#1E293B"
+                            stroke-width="2" />
                         <rect x="160" y="140" width="80" height="120" rx="20" fill="#334155" />
                         <rect x="170" y="150" width="60" height="100" rx="15" fill="#1E293B" />
-                        <path d="M 185 140 L 190 125 C 190 120, 210 120, 210 125 L 215 140 Z" fill="#94A3B8" stroke="#64748B" stroke-width="1.5"/>
-                        <rect x="150" y="190" width="100" height="20" rx="4" fill="#0EA5E9" fill-opacity="0.9"/>
+                        <path d="M 185 140 L 190 125 C 190 120, 210 120, 210 125 L 215 140 Z" fill="#94A3B8"
+                            stroke="#64748B" stroke-width="1.5" />
+                        <rect x="150" y="190" width="100" height="20" rx="4" fill="#0EA5E9" fill-opacity="0.9" />
                     </svg>
 
                     <div class="motor-trigger pos-fl dir-cw" onclick="toggleMotor(this)">
                         <svg class="arrow-ring-layer" viewBox="0 0 100 100">
-                            <path class="ring-track" d="M 14 50 A 36 36 0 0 1 48 14.5" stroke="currentColor" fill="none" />
+                            <path class="ring-track" d="M 14 50 A 36 36 0 0 1 48 14.5" stroke="currentColor"
+                                fill="none" />
                             <path class="ring-arrow-head" d="M 44 6 L 60 14.5 L 44 23 Z" fill="currentColor" />
                         </svg>
-                        <div class="motor-unit"><span class="motor-num">4</span><div class="motor-coil"></div></div>
-                        <div class="prop-layer"><svg viewBox="0 0 100 100" width="100%" height="100%"><g transform="translate(50,50)"><path class="prop-shape" d="M-5 0 Q -10 -40 0 -45 Q 10 -40 5 0 Z" /><path class="prop-tip" d="M-2 -35 Q 0 -45 2 -35 Z" transform="translate(0, -5) scale(2)"/><path class="prop-shape" d="M-5 0 Q -10 40 0 45 Q 10 40 5 0 Z" /><path class="prop-tip" d="M-2 35 Q 0 45 2 35 Z" transform="translate(0, 5) scale(2)"/></g></svg></div>
+                        <div class="motor-unit"><span class="motor-num">4</span>
+                            <div class="motor-coil"></div>
+                        </div>
+                        <div class="prop-layer"><svg viewBox="0 0 100 100" width="100%" height="100%">
+                                <g transform="translate(50,50)">
+                                    <path class="prop-shape" d="M-5 0 Q -10 -40 0 -45 Q 10 -40 5 0 Z" />
+                                    <path class="prop-tip" d="M-2 -35 Q 0 -45 2 -35 Z"
+                                        transform="translate(0, -5) scale(2)" />
+                                    <path class="prop-shape" d="M-5 0 Q -10 40 0 45 Q 10 40 5 0 Z" />
+                                    <path class="prop-tip" d="M-2 35 Q 0 45 2 35 Z"
+                                        transform="translate(0, 5) scale(2)" />
+                                </g>
+                            </svg></div>
                     </div>
 
                     <div class="motor-trigger pos-fr dir-ccw" onclick="toggleMotor(this)">
                         <svg class="arrow-ring-layer" viewBox="0 0 100 100">
-                            <path class="ring-track" d="M 86 50 A 36 36 0 0 0 52 14.5" stroke="currentColor" fill="none" />
+                            <path class="ring-track" d="M 86 50 A 36 36 0 0 0 52 14.5" stroke="currentColor"
+                                fill="none" />
                             <path class="ring-arrow-head" d="M 56 6 L 40 14.5 L 56 23 Z" fill="currentColor" />
                         </svg>
-                        <div class="motor-unit"><span class="motor-num">2</span><div class="motor-coil"></div></div>
-                        <div class="prop-layer"><svg viewBox="0 0 100 100" width="100%" height="100%"><g transform="translate(50,50)"><path class="prop-shape" d="M-5 0 Q -10 -40 0 -45 Q 10 -40 5 0 Z" /><path class="prop-tip" d="M-2 -35 Q 0 -45 2 -35 Z" transform="translate(0, -5) scale(2)"/><path class="prop-shape" d="M-5 0 Q -10 40 0 45 Q 10 40 5 0 Z" /><path class="prop-tip" d="M-2 35 Q 0 45 2 35 Z" transform="translate(0, 5) scale(2)"/></g></svg></div>
+                        <div class="motor-unit"><span class="motor-num">2</span>
+                            <div class="motor-coil"></div>
+                        </div>
+                        <div class="prop-layer"><svg viewBox="0 0 100 100" width="100%" height="100%">
+                                <g transform="translate(50,50)">
+                                    <path class="prop-shape" d="M-5 0 Q -10 -40 0 -45 Q 10 -40 5 0 Z" />
+                                    <path class="prop-tip" d="M-2 -35 Q 0 -45 2 -35 Z"
+                                        transform="translate(0, -5) scale(2)" />
+                                    <path class="prop-shape" d="M-5 0 Q -10 40 0 45 Q 10 40 5 0 Z" />
+                                    <path class="prop-tip" d="M-2 35 Q 0 45 2 35 Z"
+                                        transform="translate(0, 5) scale(2)" />
+                                </g>
+                            </svg></div>
                     </div>
 
                     <div class="motor-trigger pos-rl dir-ccw" onclick="toggleMotor(this)">
                         <svg class="arrow-ring-layer" viewBox="0 0 100 100">
-                            <path class="ring-track" d="M 14 50 A 36 36 0 0 0 48 85.5" stroke="currentColor" fill="none" />
+                            <path class="ring-track" d="M 14 50 A 36 36 0 0 0 48 85.5" stroke="currentColor"
+                                fill="none" />
                             <path class="ring-arrow-head" d="M 44 77 L 60 85.5 L 44 94 Z" fill="currentColor" />
                         </svg>
-                        <div class="motor-unit"><span class="motor-num">3</span><div class="motor-coil"></div></div>
-                        <div class="prop-layer"><svg viewBox="0 0 100 100" width="100%" height="100%"><g transform="translate(50,50)"><path class="prop-shape" d="M-5 0 Q -10 -40 0 -45 Q 10 -40 5 0 Z" /><path class="prop-tip" d="M-2 -35 Q 0 -45 2 -35 Z" transform="translate(0, -5) scale(2)"/><path class="prop-shape" d="M-5 0 Q -10 40 0 45 Q 10 40 5 0 Z" /><path class="prop-tip" d="M-2 35 Q 0 45 2 35 Z" transform="translate(0, 5) scale(2)"/></g></svg></div>
+                        <div class="motor-unit"><span class="motor-num">3</span>
+                            <div class="motor-coil"></div>
+                        </div>
+                        <div class="prop-layer"><svg viewBox="0 0 100 100" width="100%" height="100%">
+                                <g transform="translate(50,50)">
+                                    <path class="prop-shape" d="M-5 0 Q -10 -40 0 -45 Q 10 -40 5 0 Z" />
+                                    <path class="prop-tip" d="M-2 -35 Q 0 -45 2 -35 Z"
+                                        transform="translate(0, -5) scale(2)" />
+                                    <path class="prop-shape" d="M-5 0 Q -10 40 0 45 Q 10 40 5 0 Z" />
+                                    <path class="prop-tip" d="M-2 35 Q 0 45 2 35 Z"
+                                        transform="translate(0, 5) scale(2)" />
+                                </g>
+                            </svg></div>
                     </div>
 
                     <div class="motor-trigger pos-rr dir-cw" onclick="toggleMotor(this)">
                         <svg class="arrow-ring-layer" viewBox="0 0 100 100">
-                            <path class="ring-track" d="M 86 50 A 36 36 0 0 1 52 85.5" stroke="currentColor" fill="none" />
+                            <path class="ring-track" d="M 86 50 A 36 36 0 0 1 52 85.5" stroke="currentColor"
+                                fill="none" />
                             <path class="ring-arrow-head" d="M 56 77 L 40 85.5 L 56 94 Z" fill="currentColor" />
                         </svg>
-                        <div class="motor-unit"><span class="motor-num">1</span><div class="motor-coil"></div></div>
-                        <div class="prop-layer"><svg viewBox="0 0 100 100" width="100%" height="100%"><g transform="translate(50,50)"><path class="prop-shape" d="M-5 0 Q -10 -40 0 -45 Q 10 -40 5 0 Z" /><path class="prop-tip" d="M-2 -35 Q 0 -45 2 -35 Z" transform="translate(0, -5) scale(2)"/><path class="prop-shape" d="M-5 0 Q -10 40 0 45 Q 10 40 5 0 Z" /><path class="prop-tip" d="M-2 35 Q 0 45 2 35 Z" transform="translate(0, 5) scale(2)"/></g></svg></div>
+                        <div class="motor-unit"><span class="motor-num">1</span>
+                            <div class="motor-coil"></div>
+                        </div>
+                        <div class="prop-layer"><svg viewBox="0 0 100 100" width="100%" height="100%">
+                                <g transform="translate(50,50)">
+                                    <path class="prop-shape" d="M-5 0 Q -10 -40 0 -45 Q 10 -40 5 0 Z" />
+                                    <path class="prop-tip" d="M-2 -35 Q 0 -45 2 -35 Z"
+                                        transform="translate(0, -5) scale(2)" />
+                                    <path class="prop-shape" d="M-5 0 Q -10 40 0 45 Q 10 40 5 0 Z" />
+                                    <path class="prop-tip" d="M-2 35 Q 0 45 2 35 Z"
+                                        transform="translate(0, 5) scale(2)" />
+                                </g>
+                            </svg></div>
                     </div>
                 </div>
 
@@ -954,94 +1076,191 @@
             };
 
             const setTxt = (type, data, fixed) => {
-                if(!data) return;
+                if (!data) return;
                 ['x', 'y', 'z'].forEach((axis, idx) => {
                     const el = document.getElementById(`v-${type}-${axis}`);
-                    if(!el) return;
+                    if (!el) return;
                     const val = data[idx];
                     el.innerText = Number.isFinite(val) ? val.toFixed(fixed) : '--';
                 });
             };
 
             window.updateAeroHud = (sensorData) => {
-                if(!sensorData) return;
+                if (!sensorData) return;
                 const gyr = sensorData.gyr ? [sensorData.gyr.x, sensorData.gyr.y, sensorData.gyr.z] : null;
                 const acc = sensorData.acc ? [sensorData.acc.x, sensorData.acc.y, sensorData.acc.z] : null;
                 const mag = sensorData.mag ? [sensorData.mag.x, sensorData.mag.y, sensorData.mag.z] : null;
 
-                if(gyr) { setTxt('g', gyr, 1); charts.g && charts.g.update(gyr); }
-                if(acc) { setTxt('a', acc, 2); charts.a && charts.a.update(acc); }
-                if(mag) { setTxt('m', mag, 0); charts.m && charts.m.update(mag); }
+                if (gyr) { setTxt('g', gyr, 1); charts.g && charts.g.update(gyr); }
+                if (acc) { setTxt('a', acc, 2); charts.a && charts.a.update(acc); }
+                if (mag) { setTxt('m', mag, 0); charts.m && charts.m.update(mag); }
             };
         });
     </script>
     <script>
-        // Console drawer toggle + resize (min/max clamp)
+        const AeroConsole = (function () {
+            // DOM References
+            const eventList = document.getElementById('event-list');
+            const eventCountBadge = document.getElementById('event-count');
+            const termBody = document.getElementById('term-body');
+            const cmdInput = document.getElementById('cmd-input');
+            const drawerContent = document.getElementById('drawer-content');
+
+            // State
+            let eventCount = 0;
+            let autoScroll = true;
+            let showTs = true;
+            let isPaused = false;
+            let simInterval;
+            let isSim = false;
+
+            // --- Methods ---
+
+            function toggleDrawer(header) {
+                if (drawerContent) drawerContent.classList.toggle('open');
+                if (header) header.classList.toggle('active');
+            }
+
+            function addEvent(type, title, msg) {
+                if (!eventList) return;
+                const emptyState = eventList.querySelector('.empty-state');
+                if (emptyState) emptyState.remove();
+
+                const now = new Date();
+                const timeStr = now.toLocaleTimeString('en-GB', { hour12: false });
+
+                // Optimized Icons (Lucide style)
+                const icons = {
+                    'error': `<svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="10"/><line x1="12" y1="8" x2="12" y2="12"/><line x1="12" y1="16" x2="12.01" y2="16"/></svg>`,
+                    'warn': `<svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><path d="M10.29 3.86L1.82 18a2 2 0 0 0 1.71 3h16.94a2 2 0 0 0 1.71-3L13.71 3.86a2 2 0 0 0-3.42 0z"/><line x1="12" y1="9" x2="12" y2="13"/><line x1="12" y1="17" x2="12.01" y2="17"/></svg>`,
+                    'success': `<svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><path d="M22 11.08V12a10 10 0 1 1-5.93-9.14"/><polyline points="22 4 12 14.01 9 11.01"/></svg>`
+                };
+
+                const div = document.createElement('div');
+                div.className = `event-card type-${type}`;
+                div.innerHTML = `
+                    <div class="event-top"><div class="event-type">${icons[type] || ''} <span>${title}</span></div><span class="event-time">${timeStr}</span></div>
+                    <div class="event-msg">${msg}</div>
+                `;
+                eventList.prepend(div);
+                eventCount++;
+                if (eventCountBadge) eventCountBadge.innerText = eventCount;
+            }
+
+            function logTerm(msg, dir = 'RX') {
+                if (isPaused || !termBody) return;
+
+                const now = new Date();
+                const ts = now.toLocaleTimeString('en-GB', { hour12: false });
+                const div = document.createElement('div');
+                div.className = 'log-entry';
+
+                let html = '';
+                if (showTs) html += `<span class="log-ts">${ts}</span>`;
+                html += `<span class="log-dir ${dir.toLowerCase()}">${dir}</span><span class="log-txt">${msg}</span>`;
+
+                div.innerHTML = html;
+                termBody.appendChild(div);
+
+                if (termBody.children.length > 200) termBody.removeChild(termBody.firstChild);
+                if (autoScroll) termBody.scrollTop = termBody.scrollHeight;
+            }
+
+            function sendCommand() {
+                if (!cmdInput) return;
+                const val = cmdInput.value.trim();
+                if (!val) return;
+
+                // Broadcast to app.js listener
+                window.dispatchEvent(new CustomEvent('serial-tx', { detail: val }));
+                // Echo to log immediately
+                logTerm(val, 'TX');
+
+                cmdInput.value = '';
+            }
+
+            function quickSend(cmd) {
+                if (!cmdInput) return;
+                cmdInput.value = cmd;
+                sendCommand();
+            }
+
+            function toggleAutoScroll() {
+                autoScroll = !autoScroll;
+                const btn = document.getElementById('btn-scroll');
+                if (btn) btn.classList.toggle('active');
+            }
+            function toggleTs() {
+                showTs = !showTs;
+                const btn = document.getElementById('btn-ts');
+                if (btn) btn.classList.toggle('active');
+            }
+            function togglePause() {
+                isPaused = !isPaused;
+                const btn = document.getElementById('btn-pause');
+                if (btn) {
+                    btn.innerText = isPaused ? "Paused" : "Run";
+                    btn.classList.toggle('active');
+                }
+            }
+            function clearTerm() { if (termBody) termBody.innerHTML = ''; }
+            function handleEnter(e) { if (e.key === 'Enter') sendCommand(); }
+
+            // Demo Simulation
+            function toggleSim() {
+                isSim = !isSim;
+                const btn = document.getElementById('btn-sim');
+                if (btn) btn.classList.toggle('active');
+                if (isSim) {
+                    addEvent('success', 'Connected', 'SITL link active.');
+                    if (window.startMockSerial) window.startMockSerial();
+                } else {
+                    if (window.stopMockSerial) window.stopMockSerial();
+                    addEvent('warn', 'Stopped', 'Link closed.');
+                }
+            }
+
+            return {
+                toggleDrawer, addEvent, logTerm, sendCommand, quickSend,
+                toggleAutoScroll, toggleTs, togglePause, clearTerm,
+                handleEnter, toggleSim
+            };
+
+        })();
+
+        // Expose for external use (e.g. app.js)
+        window.AeroConsole = AeroConsole;
+
+        // Compatibility layer for app.js
+        window.TimelinePanel = {
+            add: (type, title, msg) => AeroConsole.addEvent(type, title, msg)
+        };
+
+        window.SerialPanel = {
+            sendCurrent: AeroConsole.sendCommand,
+            clear: AeroConsole.clearTerm
+        };
+
+        window.sendSerialCommand = (cmd) => {
+            if (window.app && window.app.serialManager && window.app.serialManager.port) {
+                // Dispatch event for app.js to handle if it listens, 
+                // OR since we are in the same context, we can try to find the method.
+                // But app.js doesn't expose a send method directly on app instance yet.
+                // We will update app.js to attach a send method to window or handle this.
+                // For now, let's assume app.js will be updated to listen or we just log it.
+                // Actually, let's try to use the writer if exposed.
+                // But better: dispatch a custom event that app.js listens to.
+                const event = new CustomEvent('serial-tx', { detail: cmd });
+                window.dispatchEvent(event);
+            } else {
+                AeroConsole.logTerm(cmd, 'TX');
+            }
+        };
+
         document.addEventListener('DOMContentLoaded', () => {
-            const drawer = document.getElementById('console-drawer');
-            const header = drawer?.querySelector('.console-header');
-            const minH = 120;
-            const maxH = 400;
-            let startY = 0;
-            let startH = 0;
-            let dragging = false;
-
-            const setHeight = (h) => {
-                const clamped = Math.max(minH, Math.min(maxH, h));
-                drawer.style.setProperty('--console-height', `${clamped}px`);
-                if (drawer.classList.contains('closed')) {
-                    drawer.classList.add('closed'); // reapply transform with new height
-                }
-            };
-
-            const endDrag = (toggleIfClick) => {
-                if (!dragging) return;
-                dragging = false;
-                document.removeEventListener('mousemove', onMove);
-                document.removeEventListener('mouseup', onUp);
-                if (toggleIfClick) {
-                    drawer.classList.toggle('closed');
-                }
-            };
-
-            const onMove = (e) => {
-                if (!dragging) return;
-                const delta = startY - e.clientY;
-                setHeight(startH + delta);
-            };
-            const onUp = (e) => {
-                const delta = Math.abs(startY - e.clientY);
-                endDrag(delta < 3);
-            };
-
-            if (drawer && header) {
-                header.addEventListener('mousedown', (e) => {
-                    if (e.target.closest('.console-ops')) return;
-                    if (e.target.closest('input,button')) return;
-                    startY = e.clientY;
-                    startH = drawer.getBoundingClientRect().height;
-                    dragging = true;
-                    document.addEventListener('mousemove', onMove);
-                    document.addEventListener('mouseup', onUp);
-                });
-            }
-
-            const mockBtn = document.getElementById('mockBtn');
-            if (mockBtn) {
-                let mocking = false;
-                mockBtn.addEventListener('click', () => {
-                    mocking = !mocking;
-                    if (mocking && window.startMockSerial) {
-                        window.startMockSerial();
-                        mockBtn.textContent = '停止模拟';
-                    } else if (!mocking && window.stopMockSerial) {
-                        window.stopMockSerial();
-                        mockBtn.textContent = '模拟数据';
-                    }
-                });
-            }
+            lucide.createIcons();
         });
-        lucide.createIcons();
     </script>
 </body>
+
 </html>

@@ -283,4 +283,22 @@ class SerialManager {
         this.reader = null;
         this.port = null;
     }
+
+    async write(data) {
+        if (this.port && this.port.writable) {
+            try {
+                const writer = this.port.writable.getWriter();
+                const encoder = new TextEncoder();
+                await writer.write(encoder.encode(data + '\n'));
+                writer.releaseLock();
+                return true;
+            } catch (e) {
+                console.error('Serial write error:', e);
+                return false;
+            }
+        } else if (this.port && this.port.mock) {
+            return true;
+        }
+        return false;
+    }
 }
