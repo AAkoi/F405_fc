@@ -5,10 +5,11 @@
 #include <stdint.h>
 #include "attitude.h"
 #include "task_rc.h"
+#include "task_mixer.h"
 #include "pid.h"
 
 typedef struct {
-    float motor[4];      // 归一化电机输出 0..1
+    float motor[MIXER_MOTOR_COUNT]; // 归一化电机输出 0..1
     float rate_sp[3];    // 期望角速度 dps
     float rate_meas[3];  // 实际角速度 dps
     float angle_sp[3];   // 期望角度 deg

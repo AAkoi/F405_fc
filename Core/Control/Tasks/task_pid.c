@@ -3,6 +3,7 @@
 #include "task_pid.h"
 #include "task_rc.h"
 #include "task_gyro.h"
+#include "task_mixer.h"
 
 // 轴索引
 enum { AXIS_ROLL = 0, AXIS_PITCH = 1, AXIS_YAW = 2 };
@@ -116,16 +117,7 @@ const pid_output_t *task_pid_step(float dt, float max_rate_dps)
     float u_yaw   = pid_update(&pid_rate[AXIS_YAW],   pid_out.rate_sp[2], pid_out.rate_meas[2]);
 
     // 混控（X 架示例），输出归一化 0..1
-    float base_thr = clampf(rc->throttle, 0.0f, 1.0f);
-    float m1 = base_thr + u_roll + u_pitch - u_yaw;
-    float m2 = base_thr - u_roll + u_pitch + u_yaw;
-    float m3 = base_thr - u_roll - u_pitch - u_yaw;
-    float m4 = base_thr + u_roll - u_pitch + u_yaw;
-
-    pid_out.motor[0] = clampf(m1, 0.0f, 1.0f);
-    pid_out.motor[1] = clampf(m2, 0.0f, 1.0f);
-    pid_out.motor[2] = clampf(m3, 0.0f, 1.0f);
-    pid_out.motor[3] = clampf(m4, 0.0f, 1.0f);
+    mixer_mix_quad_x(rc->throttle, u_roll, u_pitch, u_yaw, pid_out.motor);
 
     return &pid_out;
 }

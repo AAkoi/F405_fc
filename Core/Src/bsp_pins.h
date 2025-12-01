@@ -54,6 +54,14 @@
 // 中断引脚 (INT1)
 #define HMC5883l_INT_GPIO_PORT         GPIOB
 #define HMC5883l_INT_PIN               GPIO_PIN_2
+
+//定时器
+#define timer_port                        GPIOC
+#define timer3_ch3                      GPIO_PIN_8
+#define timer8_ch1                      GPIO_PIN_6
+#define timer8_ch2                      GPIO_PIN_7
+#define timer_port1                        GPIOB
+#define timer3_ch4                      GPIO_PIN_1
 /* ============================================================================
  * UART 引脚定义（使用 ifdef 选择性启用）
  * 建议在编译选项或全局宏中定义 USE_UARTx 以启用对应串口。

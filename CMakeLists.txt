@@ -50,6 +50,7 @@ target_sources(${CMAKE_PROJECT_NAME} PRIVATE
     Core/BSP/Bsp_SPI/bsp_spi.c
     Core/BSP/Bsp_IIC/bsp_iic.c
     Core/BSP/Bsp_uart/bsp_uart.c
+    Core/BSP/Bsp_PWM/bsp_pwm.c
     
     # ICM42688P IMU Library
     Core/Lib/icm42688p/icm42688p.c
@@ -92,7 +93,11 @@ target_sources(${CMAKE_PROJECT_NAME} PRIVATE
     Core/Control/Tasks/task_acc.c
     Core/Control/Tasks/task_mag.c
     Core/Control/Tasks/task_filter.c
-
+    Core/Control/Tasks/task_rc.c
+    Core/Control/Tasks/task_pid.c
+    Core/Control/Tasks/task_mixer.c
+    Core/Control/Tasks/task_motor.c
+ 
     # On-board tests
     Core/Test/test_gyro.c
     Core/Test/test_attitude_full.c
@@ -107,6 +112,7 @@ target_include_directories(${CMAKE_PROJECT_NAME} PRIVATE
     Core/BSP/Bsp_SPI
     Core/BSP/Bsp_IIC            # I2C BSP
     Core/BSP/Bsp_uart           # UART BSP
+    Core/BSP/Bsp_PWM            # PWM BSP
     Core/Src                    # bsp_pins.h
     Core/Lib/icm42688p          # ICM42688P library
     Core/Lib/bmp280             # BMP280 library
