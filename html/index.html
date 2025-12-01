@@ -630,31 +630,29 @@
             </button>
             <div class="calib-stage">
                 <div id="calib-step-1" class="calib-layer layer-active">
-                    <div class="calib-headline">
-                        <div class="calib-icon">
-                            <i data-lucide="compass"></i>
+                    <div class="calib-icon-large">
+                        <i data-lucide="compass"></i>
+                    </div>
+                    <h2 class="calib-title">磁力计校准</h2>
+                    <p class="calib-desc">为了保证飞行航向准确，请按照以下步骤采集数据。</p>
+
+                    <div class="calib-features">
+                        <div class="feature-item">
+                            <div class="feature-icon"><i data-lucide="link-2"></i></div>
+                            <span class="feature-text">连接串口</span>
                         </div>
-                        <div>
-                            <h3>磁力计校准</h3>
-                            <p>连接完成后请在 30 秒内围绕机身旋转，覆盖所有方向。</p>
+                        <div class="feature-item">
+                            <div class="feature-icon"><i data-lucide="magnet"></i></div>
+                            <span class="feature-text">远离干扰</span>
+                        </div>
+                        <div class="feature-item">
+                            <div class="feature-icon"><i data-lucide="refresh-cw"></i></div>
+                            <span class="feature-text">全向旋转</span>
                         </div>
                     </div>
-                    <div class="calib-pills">
-                        <div>
-                            <span class="calib-pill"><i data-lucide="link-2"></i></span>
-                            <p>连接串口</p>
-                        </div>
-                        <div>
-                            <span class="calib-pill"><i data-lucide="magnet"></i></span>
-                            <p>远离干扰</p>
-                        </div>
-                        <div>
-                            <span class="calib-pill"><i data-lucide="refresh-cw"></i></span>
-                            <p>全向旋转</p>
-                        </div>
-                    </div>
+
                     <button class="btn btn-primary" onclick="startMagCalibration()">
-                        <i data-lucide="play"></i> 开始采集
+                        <i data-lucide="play" style="width: 16px;"></i> 开始采集
                     </button>
                 </div>
 
@@ -670,7 +668,8 @@
                         </div>
                     </div>
                     <div id="canvas3d" class="calib-3d flex-1 bg-[#fcfcfc] cursor-move relative z-0">
-                        <canvas id="magPlot" width="600" height="480" style="display:block;width:600px;height:480px;"></canvas>
+                        <canvas id="magPlot" width="600" height="480"
+                            style="display:block;width:600px;height:480px;"></canvas>
                     </div>
                     <div class="calib-progress-row">
                         <div class="progress-bar">
@@ -725,7 +724,8 @@
                                     <button class="btn btn-outline" onclick="copyCalibCode()">
                                         <i data-lucide="copy"></i> 复制
                                     </button>
-                                    <button class="btn btn-outline" title="Export CSV Data" onclick="exportMagData('csv')">
+                                    <button class="btn btn-outline" title="Export CSV Data"
+                                        onclick="exportMagData('csv')">
                                         <i data-lucide="download"></i> CSV
                                     </button>
                                     <button class="btn btn-outline" onclick="exportMagData('json')">

@@ -1,286 +1,451 @@
+/* ========================================
+   磁力计校准样式 - 1:1 复刻参考文件
+   ======================================== */
+
+/* 基础重置 */
+.mag-modal-root {
+    font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, "Helvetica Neue", Arial, sans-serif;
+    color: #334155;
+    /* text-slate-700 */
+}
+
+/* 模态框遮罩 - bg-slate-900/20 backdrop-blur-[2px] */
 .modal {
     position: fixed;
     inset: 0;
-    display: flex;
+    display: none;
+    /* JS控制显示 */
     align-items: center;
     justify-content: center;
-    background: rgba(15, 23, 42, 0.6);
-    backdrop-filter: blur(6px);
-    z-index: 9000;
+    background-color: rgba(15, 23, 42, 0.2);
+    backdrop-filter: blur(2px);
+    z-index: 50;
+    transition: opacity 0.3s;
 }
 
+/* 模态框卡片 - w-[600px] h-[480px] rounded-2xl shadow-soft */
 .calib-card {
-    width: min(760px, 96vw);
-    border-radius: 28px;
-    background: #ffffff;
-    border: 1px solid rgba(226, 231, 240, 0.8);
-    box-shadow: 0 20px 40px -18px rgba(15, 23, 42, 0.9), 0 10px 80px rgba(37, 99, 235, 0.15);
-    padding: 32px;
+    width: 600px;
+    height: 480px;
+    background-color: #ffffff;
+    border-radius: 16px;
+    box-shadow: 0 10px 40px -10px rgba(0, 0, 0, 0.08);
     position: relative;
     overflow: hidden;
+    display: flex;
+    flex-direction: column;
+    transform: scale(0.95);
+    transition: all 0.3s cubic-bezier(0.16, 1, 0.3, 1);
 }
 
+/* 激活状态 */
+.modal.active {
+    display: flex;
+    opacity: 1;
+}
+
+.modal.active .calib-card {
+    transform: scale(1);
+}
+
+/* 关闭按钮 - absolute top-4 right-4 w-8 h-8 */
 .calib-close {
     position: absolute;
-    top: 18px;
-    right: 18px;
-    border: none;
-    background: rgba(15, 23, 42, 0.05);
-    width: 40px;
-    height: 40px;
+    top: 16px;
+    right: 16px;
+    z-index: 30;
+    width: 32px;
+    height: 32px;
     border-radius: 50%;
     display: flex;
     align-items: center;
     justify-content: center;
+    color: #94a3b8;
+    /* text-slate-400 */
+    background: transparent;
+    border: none;
     cursor: pointer;
-    transition: background 0.2s ease;
+    transition: background-color 0.2s;
 }
 
 .calib-close:hover {
-    background: rgba(37, 99, 235, 0.12);
+    background-color: #f1f5f9;
+    /* hover:bg-slate-100 */
 }
 
+/* 步骤容器 */
 .calib-stage {
+    flex: 1;
     position: relative;
-    min-height: 500px;
 }
 
+/* 通用层样式 - absolute inset-0 */
 .calib-layer {
     position: absolute;
     inset: 0;
     display: flex;
     flex-direction: column;
-    gap: 20px;
-    transition: opacity 0.3s ease, transform 0.3s ease;
+    transition: all 0.4s cubic-bezier(0.16, 1, 0.3, 1);
 }
 
 .layer-active {
     opacity: 1;
     transform: translateY(0);
     pointer-events: auto;
+    z-index: 20;
+    visibility: visible;
 }
 
 .layer-inactive {
     opacity: 0;
-    transform: translateY(8px);
+    transform: translateY(10px);
     pointer-events: none;
+    z-index: 0;
 }
 
-.calib-headline {
-    display: flex;
+/* ================= Step 1: 首页引导 ================= */
+/* p-8 flex flex-col items-center justify-center text-center */
+#calib-step-1 {
+    padding: 32px;
     align-items: center;
-    gap: 18px;
+    justify-content: center;
+    text-align: center;
 }
 
-.calib-icon {
-    width: 60px;
-    height: 60px;
-    border-radius: 18px;
-    border: 1px solid rgba(37, 99, 235, 0.4);
-    background: rgba(37, 99, 235, 0.1);
+/* 图标容器 - w-16 h-16 bg-blue-50 text-primary rounded-2xl mb-6 */
+.calib-icon-large {
+    width: 64px;
+    height: 64px;
+    background-color: #eff6ff;
+    color: #2563eb;
+    border-radius: 16px;
     display: flex;
     align-items: center;
     justify-content: center;
-    color: #2563eb;
-    font-size: 1.5rem;
+    font-size: 24px;
+    /* 图标大小 */
+    margin-bottom: 24px;
+    position: relative;
 }
 
-.calib-headline h3 {
-    margin: 0;
-    font-size: 1.35rem;
-    font-weight: 700;
+/* 波纹特效 - pulse-circle::before */
+.calib-icon-large::before {
+    content: '';
+    position: absolute;
+    inset: -4px;
+    border-radius: 50%;
+    /* 参考文件确实是 50% */
+    border: 2px solid #2563eb;
+    opacity: 0.2;
+    animation: pulse 2s infinite;
 }
 
-.calib-headline p {
-    margin: 4px 0 0;
-    color: #64748b;
-    font-size: 0.9rem;
+@keyframes pulse {
+    0% {
+        transform: scale(1);
+        opacity: 0.4;
+    }
+
+    100% {
+        transform: scale(1.5);
+        opacity: 0;
+    }
 }
 
-.calib-pills {
-    display: grid;
-    grid-template-columns: repeat(3, minmax(0, 1fr));
-    gap: 14px;
+/* 标题 - text-xl font-semibold text-text mb-2 */
+.calib-title {
+    font-size: 20px;
+    font-weight: 600;
+    color: #334155;
+    margin: 0 0 8px 0;
 }
 
-.calib-pills div {
-    text-align: center;
-    font-size: 0.8rem;
+/* 描述 - text-textLight text-sm mb-8 max-w-[80%] */
+.calib-desc {
+    font-size: 14px;
+    color: #94a3b8;
+    margin: 0 0 32px 0;
+    max-width: 80%;
+    line-height: 1.5;
+}
+
+/* 特征列表 - gap-8 mb-10 px-8 */
+.calib-features {
+    display: flex;
+    justify-content: center;
+    gap: 32px;
+    margin-bottom: 40px;
+    width: 100%;
+    padding: 0 32px;
+    box-sizing: border-box;
+}
+
+.feature-item {
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    gap: 8px;
+    flex: 1;
+}
+
+/* 小图标 - w-10 h-10 rounded-full bg-slate-50 text-slate-400 */
+.feature-icon {
+    width: 40px;
+    height: 40px;
+    border-radius: 50%;
+    background-color: #f8fafc;
+    display: flex;
+    align-items: center;
+    justify-content: center;
     color: #94a3b8;
 }
 
-.calib-pill {
-    width: 44px;
-    height: 44px;
-    border-radius: 16px;
-    border: 1px solid rgba(226, 232, 240, 0.9);
-    background: #f8fafc;
+.feature-text {
+    font-size: 12px;
+    color: #94a3b8;
+    font-weight: 500;
+}
+
+/* 按钮 - bg-primary px-10 py-2.5 rounded-full shadow-float */
+.btn-primary {
+    background-color: #2563eb;
+    color: white;
+    padding: 10px 40px;
+    border-radius: 9999px;
+    font-size: 14px;
+    font-weight: 500;
+    border: none;
+    cursor: pointer;
+    box-shadow: 0 4px 12px rgba(37, 99, 235, 0.15);
+    transition: all 0.2s;
     display: inline-flex;
     align-items: center;
-    justify-content: center;
-    color: #475569;
-    margin-bottom: 6px;
+    gap: 8px;
+    position: relative;
+    z-index: 10;
 }
 
-.btn {
-    border-radius: 999px;
-    font-weight: 700;
-    text-transform: none;
-    letter-spacing: normal;
+.btn-primary:hover {
+    background-color: #2563eb;
+    /* hover:bg-blue-600 */
+    transform: scale(1.05);
 }
 
-.btn-primary {
-    background: #2563eb;
-    color: #fff;
-    padding: 0 22px;
-    height: 48px;
-    box-shadow: 0 15px 26px -15px rgba(37, 99, 235, 0.8), 0 10px 20px rgba(37, 99, 235, 0.25);
+.btn-primary:active {
+    transform: scale(0.95);
 }
 
-.calib-toolbar {
+/* ================= Step 2: 3D 采集 ================= */
+#calib-step-2 {
     display: flex;
-    align-items: center;
+    flex-direction: column;
+}
+
+/* 顶部栏 - p-6 */
+.calib-toolbar {
+    position: absolute;
+    top: 0;
+    left: 0;
+    right: 0;
+    padding: 24px;
+    display: flex;
     justify-content: space-between;
+    align-items: flex-start;
+    z-index: 10;
+    pointer-events: none;
+    /* 防止遮挡 3D 操作 */
 }
 
 .calib-toolbar h3 {
-    margin: 0;
-    font-size: 1.15rem;
+    font-size: 16px;
     font-weight: 600;
+    color: #334155;
+    margin: 0;
+    display: flex;
+    align-items: center;
+    gap: 8px;
 }
 
 .calib-tip {
-    margin: 4px 0 0;
+    font-size: 12px;
     color: #94a3b8;
-    font-size: 0.85rem;
+    margin-top: 2px;
 }
 
 .calib-timer {
-    display: inline-flex;
-    align-items: center;
-    gap: 6px;
-    padding: 6px 14px;
-    border-radius: 999px;
-    border: 1px solid rgba(37, 99, 235, 0.3);
+    background-color: rgba(255, 255, 255, 0.8);
+    backdrop-filter: blur(4px);
+    padding: 4px 12px;
+    border-radius: 9999px;
+    border: 1px solid #e2e8f0;
+    font-size: 14px;
+    font-family: monospace;
     color: #2563eb;
-    font-size: 0.9rem;
-    background: rgba(37, 99, 235, 0.08);
-}
-
-.calib-3d {
-    border-radius: 22px;
-    border: 1px solid rgba(226, 231, 240, 0.7);
-    background: #f8fafc;
     display: flex;
     align-items: center;
-    justify-content: center;
-    min-height: 256px;
-    overflow: hidden;
+    gap: 4px;
+    box-shadow: 0 1px 2px rgba(0, 0, 0, 0.05);
+}
+
+/* 3D 容器 - flex-1 bg-[#fcfcfc] */
+.calib-3d {
+    flex: 1;
+    background-color: #fcfcfc;
+    cursor: move;
+    position: relative;
+    z-index: 0;
+    width: 100%;
+    height: 100%;
+}
+
+/* 底部面板 - absolute bottom-6 left-6 right-6 */
+.calib-progress-row {
+    position: absolute;
+    bottom: 24px;
+    left: 24px;
+    right: 24px;
+    background-color: rgba(255, 255, 255, 0.9);
+    backdrop-filter: blur(4px);
+    padding: 16px;
+    border-radius: 12px;
+    border: 1px solid #ffffff;
+    box-shadow: 0 10px 40px -10px rgba(0, 0, 0, 0.08);
+    display: flex;
+    align-items: center;
+    gap: 16px;
+    z-index: 20;
 }
 
 .progress-bar {
-    flex: 1 1 240px;
-    height: 10px;
-    background: #f0f4f8;
-    border-radius: 999px;
+    flex: 1;
+    height: 6px;
+    background-color: #f1f5f9;
+    border-radius: 9999px;
     overflow: hidden;
-    border: 1px solid rgba(15, 23, 42, 0.08);
 }
 
 .progress-fill {
-    width: 0;
     height: 100%;
-    background: linear-gradient(135deg, #2563eb, #3b82f6);
-    transition: width 0.2s ease;
-}
-
-.progress-text {
-    margin: 0;
-    color: #64748b;
-    font-size: 0.85rem;
-}
-
-.mag-range-grid {
-    display: grid;
-    grid-template-columns: repeat(auto-fit, minmax(120px, 1fr));
-    gap: 10px;
-    font-family: 'JetBrains Mono', monospace;
-    font-size: 0.78rem;
-    color: #1e293b;
+    background-color: #2563eb;
+    width: 0%;
+    transition: width 0.3s;
 }
 
 .btn-progress {
-    border-radius: 12px;
-    padding: 0 18px;
-    height: 44px;
-    background: #e2e8f0;
+    font-size: 12px;
+    font-weight: 500;
+    padding: 6px 16px;
+    border-radius: 8px;
+    background-color: #f1f5f9;
     color: #94a3b8;
     border: none;
+    transition: all 0.2s;
     cursor: not-allowed;
-    font-weight: 600;
 }
 
 .btn-progress:not(:disabled) {
-    background: #2563eb;
-    color: #fff;
+    background-color: #2563eb;
+    color: white;
+    box-shadow: 0 4px 12px rgba(37, 99, 235, 0.15);
     cursor: pointer;
-    box-shadow: 0 10px 18px rgba(37, 99, 235, 0.25);
 }
 
-.btn-outline {
-    border: 1px solid rgba(226, 231, 240, 0.9);
-    background: transparent;
-    color: #475569;
-    padding: 0 14px;
-    height: 38px;
+.btn-progress:not(:disabled):hover {
+    transform: scale(1.05);
 }
 
-.calib-result {
-    display: flex;
-    flex-direction: column;
-    gap: 20px;
+/* 隐藏的调试信息 */
+.mag-range-grid {
+    display: none;
+}
+
+/* ================= Step 3: 结果展示 ================= */
+/* p-8 */
+#calib-step-3 {
+    padding: 32px;
+    background-color: white;
 }
 
 .result-header {
     display: flex;
     justify-content: space-between;
     align-items: center;
+    margin-bottom: 24px;
+}
+
+.result-header h3 {
+    font-size: 16px;
+    font-weight: 600;
+    color: #334155;
+    margin: 0;
+}
+
+.result-header p {
+    font-size: 10px;
+    color: #94a3b8;
+    margin: 0;
+}
+
+.quality-badge {
+    font-size: 10px;
+    color: #94a3b8;
+    text-transform: uppercase;
 }
 
 .result-parms {
     display: grid;
-    grid-template-columns: repeat(auto-fit, minmax(170px, 1fr));
-    gap: 12px;
+    grid-template-columns: 1fr 1fr;
+    gap: 16px;
+    margin-bottom: 24px;
+}
+
+.result-parms article {
+    background-color: #f8fafc;
+    /* bg-subtle */
+    padding: 12px;
+    border-radius: 12px;
+    border: 1px solid rgba(226, 232, 240, 0.5);
 }
 
 .result-label {
-    font-size: 0.65rem;
-    letter-spacing: 0.08em;
-    text-transform: uppercase;
+    font-size: 10px;
     color: #94a3b8;
+    text-transform: uppercase;
+    letter-spacing: 0.05em;
+    margin-bottom: 4px;
 }
 
 .result-values {
+    font-family: monospace;
+    font-size: 14px;
+    color: #334155;
     display: flex;
     justify-content: space-between;
-    font-size: 0.9rem;
-    font-family: 'JetBrains Mono', monospace;
+}
+
+.result-values b {
+    color: #2563eb;
+    margin-left: 4px;
 }
 
 .code-block-wrapper {
-    border-radius: 18px;
-    border: 1px solid rgba(226, 231, 240, 0.8);
-    background: #f8fafc;
-    padding: 16px;
+    flex: 1;
+    display: flex;
+    flex-direction: column;
+    min-height: 0;
 }
 
 .code-block-title {
     display: flex;
     justify-content: space-between;
     align-items: center;
-    margin-bottom: 12px;
-    font-size: 0.85rem;
-    color: #64748b;
+    margin-bottom: 8px;
+}
+
+.code-block-title span {
+    font-size: 12px;
+    color: #94a3b8;
+    font-weight: 500;
 }
 
 .code-actions {
@@ -288,29 +453,60 @@
     gap: 8px;
 }
 
-.code-block {
-    margin: 0;
-    padding: 12px;
-    border-radius: 12px;
-    background: #0f172a;
-    color: #f8fafc;
-    font-size: 0.78rem;
-    overflow-x: auto;
+.btn-outline {
+    font-size: 10px;
+    display: flex;
+    align-items: center;
+    gap: 4px;
+    background-color: white;
+    border: 1px solid #e2e8f0;
+    padding: 4px 8px;
+    border-radius: 4px;
+    color: #94a3b8;
+    cursor: pointer;
+    transition: all 0.2s;
 }
 
-.quality-badge {
-    border-radius: 999px;
-    padding: 6px 16px;
-    font-size: 0.75rem;
-    letter-spacing: 0.2em;
-    text-transform: uppercase;
-    background: rgba(37, 99, 235, 0.1);
+.btn-outline:hover {
     color: #2563eb;
+    border-color: #2563eb;
+}
+
+.code-block {
+    flex: 1;
+    background-color: #f8fafc;
+    border-radius: 12px;
+    border: 1px solid #e2e8f0;
+    padding: 12px;
+    overflow-x: auto;
+    font-family: monospace;
+    font-size: 12px;
+    color: #475569;
+    margin: 0;
+    white-space: pre;
 }
 
 .calib-footer {
     display: flex;
-    justify-content: flex-end;
     gap: 12px;
-    flex-wrap: wrap;
+    margin-top: 24px;
+}
+
+.calib-footer .btn-primary {
+    flex: 1;
+    justify-content: center;
+}
+
+.calib-footer .btn-outline {
+    padding: 10px 16px;
+    border-radius: 8px;
+    font-size: 14px;
+    color: #94a3b8;
+    border: none;
+    background: transparent;
+}
+
+.calib-footer .btn-outline:hover {
+    background-color: #f8fafc;
+    color: #334155;
 }
