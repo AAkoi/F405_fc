@@ -112,42 +112,44 @@
     text-align: center;
 }
 
-/* 图标容器 - w-16 h-16 bg-blue-50 text-primary rounded-2xl mb-6 */
+/* 图标容器 */
 .calib-icon-large {
     width: 64px;
     height: 64px;
     background-color: #eff6ff;
     color: #2563eb;
-    border-radius: 16px;
+    border-radius: 20px;
+    /* 统一圆角 */
     display: flex;
     align-items: center;
     justify-content: center;
-    font-size: 24px;
-    /* 图标大小 */
+    font-size: 28px;
     margin-bottom: 24px;
     position: relative;
+    z-index: 1;
 }
 
-/* 波纹特效 - pulse-circle::before */
-.calib-icon-large::before {
+/* 波纹特效 - 增强版 */
+.calib-icon-large::after {
     content: '';
     position: absolute;
     inset: -4px;
-    border-radius: 50%;
-    /* 参考文件确实是 50% */
+    border-radius: 24px;
+    /* 略大于容器 */
     border: 2px solid #2563eb;
-    opacity: 0.2;
-    animation: pulse 2s infinite;
+    opacity: 0;
+    z-index: -1;
+    animation: pulse-ring 2s cubic-bezier(0.215, 0.61, 0.355, 1) infinite;
 }
 
-@keyframes pulse {
+@keyframes pulse-ring {
     0% {
-        transform: scale(1);
-        opacity: 0.4;
+        transform: scale(0.95);
+        opacity: 0.5;
     }
 
     100% {
-        transform: scale(1.5);
+        transform: scale(1.6);
         opacity: 0;
     }
 }
@@ -298,30 +300,36 @@
     height: 100%;
 }
 
-/* 底部面板 - absolute bottom-6 left-6 right-6 */
+/* 底部面板 - 紧凑悬浮版 */
 .calib-progress-row {
     position: absolute;
-    bottom: 24px;
-    left: 24px;
-    right: 24px;
-    background-color: rgba(255, 255, 255, 0.9);
-    backdrop-filter: blur(4px);
-    padding: 16px;
-    border-radius: 12px;
-    border: 1px solid #ffffff;
-    box-shadow: 0 10px 40px -10px rgba(0, 0, 0, 0.08);
+    bottom: 20px;
+    left: 50%;
+    transform: translateX(-50%);
+    width: auto;
+    min-width: 320px;
+    max-width: 90%;
+    background-color: rgba(255, 255, 255, 0.95);
+    backdrop-filter: blur(8px);
+    padding: 10px 16px;
+    border-radius: 999px;
+    /* 胶囊形状 */
+    border: 1px solid rgba(226, 232, 240, 0.8);
+    box-shadow: 0 10px 25px -5px rgba(0, 0, 0, 0.1);
     display: flex;
     align-items: center;
-    gap: 16px;
+    gap: 12px;
     z-index: 20;
 }
 
 .progress-bar {
     flex: 1;
-    height: 6px;
-    background-color: #f1f5f9;
-    border-radius: 9999px;
+    height: 4px;
+    /* 变细 */
+    background-color: #e2e8f0;
+    border-radius: 999px;
     overflow: hidden;
+    min-width: 80px;
 }
 
 .progress-fill {
@@ -331,27 +339,42 @@
     transition: width 0.3s;
 }
 
+.progress-text {
+    font-size: 12px;
+    color: #64748b;
+    white-space: nowrap;
+    font-feature-settings: "tnum";
+    font-variant-numeric: tabular-nums;
+}
+
+.progress-text span {
+    color: #334155;
+    font-weight: 600;
+}
+
 .btn-progress {
     font-size: 12px;
-    font-weight: 500;
-    padding: 6px 16px;
-    border-radius: 8px;
+    font-weight: 600;
+    padding: 6px 14px;
+    border-radius: 999px;
     background-color: #f1f5f9;
     color: #94a3b8;
     border: none;
     transition: all 0.2s;
     cursor: not-allowed;
+    white-space: nowrap;
 }
 
 .btn-progress:not(:disabled) {
     background-color: #2563eb;
     color: white;
-    box-shadow: 0 4px 12px rgba(37, 99, 235, 0.15);
+    box-shadow: 0 2px 8px rgba(37, 99, 235, 0.25);
     cursor: pointer;
 }
 
 .btn-progress:not(:disabled):hover {
-    transform: scale(1.05);
+    background-color: #1d4ed8;
+    transform: translateY(-1px);
 }
 
 /* 隐藏的调试信息 */

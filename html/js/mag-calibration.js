@@ -90,6 +90,69 @@ function resetMagCalibration() {
 
     updateMagPlots();
     setFinishBtnState(false);
+
+    // 检查是否有上次结果
+    const lastResult = localStorage.getItem('magCalibrationResult');
+    const step1Container = document.getElementById('calib-step-1');
+
+    // 移除旧的"查看上次结果"按钮（如果存在）
+    const oldBtn = document.getElementById('btn-last-result');
+    if (oldBtn) oldBtn.remove();
+
+    if (lastResult) {
+        const btn = document.createElement('button');
+        btn.id = 'btn-last-result';
+        btn.className = 'btn btn-outline';
+        btn.style.marginTop = '12px';
+        btn.style.marginLeft = '12px';
+        btn.innerHTML = '<i data-lucide="history" style="width:14px; margin-right:4px;"></i> 查看上次结果';
+        btn.onclick = showLastResult;
+
+        // 插入到"开始采集"按钮后面
+        const startBtn = step1Container.querySelector('.btn-primary');
+        if (startBtn) {
+            startBtn.parentNode.insertBefore(btn, startBtn.nextSibling);
+        }
+        lucide.createIcons();
+    }
+}
+
+/**
+ * 查看上次校准结果
+ */
+function showLastResult() {
+    const lastResult = localStorage.getItem('magCalibrationResult');
+    const lastSamples = localStorage.getItem('magCalibrationSamples');
+
+    if (lastResult) {
+        calibrationResult = JSON.parse(lastResult);
+        if (lastSamples) {
+            calibrationState.samples = JSON.parse(lastSamples);
+
+            // 重新计算极值，确保质量评估正确
+            if (calibrationState.samples.length > 0) {
+                calibrationState.minX = Infinity; calibrationState.maxX = -Infinity;
+                calibrationState.minY = Infinity; calibrationState.maxY = -Infinity;
+                calibrationState.minZ = Infinity; calibrationState.maxZ = -Infinity;
+
+                calibrationState.samples.forEach(s => {
+                    if (s.x < calibrationState.minX) calibrationState.minX = s.x;
+                    if (s.x > calibrationState.maxX) calibrationState.maxX = s.x;
+                    if (s.y < calibrationState.minY) calibrationState.minY = s.y;
+                    if (s.y > calibrationState.maxY) calibrationState.maxY = s.y;
+                    if (s.z < calibrationState.minZ) calibrationState.minZ = s.z;
+                    if (s.z > calibrationState.maxZ) calibrationState.maxZ = s.z;
+                });
+            }
+        }
+
+        displayCalibrationResult();
+
+        document.getElementById('calib-step-1').classList.add('hidden');
+        document.getElementById('calib-step-3').classList.remove('hidden');
+        setActiveLayer('calib-step-3');
+        lucide.createIcons();
+    }
 }
 
 /**
@@ -155,6 +218,9 @@ function processMagDataForCalibration(mx, my, mz) {
 /**
  * 更新校准进度
  */
+/**
+ * 更新校准进度
+ */
 function updateCalibrationProgress() {
     if (!calibrationState.isCalibrating) return;
 
@@ -170,12 +236,18 @@ function updateCalibrationProgress() {
     if (timerValue) {
         timerValue.textContent = elapsedSeconds;
     }
-    setFinishBtnState(progress >= 100);
 
-    if (remaining > 0) {
-        requestAnimationFrame(updateCalibrationProgress);
+    // 允许提前结束：如果样本数足够（> 500）或者时间到
+    if (calibrationState.samples.length > 500 || progress >= 100) {
+        setFinishBtnState(true);
     } else {
-        // 校准完成
+        setFinishBtnState(false);
+    }
+
+    if (remaining > 0 && calibrationState.isCalibrating) {
+        requestAnimationFrame(updateCalibrationProgress);
+    } else if (remaining <= 0) {
+        // 时间到，自动完成
         finishCalibration();
     }
 }
@@ -184,12 +256,23 @@ function updateCalibrationProgress() {
  * 完成校准，计算参数
  */
 function finishCalibration() {
+    // 防止重复调用
+    if (!calibrationState.isCalibrating && document.getElementById('calib-step-3').classList.contains('hidden')) {
+        // 如果不在 Step 3 且不在校准中，可能是手动点击提前结束
+    } else if (!calibrationState.isCalibrating) {
+        return;
+    }
+
     setFinishBtnState(false);
     calibrationState.isCalibrating = false;
 
     // 计算校准参数
     calculateCalibrationParams();
     updateMagPlots();
+
+    // 保存结果到 localStorage
+    localStorage.setItem('magCalibrationResult', JSON.stringify(calibrationResult));
+    localStorage.setItem('magCalibrationSamples', JSON.stringify(calibrationState.samples));
 
     // 显示结果
     displayCalibrationResult();
@@ -506,3 +589,4 @@ window.startMagCalibration = startMagCalibration;
 window.processMagDataForCalibration = processMagDataForCalibration;
 window.copyCalibCode = copyCalibCode;
 window.exportMagData = exportMagData;
+window.showLastResult = showLastResult;
