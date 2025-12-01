@@ -10,8 +10,9 @@
 #include "test_gyro.h"
 #include "test_attitude_full.h"
 #include "test_mag.h"
+#include "test_timer_log.h"
 
-#define RUN_MODE 1  // 0: gyro+acc attitude test, 1: gyro+acc+mag attitude test, 2: magnetometer stream test
+#define RUN_MODE 0 // 0: gyro+acc attitude test, 1: gyro+acc+mag attitude test, 2: magnetometer stream test
 
 int main(void)
 {
@@ -31,8 +32,10 @@ int main(void)
         test_attitude_full_run();
     } else if (RUN_MODE == 2) {
         test_mag_run();
-    } else {
+    } else if(RUN_MODE==3) {
         test_gyro_run();
+    }else{
+        test_timer_log_run();
     }
 
     // Should never reach here

@@ -102,6 +102,8 @@ target_sources(${CMAKE_PROJECT_NAME} PRIVATE
     Core/Test/test_gyro.c
     Core/Test/test_attitude_full.c
     Core/Test/test_mag.c
+    Core/Test/test_pwm_servo.c
+    Core/Test/test_timer_log.c
 )
 
 # Add include paths

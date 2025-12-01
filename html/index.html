@@ -624,100 +624,130 @@
 
     <!-- 磁力计校准模态框 -->
     <div id="magCalibModal" class="modal">
-        <div class="modal-content">
-            <div class="modal-header">
-                <h2><i data-lucide="compass"></i> 磁力计校准</h2>
-                <button class="modal-close" onclick="closeMagCalibModal()">&times;</button>
-            </div>
-            <div class="modal-body">
-                <div id="calib-step-1" class="calib-step">
-                    <h3>📋 准备工作</h3>
-                    <ul class="calib-instructions">
-                        <li>✓ 确保串口已连接</li>
-                        <li>✓ 远离电脑、手机、金属桌面等磁场源</li>
-                        <li>✓ 准备在60秒内缓慢旋转设备</li>
-                        <li>✓ 旋转方式：水平360°、前后翻转、左右翻转、8字形</li>
-                    </ul>
+        <div class="calib-card">
+            <button class="calib-close" onclick="closeMagCalibModal()">
+                <i data-lucide="x"></i>
+            </button>
+            <div class="calib-stage">
+                <div id="calib-step-1" class="calib-layer layer-active">
+                    <div class="calib-headline">
+                        <div class="calib-icon">
+                            <i data-lucide="compass"></i>
+                        </div>
+                        <div>
+                            <h3>磁力计校准</h3>
+                            <p>连接完成后请在 30 秒内围绕机身旋转，覆盖所有方向。</p>
+                        </div>
+                    </div>
+                    <div class="calib-pills">
+                        <div>
+                            <span class="calib-pill"><i data-lucide="link-2"></i></span>
+                            <p>连接串口</p>
+                        </div>
+                        <div>
+                            <span class="calib-pill"><i data-lucide="magnet"></i></span>
+                            <p>远离干扰</p>
+                        </div>
+                        <div>
+                            <span class="calib-pill"><i data-lucide="refresh-cw"></i></span>
+                            <p>全向旋转</p>
+                        </div>
+                    </div>
                     <button class="btn btn-primary" onclick="startMagCalibration()">
-                        <i data-lucide="play"></i> 开始校准
+                        <i data-lucide="play"></i> 开始采集
                     </button>
                 </div>
 
-                <div id="calib-step-2" class="calib-step hidden">
-                    <h3>🔄 正在采集数据...</h3>
-                    <p class="calib-tip">请缓慢旋转设备60秒，覆盖所有方向！</p>
-                    <div class="progress-bar">
-                        <div id="calib-progress" class="progress-fill"></div>
+                <div id="calib-step-2" class="calib-layer layer-inactive hidden">
+                    <div class="calib-toolbar">
+                        <div>
+                            <h3>数据采集</h3>
+                            <p class="calib-tip">请慢速旋转机身，覆盖所有轴向。</p>
+                        </div>
+                        <div class="calib-timer">
+                            <i data-lucide="clock"></i>
+                            <span id="calib-timer-value">0</span>s
+                        </div>
                     </div>
-                    <p class="progress-text">
-                        <span id="calib-time">0</span>s / 60s |
-                        样本数: <span id="calib-samples">0</span>
-                    </p>
-                    <div class="mag-range">
+                    <div id="canvas3d" class="calib-3d flex-1 bg-[#fcfcfc] cursor-move relative z-0">
+                        <canvas id="magPlot" width="600" height="480" style="display:block;width:600px;height:480px;"></canvas>
+                    </div>
+                    <div class="calib-progress-row">
+                        <div class="progress-bar">
+                            <div id="calib-progress" class="progress-fill"></div>
+                        </div>
+                        <p class="progress-text">
+                            <span id="calib-time">0</span>s / 60s ·
+                            样本数 <span id="calib-samples">0</span>
+                        </p>
+                        <button id="finishBtn" class="btn btn-progress" disabled onclick="finishCalibration()">
+                            计算参数
+                        </button>
+                    </div>
+                    <div class="mag-range-grid">
                         <div>X: [<span id="mx-min">--</span>, <span id="mx-max">--</span>]</div>
                         <div>Y: [<span id="my-min">--</span>, <span id="my-max">--</span>]</div>
                         <div>Z: [<span id="mz-min">--</span>, <span id="mz-max">--</span>]</div>
                     </div>
-                    <div class="mag-plot-wrapper">
-                        <canvas id="magPlot" width="520" height="450"></canvas>
-                        <div class="legend">
-                            <span><span class="legend-dot" style="background:#ff6b35; color:#ff6b35"></span> 原始数据</span>
-                            <span><span class="legend-dot" style="background:#00ff88; color:#00ff88"></span> 校准后</span>
-                        </div>
-                    </div>
                 </div>
 
-                <div id="calib-step-3" class="calib-step hidden">
-                    <h3>✅ 校准完成</h3>
+                <div id="calib-step-3" class="calib-layer layer-inactive hidden">
                     <div class="calib-result">
-                        <h4>📊 校准参数</h4>
-                        <div class="param-grid">
-                            <div class="param-item">
-                                <label>硬铁偏置 (Offset):</label>
-                                <div class="param-values">
-                                    <span>X: <code id="offset-x">0</code></span>
-                                    <span>Y: <code id="offset-y">0</code></span>
-                                    <span>Z: <code id="offset-z">0</code></span>
-                                </div>
+                        <div class="result-header">
+                            <div>
+                                <h3>校准完成</h3>
+                                <p class="text-xs text-muted">Least Squares Ellipsoid</p>
                             </div>
-                            <div class="param-item">
-                                <label>软铁缩放 (Scale):</label>
-                                <div class="param-values">
-                                    <span>X: <code id="scale-x">1.000</code></span>
-                                    <span>Y: <code id="scale-y">1.000</code></span>
-                                    <span>Z: <code id="scale-z">1.000</code></span>
-                                </div>
-                            </div>
+                            <div class="quality-badge" id="calib-quality">--</div>
                         </div>
-
-                        <h4>📋 复制代码到单片机</h4>
-                        <pre id="calib-code" class="code-block">mag_set_calibration(
-    0.0f, 0.0f, 0.0f,    // offset_x, offset_y, offset_z
-    1.0f, 1.0f, 1.0f     // scale_x, scale_y, scale_z
+                        <div class="result-parms">
+                            <article>
+                                <div class="result-label">硬铁偏置 (Offset)</div>
+                                <div class="result-values">
+                                    <span>X: <b id="offset-x">0</b></span>
+                                    <span>Y: <b id="offset-y">0</b></span>
+                                    <span>Z: <b id="offset-z">0</b></span>
+                                </div>
+                            </article>
+                            <article>
+                                <div class="result-label">软铁缩放 (Scale)</div>
+                                <div class="result-values">
+                                    <span>X: <b id="scale-x">1.000</b></span>
+                                    <span>Y: <b id="scale-y">1.000</b></span>
+                                    <span>Z: <b id="scale-z">1.000</b></span>
+                                </div>
+                            </article>
+                        </div>
+                        <div class="code-block-wrapper">
+                            <div class="code-block-title">
+                                <span>复制代码到单片机</span>
+                                <div class="code-actions">
+                                    <button class="btn btn-outline" onclick="copyCalibCode()">
+                                        <i data-lucide="copy"></i> 复制
+                                    </button>
+                                    <button class="btn btn-outline" title="Export CSV Data" onclick="exportMagData('csv')">
+                                        <i data-lucide="download"></i> CSV
+                                    </button>
+                                    <button class="btn btn-outline" onclick="exportMagData('json')">
+                                        <i data-lucide="file-text"></i> JSON
+                                    </button>
+                                </div>
+                            </div>
+                            <pre id="calib-code" class="code-block">mag_set_calibration(
+    0.0f, 0.0f, 0.0f,
+    1.0f, 1.0f, 1.0f
 );</pre>
-                        <div class="btn-group">
-                            <button class="btn btn-copy" onclick="copyCalibCode()">
-                                <i data-lucide="copy"></i> 复制代码
-                            </button>
-                            <button class="btn btn-export" onclick="exportMagData('csv')">
-                                <i data-lucide="download"></i> 导出CSV
-                            </button>
-                            <button class="btn btn-export" onclick="exportMagData('json')">
-                                <i data-lucide="file-json"></i> 导出JSON
-                            </button>
                         </div>
-
-                        <h4>📈 校准质量</h4>
-                        <div id="calib-quality" class="quality-badge">--</div>
-                        <p id="calib-tips" class="calib-tips"></p>
+                        <p id="calib-tips" class="calib-tip"></p>
                     </div>
-                    <button class="btn btn-primary" onclick="closeMagCalibModal()">完成</button>
-                    <button class="btn btn-secondary" onclick="resetMagCalibration()">重新校准</button>
+                    <div class="calib-footer">
+                        <button class="btn btn-primary" onclick="closeMagCalibModal()">完成</button>
+                        <button class="btn btn-outline" onclick="resetMagCalibration()">重新校准</button>
+                    </div>
                 </div>
             </div>
         </div>
     </div>
-
     <!-- Alerts / Critical modal -->
     <div class="hud-alert-container" id="hud-alert">
         <div class="hud-badge">

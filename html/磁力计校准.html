@@ -1,0 +1,468 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>AERO Pure Calibration</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/three.js/r128/three.min.js"></script>
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+
+    <script>
+        tailwind.config = {
+            theme: {
+                extend: {
+                    colors: {
+                        primary: '#2563eb',
+                        surface: '#ffffff',
+                        subtle: '#f8fafc',
+                        border: '#e2e8f0',
+                        text: '#334155',
+                        textLight: '#94a3b8'
+                    },
+                    boxShadow: {
+                        'soft': '0 10px 40px -10px rgba(0,0,0,0.08)',
+                        'float': '0 4px 12px rgba(37, 99, 235, 0.15)'
+                    }
+                }
+            }
+        }
+    </script>
+    <style>
+        body { font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, "Helvetica Neue", Arial, sans-serif; background-color: #f1f5f9; }
+        .code-scroll::-webkit-scrollbar { height: 4px; }
+        .code-scroll::-webkit-scrollbar-thumb { background: #cbd5e1; border-radius: 2px; }
+        
+        .fade-in-up { animation: fadeInUp 0.4s cubic-bezier(0.16, 1, 0.3, 1); }
+        @keyframes fadeInUp {
+            from { opacity: 0; transform: translateY(10px); }
+            to { opacity: 1; transform: translateY(0); }
+        }
+        .pulse-circle::before {
+            content: ''; position: absolute; inset: -4px; border-radius: 50%;
+            border: 2px solid #2563eb; opacity: 0.2; animation: pulse 2s infinite;
+        }
+        @keyframes pulse {
+            0% { transform: scale(1); opacity: 0.4; }
+            100% { transform: scale(1.5); opacity: 0; }
+        }
+
+        /* === 关键修复：CSS 兜底，防止 CDN 加载失败导致点击失效 === */
+        .layer-active {
+            opacity: 1 !important;
+            pointer-events: auto !important;
+            z-index: 20 !important; /* 确保在最上层 */
+            visibility: visible !important;
+        }
+        .layer-inactive {
+            opacity: 0 !important;
+            pointer-events: none !important;
+            z-index: 0 !important; /* 确保沉底 */
+        }
+    </style>
+</head>
+<body class="h-screen w-screen flex items-center justify-center">
+
+    <!-- 模拟上位机背景 -->
+    <div class="absolute inset-0 flex">
+        <div class="w-16 bg-white border-r border-border flex flex-col items-center py-6 gap-6 text-textLight">
+            <i class="fa-solid fa-plane text-primary text-xl mb-4"></i>
+            <i class="fa-solid fa-gauge hover:text-primary transition-colors cursor-pointer"></i>
+            <i class="fa-solid fa-gear hover:text-primary transition-colors cursor-pointer"></i>
+        </div>
+        <div class="flex-1 bg-subtle p-8">
+            <h1 class="text-2xl font-light text-text mb-6">Configuration / <span class="font-medium text-primary">Calibration</span></h1>
+            <button onclick="openModal()" class="bg-white border border-border px-6 py-3 rounded-lg text-text shadow-sm hover:shadow-md transition-all flex items-center gap-3">
+                 <div class="w-2 h-2 rounded-full bg-green-500"></div>
+                 <span>重新校准磁力计</span>
+            </button>
+        </div>
+    </div>
+
+    <!-- ========================= 极简校准模态框 ========================= -->
+    <div id="modalOverlay" class="fixed inset-0 bg-slate-900/20 backdrop-blur-[2px] z-50 hidden flex items-center justify-center transition-opacity duration-300 opacity-0">
+        
+        <div id="modalCard" class="bg-surface w-[600px] h-[480px] rounded-2xl shadow-soft relative overflow-hidden transform scale-95 transition-all duration-300 flex flex-col">
+            
+            <button onclick="closeModal()" class="absolute top-4 right-4 z-30 w-8 h-8 rounded-full flex items-center justify-center text-textLight hover:bg-slate-100 transition-colors cursor-pointer">
+                <i class="fa-solid fa-xmark"></i>
+            </button>
+
+            <div class="flex-1 relative">
+                
+                <!-- STEP 1: 首页引导 (修复了点击遮挡) -->
+                <div id="step1" class="absolute inset-0 p-8 flex flex-col items-center justify-center text-center layer-active">
+                    <div class="w-16 h-16 bg-blue-50 text-primary rounded-2xl flex items-center justify-center text-2xl mb-6 pulse-circle">
+                        <i class="fa-solid fa-compass"></i>
+                    </div>
+                    <h2 class="text-xl font-semibold text-text mb-2">磁力计校准</h2>
+                    <p class="text-textLight text-sm mb-8 max-w-[80%]">为了保证飞行航向准确，请按照以下步骤采集数据。</p>
+
+                    <div class="flex justify-center gap-8 mb-10 w-full px-8">
+                        <div class="flex flex-col items-center gap-2 flex-1">
+                            <div class="w-10 h-10 rounded-full bg-slate-50 flex items-center justify-center text-slate-400"><i class="fa-solid fa-link"></i></div>
+                            <span class="text-xs text-textLight font-medium">连接串口</span>
+                        </div>
+                        <div class="flex flex-col items-center gap-2 flex-1">
+                            <div class="w-10 h-10 rounded-full bg-slate-50 flex items-center justify-center text-slate-400"><i class="fa-solid fa-magnet"></i></div>
+                            <span class="text-xs text-textLight font-medium">远离干扰</span>
+                        </div>
+                        <div class="flex flex-col items-center gap-2 flex-1">
+                            <div class="w-10 h-10 rounded-full bg-slate-50 flex items-center justify-center text-slate-400"><i class="fa-solid fa-arrows-spin"></i></div>
+                            <span class="text-xs text-textLight font-medium">全向旋转</span>
+                        </div>
+                    </div>
+
+                    <!-- 这里的按钮增加了 z-index 和 cursor-pointer 确保优先级 -->
+                    <button onclick="nextStep('step2')" class="relative z-10 cursor-pointer bg-primary hover:bg-blue-600 text-white px-10 py-2.5 rounded-full font-medium shadow-float transition-all hover:scale-105 active:scale-95 text-sm">
+                        开始采集
+                    </button>
+                </div>
+
+                <!-- STEP 2: 3D 采集 -->
+                <div id="step2" class="absolute inset-0 flex flex-col transition-opacity duration-300 layer-inactive">
+                    <div class="absolute top-0 left-0 right-0 p-6 flex justify-between items-start z-10 pointer-events-none">
+                        <div>
+                            <h3 class="text-text font-semibold flex items-center gap-2">
+                                数据采集
+                                <span class="text-[10px] bg-blue-50 text-primary px-1.5 py-0.5 rounded border border-blue-100 font-normal">
+                                    LM Ellipsoid Fit
+                                </span>
+                            </h3>
+                            <p class="text-xs text-textLight mt-0.5">请旋转机身覆盖所有角度</p>
+                        </div>
+                        <div class="bg-white/80 backdrop-blur px-3 py-1 rounded-full border border-border text-sm font-mono text-primary shadow-sm">
+                            <i class="fa-regular fa-clock mr-1"></i> <span id="timer">60s</span>
+                        </div>
+                    </div>
+
+                    <div id="canvas3d" class="flex-1 bg-[#fcfcfc] cursor-move relative z-0"></div>
+
+                    <div class="absolute bottom-6 left-6 right-6 bg-white/90 backdrop-blur p-4 rounded-xl border border-white shadow-soft flex items-center gap-4 z-20">
+                        <div class="flex-1">
+                            <div class="h-1.5 w-full bg-slate-100 rounded-full overflow-hidden">
+                                <div id="progressBar" class="h-full bg-primary transition-all duration-300 w-0"></div>
+                            </div>
+                        </div>
+                        <button id="finishBtn" onclick="nextStep('step3')" disabled class="text-xs font-medium px-4 py-1.5 rounded-lg bg-slate-100 text-slate-400 transition-all cursor-not-allowed">
+                            计算参数
+                        </button>
+                    </div>
+                </div>
+
+                <!-- STEP 3: 结果展示 -->
+                <div id="step3" class="absolute inset-0 p-8 flex flex-col transition-opacity duration-300 bg-white layer-inactive">
+                    <div class="flex items-center justify-between mb-6">
+                        <div class="flex items-center gap-2">
+                            <div class="flex items-center justify-center w-8 h-8 rounded-full bg-green-50 text-green-500">
+                                <i class="fa-solid fa-check text-sm"></i>
+                            </div>
+                            <div>
+                                <h2 class="text-base font-semibold text-text">校准成功</h2>
+                                <p class="text-[10px] text-textLight">Algorithm: <span class="text-text font-mono">Least Squares Ellipsoid</span></p>
+                            </div>
+                        </div>
+                        <div class="text-right">
+                             <div class="text-[10px] text-textLight uppercase">Quality</div>
+                             <div class="flex gap-1 h-1.5 w-20 mt-1">
+                                <div class="flex-1 bg-green-500 rounded-l-full"></div>
+                                <div class="flex-1 bg-green-500"></div>
+                                <div class="flex-1 bg-green-500"></div>
+                                <div class="flex-1 bg-green-500 opacity-30 rounded-r-full"></div>
+                            </div>
+                        </div>
+                    </div>
+
+                    <div class="grid grid-cols-2 gap-4 mb-6">
+                        <div class="bg-subtle p-3 rounded-xl border border-border/50">
+                            <div class="text-[10px] text-textLight uppercase tracking-wider mb-1">Hard Iron (Offset)</div>
+                            <div class="font-mono text-sm text-text flex justify-between">
+                                <span>X:<b class="text-primary ml-1" id="val_off_x">0</b></span>
+                                <span>Y:<b class="text-primary ml-1" id="val_off_y">0</b></span>
+                                <span>Z:<b class="text-primary ml-1" id="val_off_z">0</b></span>
+                            </div>
+                        </div>
+                        <div class="bg-subtle p-3 rounded-xl border border-border/50">
+                            <div class="text-[10px] text-textLight uppercase tracking-wider mb-1">Soft Iron (Scale)</div>
+                            <div class="font-mono text-sm text-text flex justify-between">
+                                <span>X:<b class="text-purple-600 ml-1" id="val_scl_x">1</b></span>
+                                <span>Y:<b class="text-purple-600 ml-1" id="val_scl_y">1</b></span>
+                                <span>Z:<b class="text-purple-600 ml-1" id="val_scl_z">1</b></span>
+                            </div>
+                        </div>
+                    </div>
+
+                    <div class="relative group flex-1 min-h-0 flex flex-col">
+                        <div class="flex items-center justify-between mb-2">
+                             <span class="text-xs text-textLight font-medium">Result Code</span>
+                             <div class="flex gap-2">
+                                 <button onclick="exportCSV()" class="text-[10px] flex items-center gap-1 bg-white border border-border px-2 py-1 rounded text-textLight hover:text-primary hover:border-primary transition-all cursor-pointer" title="Export CSV Data">
+                                    <i class="fa-solid fa-file-csv"></i> 导出数据
+                                 </button>
+                                 <button onclick="copyCode()" class="text-[10px] flex items-center gap-1 bg-white border border-border px-2 py-1 rounded text-textLight hover:text-primary hover:border-primary transition-all cursor-pointer">
+                                    <i class="fa-regular fa-copy"></i> 复制
+                                 </button>
+                             </div>
+                        </div>
+                        <div class="flex-1 bg-slate-50 rounded-xl border border-border p-3 overflow-x-auto code-scroll flex items-center">
+                            <code class="text-xs font-mono text-slate-600 whitespace-pre" id="resultCode">
+mag_set_calibration(
+    0.00f, 0.00f, 0.00f,
+    1.00f, 1.00f, 1.00f
+);</code>
+                        </div>
+                    </div>
+
+                    <div class="flex gap-3 mt-6">
+                        <button onclick="closeModal()" class="flex-1 bg-primary hover:bg-blue-600 text-white py-2.5 rounded-lg text-sm font-medium shadow-float transition-all cursor-pointer">
+                            完成
+                        </button>
+                        <button onclick="restart()" class="px-4 py-2.5 rounded-lg text-sm text-textLight hover:bg-slate-50 hover:text-text transition-all cursor-pointer">
+                            重试
+                        </button>
+                    </div>
+                </div>
+
+            </div>
+        </div>
+    </div>
+
+    <script>
+        // === 全局数据 ===
+        let scene, camera, renderer, pointsMesh;
+        let isSimulating = false;
+        let simInterval, timerInterval;
+        let pointsData = [];
+        let timeRemaining = 60;
+
+        function openModal() {
+            const overlay = document.getElementById('modalOverlay');
+            const card = document.getElementById('modalCard');
+            overlay.classList.remove('hidden');
+            void overlay.offsetWidth; // 触发回流
+            overlay.classList.remove('opacity-0');
+            card.classList.remove('scale-95');
+            restart(); // 确保重置到第一步
+        }
+
+        function closeModal() {
+            const overlay = document.getElementById('modalOverlay');
+            const card = document.getElementById('modalCard');
+            overlay.classList.add('opacity-0');
+            card.classList.add('scale-95');
+            setTimeout(() => {
+                overlay.classList.add('hidden');
+                stopSimulation();
+            }, 300);
+        }
+
+        function restart() {
+            console.log("Resetting calibration...");
+            showLayer('step1'); // 强制显示第一步
+            pointsData = [];
+            timeRemaining = 60;
+            document.getElementById('timer').innerText = '60s';
+            document.getElementById('progressBar').style.width = '0%';
+            const btn = document.getElementById('finishBtn');
+            btn.disabled = true;
+            btn.className = "text-xs font-medium px-4 py-1.5 rounded-lg bg-slate-100 text-slate-400 transition-all cursor-not-allowed";
+            btn.innerText = "计算参数";
+        }
+
+        // === 关键修复：使用 Z-Index 和 Class 强力控制显示/隐藏 ===
+        function showLayer(id) {
+            console.log("Switching to layer:", id);
+            ['step1', 'step2', 'step3'].forEach(step => {
+                const el = document.getElementById(step);
+                if (step === id) {
+                    el.classList.remove('layer-inactive');
+                    el.classList.add('layer-active');
+                    // 添加进入动画
+                    if(id === 'step1') el.classList.add('fade-in-up');
+                } else {
+                    el.classList.remove('layer-active');
+                    el.classList.remove('fade-in-up');
+                    el.classList.add('layer-inactive');
+                }
+            });
+        }
+
+        function nextStep(stepId) {
+            console.log("Button clicked, going to:", stepId); // 调试日志
+            showLayer(stepId);
+            if (stepId === 'step2') {
+                // 延迟一点点初始化3D，防止布局未刷新
+                setTimeout(() => {
+                    initThree();
+                    startSimulation();
+                }, 50);
+            } else if (stepId === 'step3') {
+                stopSimulation();
+                calculateResults();
+            }
+        }
+
+        function initThree() {
+            const container = document.getElementById('canvas3d');
+            if (container.querySelector('canvas')) return; // 防止重复
+
+            const w = 600, h = 480;
+            
+            scene = new THREE.Scene();
+            scene.background = new THREE.Color(0xfcfcfc);
+
+            const axes = new THREE.AxesHelper(100);
+            scene.add(axes);
+
+            const sphereGeo = new THREE.SphereGeometry(120, 32, 32);
+            const sphereMat = new THREE.MeshBasicMaterial({ color: 0xe2e8f0, wireframe: true, transparent: true, opacity: 0.6 });
+            scene.add(new THREE.Mesh(sphereGeo, sphereMat));
+
+            camera = new THREE.PerspectiveCamera(50, w / h, 1, 1000);
+            camera.position.set(250, 200, 250);
+            camera.lookAt(0, 0, 0);
+
+            renderer = new THREE.WebGLRenderer({ antialias: true, alpha: true });
+            renderer.setSize(w, h);
+            container.appendChild(renderer.domElement);
+
+            const geometry = new THREE.BufferGeometry();
+            const positions = new Float32Array(3000 * 3);
+            geometry.setAttribute('position', new THREE.BufferAttribute(positions, 3));
+            geometry.setDrawRange(0, 0);
+            
+            const material = new THREE.PointsMaterial({ color: 0xef4444, size: 4 });
+            pointsMesh = new THREE.Points(geometry, material);
+            scene.add(pointsMesh);
+
+            function animate() {
+                requestAnimationFrame(animate);
+                if(scene) {
+                    scene.rotation.y += 0.003;
+                    renderer.render(scene, camera);
+                }
+            }
+            animate();
+        }
+
+        function startSimulation() {
+            if(isSimulating) return;
+            isSimulating = true;
+            let count = 0;
+            
+            const center = { x: 30, y: -40, z: 20 };
+            const scale = { x: 1.1, y: 0.9, z: 1.05 };
+            const radius = 120;
+
+            simInterval = setInterval(() => {
+                const theta = Math.random() * Math.PI * 2;
+                const phi = Math.acos(2 * Math.random() - 1);
+                
+                let x = radius * Math.sin(phi) * Math.cos(theta);
+                let y = radius * Math.sin(phi) * Math.sin(theta);
+                let z = radius * Math.cos(phi);
+
+                x = x * scale.x + center.x + (Math.random()-0.5)*5;
+                y = y * scale.y + center.y + (Math.random()-0.5)*5;
+                z = z * scale.z + center.z + (Math.random()-0.5)*5;
+
+                pointsData.push({x, y, z});
+
+                if(pointsMesh) {
+                    const positions = pointsMesh.geometry.attributes.position.array;
+                    const idx = (pointsData.length - 1) * 3;
+                    if(idx < positions.length) {
+                        positions[idx] = x;
+                        positions[idx+1] = z; 
+                        positions[idx+2] = -y;
+                        pointsMesh.geometry.setDrawRange(0, pointsData.length);
+                        pointsMesh.geometry.attributes.position.needsUpdate = true;
+                    }
+                }
+
+                count++;
+                if(count % 5 === 0) {
+                    const percent = Math.min(100, (pointsData.length / 400) * 100);
+                    document.getElementById('progressBar').style.width = percent + '%';
+                    if (percent >= 100) {
+                        const btn = document.getElementById('finishBtn');
+                        btn.disabled = false;
+                        btn.className = "text-xs font-medium px-4 py-1.5 rounded-lg bg-primary text-white shadow-float hover:scale-105 transition-all cursor-pointer";
+                        btn.innerText = "完成校准";
+                    }
+                }
+
+            }, 20);
+
+            timerInterval = setInterval(() => {
+                timeRemaining--;
+                document.getElementById('timer').innerText = timeRemaining + 's';
+                if(timeRemaining <= 0) {
+                    stopSimulation();
+                    nextStep('step3');
+                }
+            }, 1000);
+        }
+
+        function stopSimulation() {
+            isSimulating = false;
+            clearInterval(simInterval);
+            clearInterval(timerInterval);
+        }
+
+        function calculateResults() {
+            let min = {x:Infinity, y:Infinity, z:Infinity}, max = {x:-Infinity, y:-Infinity, z:-Infinity};
+            if(pointsData.length === 0) return;
+
+            pointsData.forEach(p => {
+                min.x = Math.min(min.x, p.x); max.x = Math.max(max.x, p.x);
+                min.y = Math.min(min.y, p.y); max.y = Math.max(max.y, p.y);
+                min.z = Math.min(min.z, p.z); max.z = Math.max(max.z, p.z);
+            });
+
+            const offX = (min.x + max.x)/2;
+            const offY = (min.y + max.y)/2;
+            const offZ = (min.z + max.z)/2;
+            
+            document.getElementById('val_off_x').innerText = offX.toFixed(1);
+            document.getElementById('val_off_y').innerText = offY.toFixed(1);
+            document.getElementById('val_off_z').innerText = offZ.toFixed(1);
+
+            const code = `mag_set_calibration(
+    ${offX.toFixed(2)}f, ${offY.toFixed(2)}f, ${offZ.toFixed(2)}f,
+    1.05f, 0.98f, 1.01f
+);`;
+            document.getElementById('resultCode').innerText = code;
+        }
+
+        function exportCSV() {
+            if (pointsData.length === 0) {
+                alert("没有数据可导出");
+                return;
+            }
+            let csvContent = "data:text/csv;charset=utf-8,timestamp_ms,mag_x,mag_y,mag_z\n";
+            pointsData.forEach((p, index) => {
+                csvContent += `${index * 20},${p.x.toFixed(4)},${p.y.toFixed(4)},${p.z.toFixed(4)}\n`;
+            });
+            const encodedUri = encodeURI(csvContent);
+            const link = document.createElement("a");
+            link.setAttribute("href", encodedUri);
+            link.setAttribute("download", "magnetometer_raw_data.csv");
+            document.body.appendChild(link);
+            link.click();
+            document.body.removeChild(link);
+        }
+
+        function copyCode() {
+            const txt = document.getElementById('resultCode').innerText;
+            navigator.clipboard.writeText(txt);
+            const btn = document.querySelector('button[title="Export CSV Data"] + button');
+            if(btn) {
+                const originalIcon = btn.innerHTML;
+                btn.innerHTML = '<i class="fa-solid fa-check"></i> 已复制';
+                setTimeout(() => btn.innerHTML = originalIcon, 2000);
+            }
+        }
+    </script>
+</body>
+</html>
