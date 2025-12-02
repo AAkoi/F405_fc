@@ -1,0 +1,2097 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>MIO SYSTEM: GCS // BLADE PROTOCOL</title>
+
+  <style>
+    /* =========================================
+       0. 基础变量
+       ========================================= */
+    :root {
+      --bg-base: #f4f6f9;
+      --text-primary: #2c3e50;
+      --text-secondary: #7f8c8d;
+      --tech-blue: #2980b9;
+      --sky-blue: #00a8ff;
+      /* 高亮天蓝 */
+      --icon-gray: #95a5a6;
+      /* 常态灰 */
+      --active-gold: #f39c12;
+      --pure-white: #ffffff;
+      --alert-red: #e74c3c;
+      /* 警示红色 */
+    }
+
+    body {
+      margin: 0;
+      padding: 0;
+      background-color: var(--bg-base);
+      height: 100vh;
+      width: 100vw;
+      overflow: hidden;
+      font-family: 'Rajdhani', 'Share Tech Mono', monospace;
+      color: var(--text-primary);
+      display: flex;
+      justify-content: center;
+      align-items: center;
+      perspective: 1200px;
+      user-select: none;
+    }
+
+    @import url('https://fonts.googleapis.com/css2?family=Cinzel:wght@700&family=Rajdhani:wght@500;700&family=Share+Tech+Mono&display=swap');
+    @import url('https://fonts.googleapis.com/css2?family=Noto+Serif+SC:wght@400;700&display=swap');
+
+    /* =========================================
+       1. 场景层级
+       ========================================= */
+    .cockpit-container {
+      width: 100%;
+      height: 100%;
+      position: absolute;
+    }
+
+    .cockpit-layer {
+      position: absolute;
+      top: 0;
+      left: 0;
+      width: 100%;
+      height: 100%;
+      pointer-events: none;
+      display: flex;
+      justify-content: center;
+      align-items: center;
+      transition: transform 0.1s ease-out;
+    }
+
+    #layer-bg {
+      z-index: 0;
+      background: radial-gradient(circle at center, #ffffff 0%, #dfe4ea 100%);
+      transform: scale(1.1);
+    }
+
+    .hex-grid {
+      position: absolute;
+      width: 100%;
+      height: 100%;
+      background-image:
+        linear-gradient(rgba(44, 62, 80, 0.05) 1px, transparent 1px),
+        linear-gradient(90deg, rgba(44, 62, 80, 0.05) 1px, transparent 1px);
+      background-size: 40px 40px;
+      mask-image: radial-gradient(circle, black 50%, transparent 100%);
+    }
+
+    #layer-rings {
+      z-index: 10;
+    }
+
+    #layer-core {
+      z-index: 20;
+      pointer-events: auto;
+    }
+
+    #layer-hud {
+      z-index: 30;
+    }
+
+    /* =========================================
+       2. 核心装置 (强化合体逻辑)
+       ========================================= */
+    /* =========================================
+       1. 调整核心大小 (改小一点)
+       ========================================= */
+    .zero-trigger-zone {
+      /* 之前是 2.5，现在改为 1.6，看起来更舒服 */
+      transform: scale(1.6);
+
+      /* 其他属性保持不变 */
+      width: 320px;
+      height: 320px;
+      display: flex;
+      justify-content: center;
+      align-items: center;
+      cursor: pointer;
+      position: relative;
+    }
+
+    .titan-wrapper {
+      position: relative;
+      width: 120px;
+      height: 120px;
+      /* 初始浮动动画 */
+      animation: hover-mechanical 6s ease-in-out infinite;
+      transition: transform 0.3s;
+    }
+
+    /* 装甲片 (方块) */
+    .armor {
+      position: absolute;
+      width: 38px;
+      height: 38px;
+      background: #ffffff;
+      border: 1px solid #bdc3c7;
+      box-shadow: 6px 6px 15px rgba(0, 0, 0, 0.1), inset 0 0 10px rgba(255, 255, 255, 0.9);
+      z-index: 5;
+      /* 这里的 ease-back-in-out 是为了模拟机械闭合的弹性 */
+      transition: all 0.5s cubic-bezier(0.68, -0.55, 0.265, 1.55);
+    }
+
+    .armor-tl {
+      top: 0;
+      left: 0;
+      border-radius: 4px 0 0 0;
+    }
+
+    .armor-tr {
+      top: 0;
+      right: 0;
+      border-radius: 0 4px 0 0;
+    }
+
+    .armor-bl {
+      bottom: 0;
+      left: 0;
+      border-radius: 0 0 0 4px;
+    }
+
+    .armor-br {
+      bottom: 0;
+      right: 0;
+      border-radius: 0 0 4px 0;
+    }
+
+    /* 待机状态：微微张开 */
+    .zero-trigger-zone:not(:hover) .titan-wrapper:not(.engaged) .armor-tl {
+      transform: translate(-5px, -5px);
+    }
+
+    .zero-trigger-zone:not(:hover) .titan-wrapper:not(.engaged) .armor-tr {
+      transform: translate(5px, -5px);
+    }
+
+    .zero-trigger-zone:not(:hover) .titan-wrapper:not(.engaged) .armor-bl {
+      transform: translate(-5px, 5px);
+    }
+
+    .zero-trigger-zone:not(:hover) .titan-wrapper:not(.engaged) .armor-br {
+      transform: translate(5px, 5px);
+    }
+
+    /* Geass 飞鸟图标 */
+    .geass-sigil {
+      position: absolute;
+      top: 50%;
+      left: 50%;
+      transform: translate(-50%, -50%);
+      width: 60px;
+      height: auto;
+      z-index: 10;
+      fill: var(--icon-gray);
+      transition: all 0.4s;
+      filter: drop-shadow(0 2px 2px rgba(0, 0, 0, 0.1));
+    }
+
+    /* === 【重点】强化模式状态 (Clicked State) === */
+
+    /* 1. 停止悬浮，改为高频微颤 (引擎发动感) */
+    .titan-wrapper.engaged {
+      animation: engine-vibrate 0.2s infinite linear;
+    }
+
+    /* 2. 方块向中心死死咬合 (Lock-in) */
+    /* 移动数值取决于容器大小，120px宽，向中心移动约20px会紧贴图标 */
+    .titan-wrapper.engaged .armor-tl {
+      transform: translate(22px, 22px);
+    }
+
+    .titan-wrapper.engaged .armor-tr {
+      transform: translate(-22px, 22px);
+    }
+
+    .titan-wrapper.engaged .armor-bl {
+      transform: translate(22px, -22px);
+    }
+
+    .titan-wrapper.engaged .armor-br {
+      transform: translate(-22px, -22px);
+    }
+
+    /* 3. 方块材质充能变化 */
+    .titan-wrapper.engaged .armor {
+      background: var(--sky-blue);
+      /* 变蓝 */
+      border-color: #fff;
+      /* 亮白边框 */
+      box-shadow: 0 0 20px var(--sky-blue);
+      /* 蓝色辉光 */
+    }
+
+    /* 4. 图标高亮爆发 */
+    .titan-wrapper.engaged .geass-sigil {
+      fill: #fff;
+      transform: translate(-50%, -50%) scale(1.1);
+      /* 稍微变大 */
+      filter: drop-shadow(0 0 15px var(--sky-blue));
+      /* 强光晕 */
+    }
+
+    /* 冲击波 */
+    .shockwave {
+      position: absolute;
+      top: 50%;
+      left: 50%;
+      width: 100px;
+      height: 100px;
+      border-radius: 50%;
+      border: 2px solid var(--sky-blue);
+      transform: translate(-50%, -50%) scale(0);
+      opacity: 0;
+      pointer-events: none;
+      z-index: 100;
+    }
+
+    .shockwave.active {
+      animation: sonar-ping 0.6s ease-out forwards;
+    }
+
+    /* =========================================
+       3. 战术圆环 (深度重构版)
+       ========================================= */
+    .magic-ring {
+      position: absolute;
+      border-radius: 50%;
+      box-sizing: border-box;
+      transition: all 0.8s cubic-bezier(0.25, 0.46, 0.45, 0.94);
+      /* 顺滑的机械过渡 */
+      pointer-events: none;
+      /* 混合模式让光效更通透 */
+      mix-blend-mode: screen;
+    }
+
+    /* --- 1. 外层：全域扫描环 (The Scanner) ---
+       视觉：极细实线，极淡，作为背景基准
+       动作：极慢速顺时针常转
+    */
+    .ring-outer {
+      width: 600px;
+      height: 600px;
+      /* 待机时较大 */
+      border: 1px solid rgba(149, 165, 166, 0.15);
+      /* 极淡的灰 */
+      border-top: 1px solid rgba(0, 168, 255, 0.3);
+      /* 只有顶部有一点亮色，模拟扫描头 */
+      animation: scan-rotate 60s linear infinite;
+      z-index: 10;
+    }
+
+    /* --- 2. 中层：伺服机械环 (The Servo) ---
+       视觉：非闭合圆弧，类似机械卡扣
+       动作：顿挫式旋转，模拟电机归位
+    */
+    .ring-middle {
+      width: 440px;
+      height: 440px;
+      /* 利用 border-color: transparent 制造缺口 */
+      border: 2px solid rgba(0, 168, 255, 0.5);
+      border-left-color: transparent;
+      border-right-color: transparent;
+
+      /* 机械辉光 */
+      box-shadow: 0 0 10px rgba(0, 168, 255, 0.05);
+      z-index: 11;
+
+      /* 关键：伺服电机动画 (转 -> 停 -> 修正 -> 转) */
+      animation: servo-step 8s cubic-bezier(0.7, 0, 0.3, 1) infinite;
+    }
+
+    /* 中层环上的装饰小方块 (游标) */
+    .ring-middle::before,
+    .ring-middle::after {
+      content: "";
+      position: absolute;
+      width: 6px;
+      height: 6px;
+      background: var(--sky-blue);
+      box-shadow: 0 0 8px var(--sky-blue);
+      left: 50%;
+      transform: translateX(-50%);
+    }
+
+    .ring-middle::before {
+      top: -4px;
+    }
+
+    .ring-middle::after {
+      bottom: -4px;
+    }
+
+    /* --- 3. 内层：姿态仪 (The Gyro) ---
+       视觉：虚线刻度盘
+       动作：由 JS 控制随鼠标倾斜，待机时有微小抖动
+    */
+    .ring-inner {
+      width: 300px;
+      height: 300px;
+      /* 虚线效果 */
+      border: 2px dashed rgba(127, 140, 141, 0.4);
+      z-index: 12;
+      /* 待机时的微小修正抖动 */
+      animation: gyro-jitter 3s ease-in-out infinite;
+    }
+
+    /* =========================================
+       交互状态逻辑：待机 (Standby) vs 解锁 (Armed)
+       ========================================= */
+
+    /* --- 状态 A: 待机 (松散、呼吸) --- */
+    /* 默认 CSS 即为待机状态，无需额外代码 */
+
+
+    /* --- 状态 B: 解锁 (紧缩、高亮、锁定) --- */
+    /* 当 body 加上 mode-armed 类时触发 */
+
+    /* 1. 外层：收缩 + 变亮 */
+    body.mode-armed .ring-outer {
+      width: 520px;
+      height: 520px;
+      /* 缩小半径 */
+      border-color: rgba(0, 168, 255, 0.2);
+      border-top-color: #fff;
+      /* 扫描头变白 */
+      animation-duration: 4s;
+      /* 加速扫描 */
+    }
+
+    /* 2. 中层：死死咬合住核心 */
+    body.mode-armed .ring-middle {
+      width: 340px;
+      height: 340px;
+      /* 紧贴核心 (核心约320px) */
+      border-width: 3px;
+      border-color: var(--sky-blue);
+      border-left-color: transparent;
+      border-right-color: transparent;
+      box-shadow: 0 0 20px rgba(0, 168, 255, 0.3);
+
+      /* 解锁后，停止顿挫，改为平稳的高速旋转 或 锁定不动 */
+      /* 这里我们选择：锁定归零，准备发射 */
+      animation: none;
+      transform: rotate(0deg) !important;
+      /* 强制归零 */
+      transition: transform 0.5s cubic-bezier(0.175, 0.885, 0.32, 1.275);
+      /* 弹性归位 */
+    }
+
+    /* 3. 内层：高频抖动 (引擎预热) */
+    body.mode-armed .ring-inner {
+      width: 280px;
+      height: 280px;
+      border-color: rgba(255, 255, 255, 0.5);
+      border-style: solid;
+      /* 虚线变实线 */
+      border-width: 1px;
+      animation: engine-vibrate 0.1s linear infinite;
+      /* 极高频震动 */
+    }
+
+
+    /* =========================================
+       动画关键帧定义 (Keyframes)
+       ========================================= */
+
+    @keyframes scan-rotate {
+      0% {
+        transform: rotate(0deg);
+      }
+
+      100% {
+        transform: rotate(360deg);
+      }
+    }
+
+    /* 模拟伺服电机的顿挫感：转90度 -> 停顿 -> 再转 */
+    @keyframes servo-step {
+      0% {
+        transform: rotate(0deg);
+      }
+
+      10% {
+        transform: rotate(90deg);
+      }
+
+      /* 快速转动 */
+      12% {
+        transform: rotate(88deg);
+      }
+
+      /* 机械回弹 */
+      14% {
+        transform: rotate(90deg);
+      }
+
+      /* 稳定 */
+      40% {
+        transform: rotate(90deg);
+      }
+
+      /* 停顿长一点 */
+
+      50% {
+        transform: rotate(90deg);
+      }
+
+      60% {
+        transform: rotate(180deg);
+      }
+
+      62% {
+        transform: rotate(178deg);
+      }
+
+      64% {
+        transform: rotate(180deg);
+      }
+
+      90% {
+        transform: rotate(180deg);
+      }
+
+      100% {
+        transform: rotate(360deg);
+      }
+
+      /* 最后归位 */
+    }
+
+    /* 陀螺仪的随机漂移 */
+    @keyframes gyro-jitter {
+      0% {
+        transform: rotate(0deg) scale(1);
+      }
+
+      25% {
+        transform: rotate(2deg) scale(1.01);
+      }
+
+      50% {
+        transform: rotate(-1deg) scale(0.99);
+      }
+
+      75% {
+        transform: rotate(1deg) scale(1);
+      }
+
+      100% {
+        transform: rotate(0deg) scale(1);
+      }
+    }
+
+    /* =========================================
+       4. HUD & UI
+       ========================================= */
+    .hud-frame {
+      position: absolute;
+      width: 92vw;
+      height: 88vh;
+      border: 1px solid rgba(44, 62, 80, 0.1);
+      background: transparent;
+    }
+
+    /* 四角括号 */
+    .bracket {
+      position: absolute;
+      width: 20px;
+      height: 20px;
+      border: 2px solid var(--text-primary);
+      transition: all 0.3s;
+    }
+
+    .bk-tl {
+      top: -1px;
+      left: -1px;
+      border-right: 0;
+      border-bottom: 0;
+    }
+
+    .bk-tr {
+      top: -1px;
+      right: -1px;
+      border-left: 0;
+      border-bottom: 0;
+    }
+
+    .bk-bl {
+      bottom: -1px;
+      left: -1px;
+      border-right: 0;
+      border-top: 0;
+    }
+
+    .bk-br {
+      bottom: -1px;
+      right: -1px;
+      border-left: 0;
+      border-top: 0;
+    }
+
+    .top-bar {
+      position: absolute;
+      top: 0;
+      left: 50%;
+      transform: translateX(-50%);
+      width: 400px;
+      height: 40px;
+      background: #fff;
+      border-bottom: 1px solid rgba(0, 0, 0, 0.08);
+      display: flex;
+      justify-content: center;
+      align-items: center;
+      font-size: 12px;
+      font-weight: 700;
+      letter-spacing: 2px;
+    }
+
+    .status-dot {
+      width: 8px;
+      height: 8px;
+      background: #bdc3c7;
+      border-radius: 50%;
+      margin-right: 10px;
+      transition: 0.3s;
+    }
+
+    .status-dot.active {
+      background: var(--sky-blue);
+      box-shadow: 0 0 8px var(--sky-blue);
+    }
+
+    .panel-side {
+      position: absolute;
+      top: 50%;
+      transform: translateY(-50%);
+      width: 240px;
+      font-family: 'Share Tech Mono', monospace;
+      font-size: 13px;
+      color: var(--text-primary);
+      line-height: 2;
+    }
+
+    .panel-left {
+      left: 4vw;
+      text-align: right;
+      border-right: 1px solid rgba(0, 0, 0, 0.1);
+      padding-right: 20px;
+    }
+
+    .panel-right {
+      right: 4vw;
+      text-align: left;
+      border-left: 1px solid rgba(0, 0, 0, 0.1);
+      padding-left: 20px;
+    }
+
+    .label {
+      color: var(--text-secondary);
+      font-size: 11px;
+    }
+
+    .val {
+      font-weight: bold;
+      color: var(--text-primary);
+    }
+
+    .val-blue {
+      color: var(--tech-blue);
+    }
+
+    .progress-track {
+      width: 100%;
+      height: 3px;
+      background: #e0e0e0;
+      margin: 5px 0 15px 0;
+      position: relative;
+    }
+
+    .progress-bar {
+      position: absolute;
+      top: 0;
+      height: 100%;
+      background: var(--text-primary);
+      width: 60%;
+      transition: width 0.5s;
+    }
+
+    .panel-left .progress-bar {
+      right: 0;
+      background: var(--tech-blue);
+    }
+
+    .log-window {
+      position: absolute;
+      bottom: 40px;
+      left: 4vw;
+      width: 350px;
+      height: 120px;
+      overflow: hidden;
+      font-size: 11px;
+      color: var(--text-secondary);
+      border-left: 2px solid var(--text-primary);
+      padding-left: 15px;
+      background: linear-gradient(90deg, rgba(255, 255, 255, 0.8), transparent);
+    }
+
+    .log-content li {
+      list-style: none;
+      margin-bottom: 2px;
+    }
+
+    /* =========================================
+       2. 恢复"澪"文字特效
+       ========================================= */
+    .bottom-cmd {
+      position: absolute;
+      /* 把它位置往下挪一点，避免撞到放大的核心 */
+      bottom: 12vh;
+      left: 50%;
+      transform: translateX(-50%);
+      text-align: center;
+      transition: all 0.3s;
+      pointer-events: none;
+      /* 防止遮挡鼠标点击背景 */
+    }
+
+    .cmd-title {
+      position: relative;
+      font-size: 3rem;
+      /* 字体稍微大一点 */
+      font-weight: 900;
+      font-family: 'Noto Serif SC', 'SimSun', serif;
+      /* 宋体/衬线体 */
+      letter-spacing: 12px;
+      margin-left: 12px;
+      margin-bottom: 10px;
+      color: #34495e;
+      /* 待机颜色：深灰 */
+      z-index: 10;
+      transition: all 0.5s ease;
+    }
+
+    /* 激活状态 (变蓝 + 发光) */
+    body.mode-armed .cmd-title {
+      color: #00a8ff;
+      text-shadow: 0 0 20px rgba(0, 168, 255, 0.6);
+    }
+
+    /* 激活状态的残影/微颤特效 */
+    .cmd-title::before {
+      content: attr(data-text);
+      position: absolute;
+      top: 0;
+      left: 0;
+      width: 100%;
+      height: 100%;
+      opacity: 0;
+      transition: opacity 0.3s;
+    }
+
+    body.mode-armed .cmd-title::before {
+      opacity: 0.4;
+      color: #00a8ff;
+      transform: translate(-2px, 0);
+      filter: blur(2px);
+      animation: micro-shake 2s infinite linear;
+    }
+
+    /* 副标题样式 */
+    .cmd-sub {
+      font-size: 0.9rem;
+      color: #2980b9;
+      letter-spacing: 4px;
+      font-weight: 600;
+      background: rgba(41, 128, 185, 0.1);
+      padding: 4px 15px;
+      border-radius: 4px;
+      transition: all 0.3s;
+    }
+
+    /* 动画定义 */
+    @keyframes micro-shake {
+      0% {
+        transform: translate(0, 0);
+      }
+
+      2% {
+        transform: translate(-2px, 1px);
+      }
+
+      4% {
+        transform: translate(2px, -1px);
+      }
+
+      6% {
+        transform: translate(0, 0);
+      }
+
+      100% {
+        transform: translate(0, 0);
+      }
+    }
+
+    /* =========================================
+       背景流体波浪 (Subtle Waves)
+       ========================================= */
+    a-waves {
+      /* 定义 CSS 变量，JS 会更新这些值 */
+      --x: 50%;
+      --y: 50%;
+
+      position: absolute;
+      top: 0;
+      left: 0;
+      width: 100%;
+      height: 100%;
+      overflow: hidden;
+      z-index: 1;
+      /* 在网格之上 */
+      opacity: 0.6;
+      /* 整体透明度再降一点 */
+      pointer-events: none;
+      /* 让鼠标穿透，不阻挡点击核心 */
+    }
+
+    a-waves svg {
+      display: block;
+      width: 100%;
+      height: 100%;
+    }
+
+    a-waves svg path {
+      fill: none;
+      /* ★关键：颜色改为极淡的科技蓝，几乎看不见，动起来才有感觉 */
+      stroke: rgba(0, 168, 255, 0.12);
+      stroke-width: 1px;
+      /* 柔和的线条末端 */
+      stroke-linecap: round;
+      stroke-linejoin: round;
+      transition: stroke 0.5s;
+    }
+
+    /* 激活模式下，稍微亮一点点 */
+    body.mode-armed a-waves svg path {
+      stroke: rgba(0, 168, 255, 0.25);
+    }
+
+    /* 悬停效果 (未连接时有效) */
+    .zero-trigger-zone:hover .titan-wrapper:not(.engaged) .geass-sigil {
+      fill: var(--sky-blue);
+      transform: translate(-50%, -50%) scale(1.3) rotate(360deg);
+      filter: drop-shadow(0 0 10px rgba(0, 168, 255, 0.6));
+    }
+
+    .zero-trigger-zone:hover .cmd-sub {
+      background: var(--sky-blue);
+      color: #fff;
+    }
+
+    /* 动画定义 */
+    @keyframes spin {
+      100% {
+        transform: rotate(360deg);
+      }
+    }
+
+    @keyframes spin-rev {
+      100% {
+        transform: rotate(-360deg);
+      }
+    }
+
+    @keyframes hover-mechanical {
+
+      0%,
+      100% {
+        transform: translateY(0);
+      }
+
+      50% {
+        transform: translateY(-5px);
+      }
+    }
+
+    @keyframes sonar-ping {
+      0% {
+        transform: translate(-50%, -50%) scale(0);
+        opacity: 0.8;
+        border-width: 5px;
+      }
+
+      100% {
+        transform: translate(-50%, -50%) scale(8);
+        opacity: 0;
+        border-width: 0px;
+      }
+    }
+
+    @keyframes engine-vibrate {
+      0% {
+        transform: translate(1px, 1px);
+      }
+
+      25% {
+        transform: translate(-1px, -1px);
+      }
+
+      50% {
+        transform: translate(-1px, 1px);
+      }
+
+      75% {
+        transform: translate(1px, -1px);
+      }
+
+      100% {
+        transform: translate(1px, 1px);
+      }
+    }
+
+    /* =========================================
+       新增：合体后的强化特效 (Post-Merge FX)
+       ========================================= */
+
+    /* 1. 全域雷达扫描波 */
+    .radar-sweep {
+      position: absolute;
+      top: 50%;
+      left: 50%;
+      width: 150vmax;
+      height: 150vmax;
+      /* 覆盖全屏 */
+      background: conic-gradient(from 0deg, transparent 0deg, rgba(0, 168, 255, 0.1) 60deg, transparent 65deg);
+      transform: translate(-50%, -50%);
+      border-radius: 50%;
+      opacity: 0;
+      /* 默认隐藏 */
+      pointer-events: none;
+      z-index: 1;
+      transition: opacity 1s;
+    }
+
+    /* 激活状态 */
+    body.mode-armed .radar-sweep {
+      opacity: 1;
+      animation: radar-spin 4s linear infinite;
+    }
+
+    /* 2. 四角战术警示 */
+    .corner-status {
+      position: absolute;
+      padding: 5px 10px;
+      font-size: 10px;
+      font-weight: bold;
+      letter-spacing: 2px;
+      color: var(--sky-blue);
+      border: 1px solid var(--sky-blue);
+      background: rgba(0, 168, 255, 0.05);
+      opacity: 0;
+      transition: all 0.5s;
+    }
+
+    body.mode-armed .corner-status {
+      opacity: 1;
+    }
+
+    .cs-tl {
+      top: 20px;
+      left: 20px;
+      border-top: none;
+      border-left: none;
+    }
+
+    .cs-tr {
+      top: 20px;
+      right: 20px;
+      border-top: none;
+      border-right: none;
+      color: var(--alert-red);
+      border-color: var(--alert-red);
+      background: rgba(231, 76, 60, 0.1);
+    }
+
+    .cs-bl {
+      bottom: 20px;
+      left: 20px;
+      border-bottom: none;
+      border-left: none;
+    }
+
+    .cs-br {
+      bottom: 20px;
+      right: 20px;
+      border-bottom: none;
+      border-right: none;
+    }
+
+    /* 录制红点闪烁 */
+    .rec-dot {
+      display: inline-block;
+      width: 6px;
+      height: 6px;
+      background: var(--alert-red);
+      border-radius: 50%;
+      margin-right: 5px;
+      animation: blink 1s infinite;
+    }
+
+    /* 3. 粒子溢出特效 */
+    .energy-particle-ring {
+      position: absolute;
+      top: 50%;
+      left: 50%;
+      width: 100px;
+      height: 100px;
+      transform: translate(-50%, -50%);
+      pointer-events: none;
+      z-index: 4;
+      /* 在方块下面一点 */
+    }
+
+    .particle {
+      position: absolute;
+      top: 50%;
+      left: 50%;
+      width: 2px;
+      height: 2px;
+      background: var(--sky-blue);
+      border-radius: 50%;
+      opacity: 0;
+    }
+
+    /* 粒子动画：向外飘散 */
+    body.mode-armed .particle {
+      animation: particle-fly 2s infinite ease-out;
+    }
+
+    /* 设置不同粒子的随机位置和延迟 */
+    .p1 {
+      transform: rotate(0deg) translateY(-60px);
+      animation-delay: 0s;
+    }
+
+    .p2 {
+      transform: rotate(72deg) translateY(-60px);
+      animation-delay: 0.4s;
+    }
+
+    .p3 {
+      transform: rotate(144deg) translateY(-60px);
+      animation-delay: 0.8s;
+    }
+
+    .p4 {
+      transform: rotate(216deg) translateY(-60px);
+      animation-delay: 1.2s;
+    }
+
+    .p5 {
+      transform: rotate(288deg) translateY(-60px);
+      animation-delay: 1.6s;
+    }
+
+    @keyframes radar-spin {
+      from {
+        transform: translate(-50%, -50%) rotate(0deg);
+      }
+
+      to {
+        transform: translate(-50%, -50%) rotate(360deg);
+      }
+    }
+
+    @keyframes blink {
+
+      0%,
+      100% {
+        opacity: 1;
+      }
+
+      50% {
+        opacity: 0;
+      }
+    }
+
+    @keyframes particle-fly {
+      0% {
+        opacity: 1;
+        transform: inherit;
+      }
+
+      100% {
+        opacity: 0;
+        transform: inherit scale(5);
+      }
+
+      /* 修正：这里简化动画，实际需要更复杂的位移，但为了简洁，做简单的放大消失 */
+    }
+
+    /* 修正粒子动画：让它们真的飞出去 */
+    body.mode-armed .p1 {
+      animation: p-fly-1 2s infinite;
+    }
+
+    @keyframes p-fly-1 {
+      0% {
+        opacity: 0;
+        transform: translate(-50%, -50%);
+      }
+
+      50% {
+        opacity: 1;
+      }
+
+      100% {
+        opacity: 0;
+        transform: translate(-50%, -100px);
+      }
+    }
+
+    body.mode-armed .p2 {
+      animation: p-fly-2 2s infinite 0.3s;
+    }
+
+    @keyframes p-fly-2 {
+      0% {
+        opacity: 0;
+        transform: translate(-50%, -50%);
+      }
+
+      50% {
+        opacity: 1;
+      }
+
+      100% {
+        opacity: 0;
+        transform: translate(50%, -50px);
+      }
+    }
+
+    body.mode-armed .p3 {
+      animation: p-fly-3 2s infinite 0.6s;
+    }
+
+    @keyframes p-fly-3 {
+      0% {
+        opacity: 0;
+        transform: translate(-50%, -50%);
+      }
+
+      50% {
+        opacity: 1;
+      }
+
+      100% {
+        opacity: 0;
+        transform: translate(50%, 50px);
+      }
+    }
+
+    body.mode-armed .p4 {
+      animation: p-fly-4 2s infinite 0.9s;
+    }
+
+    @keyframes p-fly-4 {
+      0% {
+        opacity: 0;
+        transform: translate(-50%, -50%);
+      }
+
+      50% {
+        opacity: 1;
+      }
+
+      100% {
+        opacity: 0;
+        transform: translate(-50%, 100px);
+      }
+    }
+
+    /* =========================================
+       新增：AI 算法强化与机体护盾 (AI & Reinforcement)
+       ========================================= */
+
+    /* 1. 全息六边形护盾 (强化机体) */
+    .hex-shield {
+      position: absolute;
+      top: 50%;
+      left: 50%;
+      width: 180px;
+      height: 180px;
+      /* 比核心大一圈 */
+      transform: translate(-50%, -50%);
+      pointer-events: none;
+      z-index: 2;
+      /* 在方块下面，背景上面 */
+      opacity: 0;
+      transition: all 0.5s;
+    }
+
+    /* 护盾由两个六边形组成 */
+    .hex-shield::before,
+    .hex-shield::after {
+      content: "";
+      position: absolute;
+      top: 0;
+      left: 0;
+      width: 100%;
+      height: 100%;
+      clip-path: polygon(50% 0%, 100% 25%, 100% 75%, 50% 100%, 0% 75%, 0% 25%);
+      border: 2px solid rgba(0, 168, 255, 0.3);
+      box-shadow: 0 0 15px rgba(0, 168, 255, 0.1);
+    }
+
+    .hex-shield::after {
+      width: 90%;
+      height: 90%;
+      top: 5%;
+      left: 5%;
+      /* 内圈 */
+      border: 1px dashed rgba(0, 168, 255, 0.5);
+    }
+
+    /* 激活态：护盾展开并旋转 */
+    body.mode-armed .hex-shield {
+      opacity: 1;
+      animation: shield-pulse 4s infinite linear;
+    }
+
+    /* 2. AI 神经网络节点 (体现算法) */
+    .ai-synapse {
+      position: absolute;
+      top: 50%;
+      left: 50%;
+      width: 240px;
+      height: 240px;
+      transform: translate(-50%, -50%);
+      pointer-events: none;
+      z-index: 15;
+      /* 浮在核心上方 */
+      opacity: 0;
+    }
+
+    body.mode-armed .ai-synapse {
+      opacity: 1;
+      animation: spin-slow 10s linear infinite;
+    }
+
+    .node-dot {
+      position: absolute;
+      width: 6px;
+      height: 6px;
+      background: #fff;
+      border-radius: 50%;
+      box-shadow: 0 0 8px var(--sky-blue);
+    }
+
+    /* 放置4个节点 */
+    .nd-1 {
+      top: 0;
+      left: 50%;
+      transform: translate(-50%, -50%);
+    }
+
+    .nd-2 {
+      bottom: 0;
+      left: 50%;
+      transform: translate(-50%, 50%);
+    }
+
+    .nd-3 {
+      left: 0;
+      top: 50%;
+      transform: translate(-50%, -50%);
+    }
+
+    .nd-4 {
+      right: 0;
+      top: 50%;
+      transform: translate(50%, -50%);
+    }
+
+    /* 节点连线 */
+    .synapse-line {
+      position: absolute;
+      top: 50%;
+      left: 50%;
+      width: 100%;
+      height: 1px;
+      background: linear-gradient(90deg, transparent, var(--sky-blue), transparent);
+      transform: translate(-50%, -50%);
+    }
+
+    .sl-2 {
+      transform: translate(-50%, -50%) rotate(90deg);
+    }
+
+    /* 3. 算法数据瀑布 (Floating Algo Data) */
+    .algo-stream {
+      position: absolute;
+      top: 50%;
+      left: 50%;
+      transform: translate(-50%, -50%);
+      width: 400px;
+      height: 200px;
+      pointer-events: none;
+      z-index: 12;
+      opacity: 0;
+      font-family: 'Share Tech Mono', monospace;
+      font-size: 10px;
+      color: var(--sky-blue);
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+    }
+
+    body.mode-armed .algo-stream {
+      opacity: 0.6;
+    }
+
+    .stream-col {
+      width: 60px;
+      text-align: center;
+      /* 这是一个简单的字符闪烁动画 */
+      animation: data-flicker 0.1s infinite;
+      text-shadow: 0 0 5px var(--sky-blue);
+    }
+
+    /* 动画定义 */
+    @keyframes shield-pulse {
+      0% {
+        transform: translate(-50%, -50%) scale(1);
+        border-color: rgba(0, 168, 255, 0.3);
+      }
+
+      50% {
+        transform: translate(-50%, -50%) scale(1.05);
+        border-color: rgba(0, 168, 255, 0.8);
+      }
+
+      100% {
+        transform: translate(-50%, -50%) scale(1);
+        border-color: rgba(0, 168, 255, 0.3);
+      }
+    }
+
+    @keyframes spin-slow {
+      100% {
+        transform: translate(-50%, -50%) rotate(360deg);
+      }
+    }
+
+    @keyframes data-flicker {
+      0% {
+        opacity: 0.8;
+      }
+
+      50% {
+        opacity: 1;
+      }
+
+      100% {
+        opacity: 0.8;
+      }
+    }
+
+    /* =========================================
+       SPA 转场逻辑 (UI Expansion)
+       ========================================= */
+
+    /* 1. 上位机容器初始状态：完全透明，不可点击 */
+    #main-dashboard {
+      position: absolute;
+      top: 0;
+      left: 0;
+      width: 100%;
+      height: 100%;
+      z-index: 50;
+      /* 在背景之上，但在 Logo 之下(一开始) */
+      opacity: 0;
+      pointer-events: none;
+      transition: opacity 1s ease 1s;
+      /* 延迟1秒显示，等Logo移过去 */
+      padding: 100px;
+      /* 简单的内边距，避免被左上角Logo挡住 */
+      box-sizing: border-box;
+    }
+
+    /* 2. 定义【Dashboard模式】下的状态 */
+
+    /* A. 背景线条 (a-waves)：淡出 */
+    body.mode-dashboard a-waves {
+      opacity: 0 !important;
+      transition: opacity 1s ease;
+    }
+
+    /* B. 战术圆环：淡出 + 缩小消失 */
+    body.mode-dashboard #layer-rings {
+      opacity: 0;
+      transform: scale(0.8);
+      transition: all 0.8s ease;
+    }
+
+    /* C. 底部文字 (澪)：淡出 + 下沉 */
+    body.mode-dashboard .bottom-cmd {
+      position: absolute !important;
+      left: 68px !important;
+      top: 20px !important;
+      bottom: auto !important;
+      transform: translate(0, 0) !important;
+      opacity: 1 !important;
+      transition: all 1.2s cubic-bezier(0.68, -0.55, 0.265, 1.55);
+    }
+
+    body.mode-dashboard .cmd-title {
+      font-size: 1.2rem !important;
+      letter-spacing: 2px !important;
+      margin: 0 !important;
+      color: #fff !important;
+      text-shadow: none !important;
+    }
+
+    body.mode-dashboard .cmd-sub {
+      display: none !important;
+    }
+
+    /* D. 上位机容器：显示 */
+    body.mode-dashboard #main-dashboard {
+      opacity: 1;
+      pointer-events: auto;
+    }
+
+    /* E. ★★★ 核心 Logo 的位移 (关键) ★★★ */
+    /* 我们要把它从屏幕正中心，移到左上角，并缩小 */
+    /* 注意：这个规则会被下面的"修正补丁"覆盖，但保留作为过渡动画的初始状态 */
+    body.mode-dashboard .zero-trigger-zone {
+      position: absolute !important;
+      left: 32px !important;
+      top: 20px !important;
+      transform: scale(0.2) !important;
+      transition: all 1.2s cubic-bezier(0.68, -0.55, 0.265, 1.55);
+      width: 120px !important;
+      height: 120px !important;
+      pointer-events: auto !important;
+      cursor: pointer;
+    }
+
+    /* =========================================
+       修正补丁：24px 静态图标 (Pixel Perfect)
+       ========================================= */
+
+    /* 1. 修正位移和缩放逻辑 */
+
+
+    /* 2. 强制内部变为静态 (无动画、无发光、紧闭状态) */
+    body.mode-dashboard .titan-wrapper {
+      animation: none !important;
+      /* 停止悬浮 */
+    }
+
+    body.mode-dashboard .titan-wrapper.engaged {
+      animation: none !important;
+      /* 停止震动 */
+    }
+
+    /* 3. 强制方块"咬死"在闭合位置 */
+    /* 必须写死 translate 值，防止它乱动。22px 是闭合时的位移量 */
+    body.mode-dashboard .armor-tl {
+      transform: translate(22px, 22px) !important;
+    }
+
+    body.mode-dashboard .armor-tr {
+      transform: translate(-22px, 22px) !important;
+    }
+
+    body.mode-dashboard .armor-bl {
+      transform: translate(22px, -22px) !important;
+    }
+
+    body.mode-dashboard .armor-br {
+      transform: translate(-22px, -22px) !important;
+    }
+
+    /* 4. 样式扁平化 (去掉 3D 阴影和光效) */
+    body.mode-dashboard .armor {
+      box-shadow: none !important;
+      border: 1px solid rgba(0, 168, 255, 0.5) !important;
+      /* 这里的边框色可以自己定 */
+      background: transparent !important;
+      /* 或者设为某种实色 */
+      transition: none !important;
+    }
+
+    /* 5. 飞鸟图标修正 */
+    body.mode-dashboard .geass-sigil {
+      fill: #00a8ff !important;
+      /* 图标变蓝 (或白色 #fff) */
+      filter: none !important;
+      /* 去掉发光 */
+      transform: translate(-50%, -50%) scale(1.2) !important;
+      /* 稍微放大一点点填充缝隙 */
+    }
+
+    /* 6. 再次确保其他特效彻底隐藏 */
+    body.mode-dashboard .shockwave,
+    body.mode-dashboard .energy-particle-ring,
+    body.mode-dashboard .hex-shield,
+    body.mode-dashboard .ai-synapse,
+    body.mode-dashboard .algo-stream,
+    body.mode-dashboard .radar-sweep {
+      display: none !important;
+      /* 直接 display:none 省性能 */
+    }
+
+    /* =========================================
+       上位机模式：环境净化 (Clean Up)
+       ========================================= */
+
+    /* 1. 隐藏背景网格和波浪 */
+    body.mode-dashboard .hex-grid,
+    body.mode-dashboard #layer-bg {
+      opacity: 0 !important;
+      transition: opacity 0.5s;
+    }
+
+    /* 2. 隐藏 HUD 边框 (那个黑色的边框和四角的括号) */
+    body.mode-dashboard .hud-frame {
+      opacity: 0 !important;
+      pointer-events: none;
+      transition: opacity 0.5s;
+    }
+
+    /* 3. (可选) 如果你想连背景色都改掉，比如改成纯白或纯黑，可以在这里添加：
+       body.mode-dashboard {
+         background-color: #ffffff !important; 
+       }
+    */
+
+    /* =========================================
+       上位机变形补丁：MIO -> TITAN X Morphing
+       ========================================= */
+
+    /* 1. 核心 (Core) 的基础样式 (平时隐藏) */
+    .core {
+      position: absolute;
+      top: 50%;
+      left: 50%;
+      transform: translate(-50%, -50%) rotate(0deg);
+      width: 12px;
+      height: 12px;
+      background: #1a1c23;
+      /* 默认暗色 */
+      border-radius: 2px;
+      z-index: 20;
+      opacity: 0;
+      /* 默认不可见 */
+      transition: all 0.5s ease;
+    }
+
+    /* =========================================
+       进入 Dashboard 模式后的 样式覆盖
+       ========================================= */
+
+    /* A. 隐藏旧的飞鸟 Logo */
+    body.mode-dashboard .geass-sigil {
+      opacity: 0 !important;
+      transform: translate(-50%, -50%) scale(0) !important;
+      transition: all 0.3s;
+    }
+
+    /* B. 显示新的核心 */
+    body.mode-dashboard .core {
+      opacity: 1;
+    }
+
+    /* C. 改造装甲片 (Armor Transformation) */
+    body.mode-dashboard .titan-wrapper .armor {
+      /* 1. 尺寸调整：从原来的 38px 变为 22px */
+      width: 22px !important;
+      height: 22px !important;
+
+      /* 2. 颜色材质：变为钛灰色，去掉原来的发光阴影 */
+      background: #475569 !important;
+      box-shadow: none !important;
+      border: none !important;
+      border-radius: 0 !important;
+      /* 去掉圆角，因为要用 clip-path */
+
+      /* 3. 位置修正：稍微往回缩一点，因为尺寸变小了 */
+      /* 这里的 margin 是为了让它们居中对齐核心 */
+      /* 之前是 absolute 定位，这里保持不变，依靠 transform 归位 */
+    }
+
+    /* D. 应用机械切割形状 (Clip-Path) */
+    /* 左上 */
+    body.mode-dashboard .titan-wrapper .armor-tl {
+      clip-path: polygon(0 0, 100% 0, 100% 70%, 70% 100%, 0 100%);
+      border-top-left-radius: 4px !important;
+      /* 强制归位到紧凑的 X 形状 */
+      top: calc(50% - 24px) !important;
+      left: calc(50% - 24px) !important;
+      transform: translate(0, 0) !important;
+    }
+
+    /* 右上 */
+    body.mode-dashboard .titan-wrapper .armor-tr {
+      clip-path: polygon(0 0, 100% 0, 100% 100%, 30% 100%, 0 70%);
+      border-top-right-radius: 4px !important;
+      top: calc(50% - 24px) !important;
+      right: calc(50% - 24px) !important;
+      transform: translate(0, 0) !important;
+    }
+
+    /* 左下 */
+    body.mode-dashboard .titan-wrapper .armor-bl {
+      clip-path: polygon(0 0, 70% 0, 100% 30%, 100% 100%, 0 100%);
+      border-bottom-left-radius: 4px !important;
+      bottom: calc(50% - 24px) !important;
+      left: calc(50% - 24px) !important;
+      transform: translate(0, 0) !important;
+    }
+
+    /* 右下 */
+    body.mode-dashboard .titan-wrapper .armor-br {
+      clip-path: polygon(30% 0, 100% 0, 100% 100%, 0 100%, 0 30%);
+      border-bottom-right-radius: 4px !important;
+      bottom: calc(50% - 24px) !important;
+      right: calc(50% - 24px) !important;
+      transform: translate(0, 0) !important;
+    }
+
+    /* =========================================
+       上位机模式下的交互特效 (Hover Effects)
+       ========================================= */
+
+    /* 确保 Wrapper 在 Dashboard 模式下大小合适，方便鼠标感应 */
+    body.mode-dashboard .titan-wrapper {
+      width: 60px !important;
+      height: 60px !important;
+      /* 之前为了飞到左上角 scale 变成了 0.4，这里我们稍微改大一点，方便看 */
+      /* 如果觉得左上角图标太小，可以去修改之前 JS/CSS 里的 scale(0.4) 为 scale(0.8) */
+    }
+
+    /* 1. 悬浮时：装甲挤压变色 */
+    body.mode-dashboard .zero-trigger-zone:hover .armor {
+      background: #f1f5f9 !important;
+      /* 变亮白 */
+    }
+
+    body.mode-dashboard .zero-trigger-zone:hover .armor-tl {
+      transform: translate(4px, 4px) !important;
+    }
+
+    body.mode-dashboard .zero-trigger-zone:hover .armor-tr {
+      transform: translate(-4px, 4px) !important;
+    }
+
+    body.mode-dashboard .zero-trigger-zone:hover .armor-bl {
+      transform: translate(4px, -4px) !important;
+    }
+
+    body.mode-dashboard .zero-trigger-zone:hover .armor-br {
+      transform: translate(-4px, -4px) !important;
+    }
+
+    /* 2. 悬浮时：核心激活 (蓝光) */
+    body.mode-dashboard .zero-trigger-zone:hover .core {
+      background: #0ea5e9;
+      box-shadow: 0 0 15px #0ea5e9, 0 0 30px rgba(14, 165, 233, 0.4);
+      transform: translate(-50%, -50%) scale(1.4) rotate(45deg);
+      /* 旋转放大 */
+    }
+  </style>
+</head>
+
+<body>
+
+  <div class="cockpit-container">
+    <div class="cockpit-layer" id="layer-bg" data-depth="0.02">
+      <div class="hex-grid"></div>
+
+      <!-- ★★★ 替换原来的 canvas ★★★ -->
+      <a-waves>
+        <svg class="js-svg"></svg>
+      </a-waves>
+      <!-- ★★★★★★★★★★★★★★★★★★★★★ -->
+
+    </div>
+
+    <!-- 战术圆环层：结构微调 -->
+    <div class="cockpit-layer" id="layer-rings" data-depth="0.08">
+      <!-- 外层：扫描环 (基准) -->
+      <div class="magic-ring ring-outer"></div>
+
+      <!-- 中层：伺服机械环 (带游标装饰) -->
+      <div class="magic-ring ring-middle">
+        <div class="ring-decoration"></div>
+      </div>
+
+      <!-- 内层：姿态仪 (虚线刻度) -->
+      <div class="magic-ring ring-inner"></div>
+    </div>
+
+    <!-- 核心层 -->
+    <div class="cockpit-layer" id="layer-core" data-depth="0.15">
+      <div class="zero-trigger-zone" onclick="toggleConnect()">
+
+        <!-- 1. 新增：全息护盾 (Hex-Shield) -->
+        <div class="hex-shield"></div>
+
+        <!-- 2. 新增：AI 神经网络 (Synapse) -->
+        <div class="ai-synapse">
+          <div class="node-dot nd-1"></div>
+          <div class="node-dot nd-2"></div>
+          <div class="node-dot nd-3"></div>
+          <div class="node-dot nd-4"></div>
+          <div class="synapse-line sl-1"></div>
+          <div class="synapse-line sl-2"></div>
+        </div>
+
+        <!-- 3. 新增：两侧算法数据流 -->
+        <div class="algo-stream">
+          <div class="stream-col" id="algo-left">0110<br>1011<br>AF09</div>
+          <div class="stream-col" id="algo-right">32X<br>NULL<br>PTR</div>
+        </div>
+
+        <!-- 原有的粒子容器 -->
+        <div class="energy-particle-ring">
+          <div class="particle p1"></div>
+          <div class="particle p2"></div>
+          <div class="particle p3"></div>
+          <div class="particle p4"></div>
+        </div>
+
+        <div class="titan-wrapper" id="titan-core">
+          <!-- 原有的飞鸟 SVG -->
+          <svg class="geass-sigil" viewBox="0 0 100 100">
+            <path d="M50 20 Q70 5 90 20 T70 50 Q50 70 30 50 T10 20 Q30 5 50 20 Z" fill="none" />
+            <path
+              d="M50 35 L65 15 L75 25 L60 40 L85 30 L90 40 L60 55 L50 85 L40 55 L10 40 L15 30 L40 40 L25 25 L35 15 Z" />
+          </svg>
+
+          <!-- ★★★ 新增：预埋的 Titan 核心 (平时隐藏) ★★★ -->
+          <div class="core"></div>
+
+          <!-- 原有的四个装甲片 -->
+          <div class="armor armor-tl"></div>
+          <div class="armor armor-tr"></div>
+          <div class="armor armor-bl"></div>
+          <div class="armor armor-br"></div>
+        </div>
+        <div class="shockwave" id="shockwave"></div>
+      </div>
+
+      <!-- ★★★ 在这里把"澪"加回来 ★★★ -->
+      <div class="bottom-cmd">
+        <div class="cmd-title" data-text="澪">澪</div>
+        <div class="cmd-sub" id="status-text">SYSTEM STANDBY</div>
+      </div>
+    </div>
+
+    <!-- HUD 层 -->
+    <div class="cockpit-layer" id="layer-hud" data-depth="0.0">
+      <div class="hud-frame">
+        <div class="bracket bk-tl"></div>
+        <div class="bracket bk-tr"></div>
+        <div class="bracket bk-bl"></div>
+        <div class="bracket bk-br"></div>
+
+        <!-- 保留四角极小的文字（可选，如果不想要也可以删掉） -->
+        <div class="corner-status cs-tl">SYS: ARMED</div>
+        <div class="corner-status cs-tr"><span class="rec-dot"></span>REC</div>
+        <div class="corner-status cs-bl">GPS: 3D FIX</div>
+        <div class="corner-status cs-br">TX: HIGH</div>
+      </div>
+    </div>
+  </div>
+
+  <!-- ★★★ 新增：上位机内容容器 (默认隐藏) ★★★ -->
+  <div id="main-dashboard">
+    <!-- 这里放你原本的上位机 HTML 代码 -->
+    <!-- 举例：一个简单的标题 -->
+    <div class="dash-content">
+      <h1>MIO DASHBOARD // ACCESS GRANTED</h1>
+      <p>Loading modules...</p>
+      <!-- 你的图表、地图、数据都在这里 -->
+    </div>
+  </div>
+
+  <script>
+    // 鼠标交互：视差 + 姿态仪控制
+    document.addEventListener('mousemove', (e) => {
+      // 1. 现有的视差逻辑 (保持不变)
+      const layers = document.querySelectorAll('.cockpit-layer');
+      const cx = window.innerWidth / 2;
+      const cy = window.innerHeight / 2;
+      const x = (e.clientX - cx) / cx;
+      const y = (e.clientY - cy) / cy;
+
+      layers.forEach(layer => {
+        const d = layer.getAttribute('data-depth');
+        let tr = `translate(${x * 20 * d}px, ${y * 15 * d}px)`;
+        if (layer.id === 'layer-bg') tr += ' scale(1.1)';
+        layer.style.transform = tr;
+      });
+
+      // 2. ★★★ 新增：内圈姿态仪跟随逻辑 ★★★
+      // 只有在"非锁定"状态(Standby)下，圆环才跟随鼠标摆动
+      if (!isConnected) {
+        const innerRing = document.querySelector('.ring-inner');
+        if (innerRing) {
+          // 这里的逻辑是：鼠标往左，圆环逆时针微转；鼠标往下，圆环略微压扁模拟俯仰
+          // rotate: 模拟 Roll 轴 (左右倾斜) - 最大 ±15度
+          // scaleY: 模拟 Pitch 轴 (前后俯仰) - 只有微小的透视变化
+          const rot = x * 15;
+          const pitch = 1 - (Math.abs(y) * 0.1);
+
+          // 使用 style.transform 会覆盖掉 keyframes，所以我们只改 transform
+          // 注意：这会暂停 gyro-jitter 动画，符合"手动介入"的逻辑
+          innerRing.style.transform = `rotate(${rot}deg) scale(${pitch})`;
+          innerRing.style.animation = 'none'; // 鼠标接管时，停止随机抖动
+        }
+      } else {
+        // 锁定状态下，恢复 CSS 定义的震动动画，不再跟随鼠标
+        const innerRing = document.querySelector('.ring-inner');
+        if (innerRing) innerRing.style.transform = ''; // 清除内联样式
+        if (innerRing) innerRing.style.animation = ''; // 恢复 CSS 动画
+      }
+    });
+
+    // 状态管理
+    let isConnected = false;
+    const core = document.getElementById('titan-core');
+    const shock = document.getElementById('shockwave');
+    const ringLayer = document.getElementById('layer-rings');
+    const statusText = document.getElementById('status-text');
+
+    // 模拟数据更新（已删除，因为对应的HTML元素已移除）
+    // function updateTelemetry() {
+    //   if(isConnected) {
+    //     // --- 删除或注释以下 5 行，因为对应的 HTML 已经没了 ---
+    //     // document.getElementById('sig-val').innerText = ...
+    //     // document.getElementById('bar-sig').style.width = ...
+    //     // document.getElementById('val-lat').innerText = ...
+    //     // document.getElementById('val-lng').innerText = ...
+    //     // document.getElementById('cpu-val').innerText = ...
+    //   }
+    //   setTimeout(updateTelemetry, 500);
+    // }
+    // updateTelemetry();
+
+    // 日志（已删除，因为log-window已移除）
+    // function addLog(msg) {
+    //   const li = document.createElement('li');
+    //   li.innerText = `[${new Date().toLocaleTimeString('en-GB',{hour12:false})}] ${msg}`;
+    //   logList.appendChild(li);
+    //   if(logList.children.length > 6) logList.removeChild(logList.children[0]);
+    // }
+
+    // 模拟算法数据流
+    let algoInterval;
+    function startAlgoStream() {
+      const chars = "01ABCDEFXYZ";
+      algoInterval = setInterval(() => {
+        const left = document.getElementById('algo-left');
+        const right = document.getElementById('algo-right');
+        // 随机生成 3 行乱码
+        left.innerHTML = Array(3).fill(0).map(() => Array(4).fill(0).map(() => chars[Math.floor(Math.random() * chars.length)]).join('')).join('<br>');
+        right.innerHTML = Array(3).fill(0).map(() => Array(4).fill(0).map(() => chars[Math.floor(Math.random() * chars.length)]).join('')).join('<br>');
+      }, 80); // 80ms 刷新一次，非常快
+    }
+
+    function stopAlgoStream() {
+      clearInterval(algoInterval);
+    }
+
+    // 状态标记，防止重复点击
+    let isTransitioning = false;
+
+    // 点击事件
+    window.toggleConnect = function () {
+      if (isTransitioning) return; // 如果正在转场，忽略点击
+
+      const shock = document.getElementById('shockwave');
+      shock.classList.remove('active');
+      void shock.offsetWidth;
+      shock.classList.add('active');
+
+      if (!isConnected) {
+        // === 阶段 1: 激活 (Lock-in) ===
+        // 这一步播放原本的"变蓝、闭合"动画
+        isConnected = true;
+        document.body.classList.add('mode-armed');
+        core.classList.add('engaged');
+        ringLayer.classList.add('engaged-rings');
+
+        // 文字变化
+        statusText.innerText = "MIO: SYNCHRONIZED";
+        statusText.style.background = "#00a8ff";
+        statusText.style.color = "#fff";
+        statusText.style.boxShadow = "0 0 15px rgba(0, 168, 255, 0.4)";
+
+        // 启动一下数据流装装样子
+        startAlgoStream();
+
+        // === 阶段 2: 延迟转场 (UI Expansion) ===
+        isTransitioning = true; // 锁定状态，不可逆
+
+        setTimeout(() => {
+          // ★ 给 body 加类，触发 CSS 里的位移和淡出动画
+          document.body.classList.add('mode-dashboard');
+
+          // (可选) 停止数据流以节省性能
+          stopAlgoStream();
+
+          // ★★★ 注释掉 SVG 替换逻辑，改用 CSS 变形效果 ★★★
+          // 现在使用 CSS 变形将 Logo 从"澪"变形为 AOI Titan 风格
+          // 如果需要静态 SVG，可以取消下面的注释
+          /*
+          setTimeout(() => {
+            const zone = document.querySelector('.zero-trigger-zone');
+            // 清空原来的复杂的方块结构
+            zone.innerHTML = `
+              <svg width="24" height="24" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg">
+                <path d="M2 2H10V10H2V2Z" fill="#00A8FF"/>
+                <path d="M14 2H22V10H14V2Z" fill="#00A8FF"/>
+                <path d="M2 14H10V22H2V14Z" fill="#00A8FF"/>
+                <path d="M14 14H22V22H14V14Z" fill="#00A8FF"/>
+                <path fill-rule="evenodd" clip-rule="evenodd" d="M12 4L15 9L16 8L12 19L8 8L9 9L12 4Z" fill="white"/>
+              </svg>
+            `;
+            // 强制修正样式，确保它居中或者在你想要的位置
+            zone.style.display = 'block';
+            zone.style.width = '24px';
+            zone.style.height = '24px';
+            zone.style.transform = 'translate(50px, 50px)'; // 定位到左上角
+            
+          }, 1200); // 等飞过去的动画播放完再替换，肉眼看不出来的
+          */
+
+        }, 1500); // 1.5秒后开始移动，留时间给用户看那个帅气的锁定动作
+
+      } else {
+        // 如果你希望这是一个单向过程（进了上位机就不退回登陆页），
+        // 这里的 else 代码其实可以删掉或者留空。
+        // 如果需要退回，逻辑会比较复杂，通常 SPA 是单向进入的。
+        console.log("Already in dashboard mode.");
+      }
+    };
+
+    // ============================================
+    // 1. 简易柏林噪声库 (Perlin Noise Helper)
+    //    用于生成自然的随机波动
+    // ============================================
+    class Noise {
+      constructor(seed) {
+        this.grad3 = [[1, 1, 0], [-1, 1, 0], [1, -1, 0], [-1, -1, 0], [1, 0, 1], [-1, 0, 1], [1, 0, -1], [-1, 0, -1], [0, 1, 1], [0, -1, 1], [0, 1, -1], [0, -1, -1]];
+        this.p = []; this.perm = [];
+        for (let i = 0; i < 256; i++) this.p[i] = Math.floor(seed * 256);
+        for (let i = 0; i < 512; i++) this.perm[i] = this.p[i & 255];
+      }
+      dot(g, x, y) { return g[0] * x + g[1] * y; }
+      mix(a, b, t) { return (1 - t) * a + t * b; }
+      fade(t) { return t * t * t * (t * (t * 6 - 15) + 10); }
+
+      perlin2(x, y) {
+        let X = Math.floor(x), Y = Math.floor(y);
+        x = x - X; y = y - Y;
+        X = X & 255; Y = Y & 255;
+        let n00 = this.dot(this.grad3[this.perm[X + this.perm[Y]] % 12], x, y);
+        let n01 = this.dot(this.grad3[this.perm[X + this.perm[Y + 1]] % 12], x, y - 1);
+        let n10 = this.dot(this.grad3[this.perm[X + 1 + this.perm[Y]] % 12], x - 1, y);
+        let n11 = this.dot(this.grad3[this.perm[X + 1 + this.perm[Y + 1]] % 12], x - 1, y - 1);
+        let u = this.fade(x), v = this.fade(y);
+        return this.mix(this.mix(n00, n10, u), this.mix(n01, n11, u), v);
+      }
+    }
+
+    // ============================================
+    // 2. AWaves 组件逻辑
+    //    实现垂直线条随鼠标波动的效果
+    // ============================================
+    class AWaves extends HTMLElement {
+      connectedCallback() {
+        this.svg = this.querySelector('.js-svg');
+        this.mouse = { x: -10, y: 0, lx: 0, ly: 0, sx: 0, sy: 0, v: 0, vs: 0, a: 0, set: false };
+        this.lines = [];
+        this.paths = [];
+        this.noise = new Noise(Math.random());
+        this.setSize();
+        this.setLines();
+        this.bindEvents();
+        requestAnimationFrame(this.tick.bind(this));
+      }
+
+      bindEvents() {
+        window.addEventListener('resize', this.onResize.bind(this));
+        window.addEventListener('mousemove', this.onMouseMove.bind(this));
+        window.addEventListener('touchmove', this.onTouchMove.bind(this));
+      }
+
+      onResize() {
+        this.setSize();
+        this.setLines();
+      }
+
+      onMouseMove(e) { this.updateMousePosition(e.pageX, e.pageY); }
+      onTouchMove(e) {
+        const touch = e.touches[0];
+        this.updateMousePosition(touch.clientX, touch.clientY);
+      }
+
+      updateMousePosition(x, y) {
+        const { mouse } = this;
+        mouse.x = x - this.bounding.left;
+        mouse.y = y - this.bounding.top + window.scrollY;
+        if (!mouse.set) {
+          mouse.sx = mouse.x; mouse.sy = mouse.y;
+          mouse.lx = mouse.x; mouse.ly = mouse.y;
+          mouse.set = true;
+        }
+      }
+
+      setSize() {
+        this.bounding = this.getBoundingClientRect();
+        this.svg.style.width = `${this.bounding.width}px`;
+        this.svg.style.height = `${this.bounding.height}px`;
+      }
+
+      // ★★★ 修改点 1：增加线条密度 ★★★
+      setLines() {
+        const { width, height } = this.bounding;
+        this.lines = [];
+        this.paths.forEach(p => p.remove());
+        this.paths = [];
+
+        // xGap: 横向间距。之前是60，改为 20，线条数量会增加3倍
+        const xGap = 15;
+        // yGap: 纵向采样点间距。改为 20，让曲线更细腻，不会有棱角
+        const yGap = 15;
+
+        const oWidth = width + 200;
+        const oHeight = height + 30;
+        const totalLines = Math.ceil(oWidth / xGap);
+        const totalPoints = Math.ceil(oHeight / yGap);
+        const xStart = (width - xGap * totalLines) / 2;
+        const yStart = (height - yGap * totalPoints) / 2;
+
+        for (let i = 0; i <= totalLines; i++) {
+          const points = [];
+          for (let j = 0; j <= totalPoints; j++) {
+            points.push({
+              x: xStart + xGap * i,
+              y: yStart + yGap * j,
+              wave: { x: 0, y: 0 },
+              cursor: { x: 0, y: 0, vx: 0, vy: 0 },
+            });
+          }
+          const path = document.createElementNS('http://www.w3.org/2000/svg', 'path');
+          this.svg.appendChild(path);
+          this.paths.push(path);
+          this.lines.push(points);
+        }
+      }
+
+      movePoints(time) {
+        const { lines, mouse, noise } = this;
+        lines.forEach(points => {
+          points.forEach(p => {
+            // ★ 调整：降低波动的幅度 (*8)，让它看起来像平静的水面，而不是狂风巨浪
+            const move = noise.perlin2((p.x + time * 0.0125) * 0.002, (p.y + time * 0.005) * 0.0015) * 12;
+            p.wave.x = Math.cos(move) * 16;
+            p.wave.y = Math.sin(move) * 8;
+
+            const dx = p.x - mouse.sx;
+            const dy = p.y - mouse.sy;
+            const d = Math.hypot(dx, dy);
+            const l = Math.max(175, mouse.vs);
+
+            if (d < l) {
+              const s = 1 - d / l;
+              const f = Math.cos(d * 0.001) * s;
+              p.cursor.vx += Math.cos(mouse.a) * f * l * mouse.vs * 0.00065;
+              p.cursor.vy += Math.sin(mouse.a) * f * l * mouse.vs * 0.00065;
+            }
+
+            p.cursor.vx += (0 - p.cursor.x) * 0.005;
+            p.cursor.vy += (0 - p.cursor.y) * 0.005;
+            p.cursor.vx *= 0.925;
+            p.cursor.vy *= 0.925;
+            p.cursor.x += p.cursor.vx * 2;
+            p.cursor.y += p.cursor.vy * 2;
+            p.cursor.x = Math.min(100, Math.max(-100, p.cursor.x));
+            p.cursor.y = Math.min(100, Math.max(-100, p.cursor.y));
+          });
+        });
+      }
+
+      moved(point, withCursorForce = true) {
+        const coords = {
+          x: point.x + point.wave.x + (withCursorForce ? point.cursor.x : 0),
+          y: point.y + point.wave.y + (withCursorForce ? point.cursor.y : 0),
+        };
+        coords.x = Math.round(coords.x * 10) / 10;
+        coords.y = Math.round(coords.y * 10) / 10;
+        return coords;
+      }
+
+      // ★★★ 修改点 2：使用贝塞尔曲线 (Q) 实现平滑连接 ★★★
+      drawLines() {
+        const { lines, moved, paths } = this;
+        lines.forEach((points, lIndex) => {
+          let p1 = moved(points[0], false);
+          let d = `M ${p1.x} ${p1.y}`;
+
+          points.forEach((p1, pIndex) => {
+            const isLast = pIndex === points.length - 1;
+            p1 = moved(p1, !isLast);
+
+            // 获取下一个点，如果是最后一个点，就重用当前点
+            const p2 = moved(
+              points[pIndex + 1] || points[points.length - 1],
+              !isLast
+            );
+
+            // ★ 核心改动：使用 Q (Quadratic Curve) 二次贝塞尔曲线
+            // p1 是控制点，(p1+p2)/2 是终点
+            // 这样可以画出非常顺滑的丝绸感线条
+            d += `Q ${p1.x} ${p1.y} ${(p1.x + p2.x) / 2} ${(p1.y + p2.y) / 2} `;
+          });
+
+          paths[lIndex].setAttribute('d', d);
+        });
+      }
+
+      tick(time) {
+        const { mouse } = this;
+        mouse.sx += (mouse.x - mouse.sx) * 0.1;
+        mouse.sy += (mouse.y - mouse.sy) * 0.1;
+        const dx = mouse.x - mouse.lx;
+        const dy = mouse.y - mouse.ly;
+        const d = Math.hypot(dx, dy);
+        mouse.v = d;
+        mouse.vs += (d - mouse.vs) * 0.1;
+        mouse.vs = Math.min(100, mouse.vs);
+        mouse.lx = mouse.x; mouse.ly = mouse.y;
+        mouse.a = Math.atan2(dy, dx);
+        this.style.setProperty('--x', `${mouse.sx}px`);
+        this.style.setProperty('--y', `${mouse.sy}px`);
+        this.movePoints(time);
+        this.drawLines();
+        requestAnimationFrame(this.tick.bind(this));
+      }
+    }
+    customElements.define('a-waves', AWaves);
+  </script>
+</body>
+
+</html>
