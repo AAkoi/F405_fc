@@ -23,9 +23,9 @@
     transition: opacity 0.3s;
 }
 
-/* 模态框卡片 - w-[600px] h-[480px] rounded-2xl shadow-soft */
 .calib-card {
-    width: 600px;
+    width: 380px;
+    max-width: 90vw;
     height: 480px;
     background-color: #ffffff;
     border-radius: 16px;
@@ -175,10 +175,10 @@
 .calib-features {
     display: flex;
     justify-content: center;
-    gap: 32px;
+    gap: 12px;
     margin-bottom: 40px;
     width: 100%;
-    padding: 0 32px;
+    padding: 0;
     box-sizing: border-box;
 }
 
@@ -298,6 +298,12 @@
     z-index: 0;
     width: 100%;
     height: 100%;
+}
+
+.calib-3d canvas {
+    width: 100% !important;
+    height: 100% !important;
+    object-fit: contain;
 }
 
 /* 底部面板 - 紧凑悬浮版 */
