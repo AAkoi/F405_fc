@@ -1,6 +1,7 @@
 /**
  * @file    task_acc.c
- * @brief   加速度计数据处理实现（零偏补偿 + 刻度转换）
+ * @brief   加速度计数据处理实现（仅刻度转换，不做零偏补偿）
+ * @note    加速度计保留重力分量，因为重力是姿态解算的必需信号
  */
 
 #include "task_acc.h"
@@ -12,37 +13,8 @@
 static bool accel_processing_ready = false;   // 是否已初始化
 
 // 输出数据（全局变量，供外部访问）
-accel_compensated_t accel_compensated;         // 零偏补偿后的数据（原始值）
+accel_compensated_t accel_compensated;         // 原始数据（不做零偏补偿）
 accel_scaled_t accel_scaled;                   // 刻度转换后的数据（g）
-
-/**
- * @brief 对加速度计原始数据进行零偏补偿
- * @param raw_x 输入/输出：X轴原始数据
- * @param raw_y 输入/输出：Y轴原始数据
- * @param raw_z 输入/输出：Z轴原始数据
- * @note 使用 ICM42688P 的校准偏移量进行补偿
- */
-static void accel_compensate_offset(int16_t *raw_x, int16_t *raw_y, int16_t *raw_z)
-{
-    extern icm42688p_dev_t icm;
-    
-    // 减去零偏（带溢出保护）
-    int32_t x = (int32_t)(*raw_x) - (int32_t)icm.accel_offset[0];
-    int32_t y = (int32_t)(*raw_y) - (int32_t)icm.accel_offset[1];
-    int32_t z = (int32_t)(*raw_z) - (int32_t)icm.accel_offset[2];
-    
-    // 限幅到 int16_t 范围
-    if (x > 32767) x = 32767;
-    if (x < -32768) x = -32768;
-    if (y > 32767) y = 32767;
-    if (y < -32768) y = -32768;
-    if (z > 32767) z = 32767;
-    if (z < -32768) z = -32768;
-    
-    *raw_x = (int16_t)x;
-    *raw_y = (int16_t)y;
-    *raw_z = (int16_t)z;
-}
 
 /**
  * @brief 刻度转换：将补偿后的原始值转换为 g
@@ -82,7 +54,8 @@ void accel_processing_init(void)
 
 /**
  * @brief 处理一个加速度计原始样本
- * @note 处理流程：原始值 → 零偏补偿 → 刻度转换(g)
+ * @note 处理流程：原始值 → 刻度转换(g)
+ *       不做零偏补偿，因为重力是姿态解算的必需信号
  */
 bool accel_process_sample(int16_t raw_x, int16_t raw_y, int16_t raw_z)
 {
@@ -95,15 +68,12 @@ bool accel_process_sample(int16_t raw_x, int16_t raw_y, int16_t raw_z)
         return false;
     }
     
-    // 步骤1：零偏补偿
-    accel_compensate_offset(&raw_x, &raw_y, &raw_z);
-    
-    // 保存补偿后的数据（原始值）
+    // 保存原始数据（不做零偏补偿）
     accel_compensated.x = raw_x;
     accel_compensated.y = raw_y;
     accel_compensated.z = raw_z;
     
-    // 步骤2：刻度转换（原始值 → g）
+    // 刻度转换（原始值 → g）
     accel_scale_to_g(raw_x, raw_y, raw_z,
                     &accel_scaled.g_x,
                     &accel_scaled.g_y,
