@@ -70,21 +70,22 @@ function startRedirectSequence() {
 
   if (transitionVeil) {
     transitionVeil.classList.add('active');
+    if (veilStatusTimer) clearTimeout(veilStatusTimer);
     if (veilStatus) {
-      veilStatus.textContent = '航迹编排中...';
+      veilStatus.textContent = '光阈开启...';
     }
     veilStatusTimer = setTimeout(() => {
       transitionVeil.classList.add('ready');
       if (veilStatus) {
-        veilStatus.textContent = '即将进入 INDEX';
+        veilStatus.textContent = '';
       }
-    }, 650);
+    }, 500);
   }
 
   redirectTimer = setTimeout(() => {
     if (transitionVeil) transitionVeil.classList.add('depart');
     window.location.href = 'index.html';
-  }, 1800);
+  }, 1500);
 }
 
 function toggleConnect() {
@@ -253,7 +254,7 @@ if (triggerZone) {
         lines.forEach(points => {
           points.forEach(p => {
             // ★ 调整：降低波动的幅度 (*8)，让它看起来像平静的水面，而不是狂风巨浪
-            const move = noise.perlin2((p.x + time * 0.0125) * 0.002, (p.y + time * 0.005) * 0.0015) * 12;
+            const move = noise.perlin2((p.x + time * 0.0125) * 0.002, (p.y + time * 0.005) * 0.0015) * 15;
             p.wave.x = Math.cos(move) * 16;
             p.wave.y = Math.sin(move) * 8;
 

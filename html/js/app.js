@@ -44,6 +44,7 @@ class DroneVisualizerApp {
             this.onDataUpdate(data);
         };
         this.serialManager.onLine = (line) => this.appendConsoleLine(line, 'log-rx');
+        this.serialManager.onDisconnect = () => this.handleSerialDisconnect('Serial port disconnected.');
 
         // 绑定按钮事件
         this.bindEvents();
@@ -159,6 +160,25 @@ class DroneVisualizerApp {
         this.appendConsoleLine('Serial port opened.', 'log-sys');
     } catch (e) {
         console.error('串口连接失败:', e);
+        const connectBtn = document.getElementById('connectBtn');
+        if (connectBtn) {
+            connectBtn.innerHTML = '<i data-lucide="link"></i><span>连接串口</span>';
+            connectBtn.classList.remove('connected', 'connecting');
+            connectBtn.classList.add('disconnected');
+            connectBtn.onmouseenter = null;
+            connectBtn.onmouseleave = null;
+            if (typeof lucide !== 'undefined') {
+                lucide.createIcons();
+            }
+        }
+        const recordBtn = document.getElementById('recordBtn');
+        if (recordBtn) {
+            recordBtn.style.display = 'none';
+            recordBtn.innerHTML = '<i data-lucide="circle-dot"></i> 开始录制';
+        }
+        this.uiManager.setConnectionStatus(false);
+        this.serialManager.port = null;
+
         const msg = e?.message === 'No port selected by the user.' ? '未选择串口，连接已取消' : (e?.message || '串口连接失败');
         if (this.uiManager.alerts) {
             this.uiManager.alerts.toast({ type: 'error', title: 'Serial Error', message: msg });
@@ -175,25 +195,7 @@ class DroneVisualizerApp {
     } catch (e) {
         console.warn('串口断开时异常', e);
     }
-    this.uiManager.setConnectionStatus(false);
-    const connectBtn = document.getElementById('connectBtn');
-    if (connectBtn) {
-        connectBtn.innerHTML = '<i data-lucide="link"></i><span>连接串口</span>';
-        connectBtn.classList.remove('connected', 'connecting');
-        connectBtn.classList.add('disconnected');
-        connectBtn.onmouseenter = null;
-        connectBtn.onmouseleave = null;
-        // Re-initialize icons
-        if (typeof lucide !== 'undefined') {
-            lucide.createIcons();
-        }
-    }
-    const recordBtn = document.getElementById('recordBtn');
-    if (recordBtn) {
-        recordBtn.style.display = 'none';
-        recordBtn.innerHTML = '<i data-lucide="circle-dot"></i> 开始录制';
-    }
-    this.appendConsoleLine('Serial port closed.', 'log-sys');
+    this.handleSerialDisconnect('Serial port closed.');
 }
 
 startMockSerialMode() {
@@ -240,6 +242,30 @@ stopMockSerialMode() {
     }
 
     this.appendConsoleLine('[MOCK] 模拟串口已停止', 'log-sys');
+}
+
+handleSerialDisconnect(message = 'Serial port disconnected.') {
+    this.uiManager.setConnectionStatus(false);
+
+    const connectBtn = document.getElementById('connectBtn');
+    if (connectBtn) {
+        connectBtn.innerHTML = '<i data-lucide="link"></i><span>连接串口</span>';
+        connectBtn.classList.remove('connected', 'connecting');
+        connectBtn.classList.add('disconnected');
+        connectBtn.onmouseenter = null;
+        connectBtn.onmouseleave = null;
+        if (typeof lucide !== 'undefined') {
+            lucide.createIcons();
+        }
+    }
+
+    const recordBtn = document.getElementById('recordBtn');
+    if (recordBtn) {
+        recordBtn.style.display = 'none';
+        recordBtn.innerHTML = '<i data-lucide="circle-dot"></i> 开始录制';
+    }
+
+    this.appendConsoleLine(message, 'log-sys');
 }
 
 toggleRecording() {

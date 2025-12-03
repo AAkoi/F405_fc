@@ -24,12 +24,12 @@
 }
 
 .calib-card {
-    width: 380px;
-    max-width: 90vw;
+    width: 720px;
+    max-width: 92vw;
     height: 480px;
     background-color: #ffffff;
-    border-radius: 16px;
-    box-shadow: 0 10px 40px -10px rgba(0, 0, 0, 0.08);
+    border-radius: 12px;
+    box-shadow: 0 20px 25px -5px rgba(0,0,0,0.1), 0 10px 10px -5px rgba(0,0,0,0.06);
     position: relative;
     overflow: hidden;
     display: flex;

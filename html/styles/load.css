@@ -695,27 +695,32 @@
     @keyframes spin-slow { 100% { transform: translate(-50%, -50%) rotate(360deg); } }
     @keyframes data-flicker { 0% { opacity: 0.8; } 50% { opacity: 1; } 100% { opacity: 0.8; } }
 
-    /* 过渡幕布：柔和跳转 */
+    /* 过渡幕布：中心开窗 */
     .transition-veil {
       position: fixed;
       inset: 0;
       z-index: 200;
       pointer-events: none;
-      background: radial-gradient(circle at 50% 50%, rgba(0, 168, 255, 0.1), rgba(10, 18, 30, 0.8));
-      mix-blend-mode: screen;
       opacity: 0;
-      transform: scale(1.02);
-      transition: opacity 0.6s ease, transform 0.9s ease;
+      transition: opacity 0.35s ease;
       overflow: hidden;
-      backdrop-filter: blur(2px);
+    }
+    .transition-veil .veil-hole {
+      position: absolute;
+      top: 50%; left: 50%;
+      width: 0;
+      height: 0;
+      transform: translate(-50%, -50%);
+      border-radius: 50%;
+      box-shadow: 0 0 0 200vmax rgba(5, 10, 18, 0.92);
+      transition: width 0.9s ease, height 0.9s ease;
     }
     .transition-veil .veil-noise {
       position: absolute;
-      inset: -20%;
-      background: conic-gradient(from 0deg, rgba(0, 168, 255, 0.18), transparent 40%);
-      filter: blur(50px);
-      opacity: 0.4;
-      animation: veil-noise 4s ease-in-out infinite;
+      inset: -10%;
+      background: radial-gradient(circle at 50% 50%, rgba(0, 168, 255, 0.08), transparent 55%);
+      opacity: 0.35;
+      animation: veil-noise 5s ease-in-out infinite;
     }
     .transition-veil .veil-text {
       position: absolute;
@@ -735,32 +740,27 @@
       display: block;
       margin-top: 8px;
       font-size: 16px;
-      text-shadow: 0 0 18px rgba(0, 168, 255, 0.5);
+      text-shadow: 0 0 12px rgba(0, 168, 255, 0.4);
       animation: veil-text-glow 2s ease-in-out infinite;
     }
-    .transition-veil.active {
-      opacity: 1;
-      transform: scale(1);
+    .transition-veil.active { opacity: 1; }
+    .transition-veil.ready .veil-hole {
+      width: 140vmax;
+      height: 140vmax;
     }
-    .transition-veil.ready {
-      background: radial-gradient(circle at 50% 50%, rgba(0, 168, 255, 0.2), rgba(10, 18, 30, 0.9));
-    }
-    .transition-veil.depart {
-      opacity: 0;
-      transition-duration: 0.45s;
-    }
+    .transition-veil.depart { opacity: 0; transition-duration: 0.25s; }
     body.redirecting .cockpit-container {
-      filter: blur(2px) saturate(0.85);
+      filter: saturate(0.9);
       transition: filter 0.6s ease;
     }
 
     @keyframes veil-noise {
-      0% { transform: translate(-8%, -6%) rotate(0deg); opacity: 0.25; }
-      50% { transform: translate(6%, 4%) rotate(180deg); opacity: 0.35; }
-      100% { transform: translate(-8%, -6%) rotate(360deg); opacity: 0.25; }
+      0% { transform: translate(-8%, -6%) scale(1); opacity: 0.2; }
+      50% { transform: translate(6%, 4%) scale(1.05); opacity: 0.35; }
+      100% { transform: translate(-8%, -6%) scale(1); opacity: 0.2; }
     }
     @keyframes veil-text-glow {
       0% { opacity: 0.7; text-shadow: 0 0 8px rgba(0, 168, 255, 0.3); }
-      50% { opacity: 1; text-shadow: 0 0 18px rgba(0, 168, 255, 0.6); }
+      50% { opacity: 1; text-shadow: 0 0 16px rgba(0, 168, 255, 0.6); }
       100% { opacity: 0.7; text-shadow: 0 0 8px rgba(0, 168, 255, 0.3); }
     }

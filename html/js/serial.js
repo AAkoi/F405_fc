@@ -4,6 +4,8 @@ class SerialManager {
         this.port = null;
         this.reader = null;
         this.mockInterval = null;
+        this.onDisconnect = null;
+        this._closing = false;
         this.sensorData = {
             acc: {x: 0, y: 0, z: 0},
             gyr: {x: 0, y: 0, z: 0},
@@ -25,30 +27,63 @@ class SerialManager {
         };
         this.onDataUpdate = null;
         this.onLine = null; // 原始文本行回调（用于控制台输出）
+
+        if (navigator.serial) {
+            navigator.serial.addEventListener('disconnect', () => {
+                this.handleUnexpectedDisconnect();
+            });
+        }
     }
 
     async connect() {
         if (!navigator.serial) {
             throw new Error("Browser not supported (Use Chrome/Edge)");
         }
-        
+        // 若已有端口残留，先断开避免 Already open 异常
+        if (this.port) {
+            await this.disconnect();
+        }
+
         this.port = await navigator.serial.requestPort();
-        await this.port.open({ baudRate: CONFIG.serial.baudRate });
+        try {
+            await this.port.open({ baudRate: CONFIG.serial.baudRate });
+        } catch (err) {
+            // 端口被占用/已打开时，清理后抛出
+            this.port = null;
+            throw err;
+        }
         return true;
     }
 
     async startReading() {
+        if (!this.port || this.reader) return;
+
+        const activePort = this.port;
         const decoder = new TextDecoderStream();
-        this.port.readable.pipeTo(decoder.writable);
+        const sourceClosed = this.port.readable.pipeTo(decoder.writable).catch(() => {});
         this.reader = decoder.readable.getReader();
-        
         let buffer = "";
-        while (true) {
-            const { value, done } = await this.reader.read();
-            if (done) break;
-            if (value) {
-                buffer += value;
-                buffer = this.processBuffer(buffer);
+
+        try {
+            while (true) {
+                const { value, done } = await this.reader.read();
+                if (done) break;
+                if (value) {
+                    buffer += value;
+                    buffer = this.processBuffer(buffer);
+                }
+            }
+        } catch (err) {
+            if (this.onLine) {
+                this.onLine(`[ERR] Serial read error: ${err?.message || err}`);
+            }
+        } finally {
+            this.reader = null;
+            await sourceClosed.catch(() => {});
+            // 仅在当前端口仍为这次读取的端口且不是主动关闭时，才触发断开回调
+            if (!this._closing && this.port === activePort) {
+                this.port = null;
+                if (this.onDisconnect) this.onDisconnect();
             }
         }
     }
@@ -273,15 +308,24 @@ class SerialManager {
     }
 
     async disconnect() {
+        this._closing = true;
         this.stopMockMode();
         if (this.reader) {
-            await this.reader.cancel();
+            try { await this.reader.cancel(); } catch (e) { /* ignore */ }
         }
         if (this.port) {
             try { await this.port.close(); } catch (e) { /* ignore close errors */ }
         }
         this.reader = null;
         this.port = null;
+        this._closing = false;
+    }
+
+    handleUnexpectedDisconnect() {
+        this.stopMockMode();
+        this.reader = null;
+        this.port = null;
+        if (this.onDisconnect) this.onDisconnect();
     }
 
     async write(data) {
