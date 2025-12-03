@@ -15,8 +15,10 @@
 /* ============================================================================
  * 全局变量
  * ============================================================================ */
-
 hmc5883l_dev_t hmc_dev;
+#ifdef USE_HMC5883L_INT
+volatile uint8_t hmc5883l_data_ready_flag = 0;
+#endif
 
 /* ============================================================================
  * I2C 通信函数（适配 BSP）
@@ -227,6 +229,13 @@ bool hmc5883l_run_self_test(void)
  */
 bool hmc5883l_is_data_ready(void)
 {
+#ifdef USE_HMC5883L_INT
+    if (hmc5883l_data_ready_flag) {
+        hmc5883l_data_ready_flag = 0; // consume flag set by EXTI
+        return true;
+    }
+    return false;
+#else
     return hmc5883l_data_ready(&hmc_dev);
+#endif
 }
-

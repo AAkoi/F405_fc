@@ -29,6 +29,16 @@ void MX_GPIO_Init(void)
   HAL_NVIC_SetPriority(ICM42688P_INT_EXTI_IRQn, 1, 0);
   HAL_NVIC_EnableIRQ(ICM42688P_INT_EXTI_IRQn);
 
+  /* 配置 HMC5883L DRDY 中断引脚 PC4 */
+  GPIO_InitStruct.Pin = HMC5883l_INT_PIN;
+  GPIO_InitStruct.Mode = GPIO_MODE_IT_RISING; // DRDY 为高电平有效
+  GPIO_InitStruct.Pull = GPIO_NOPULL;
+  GPIO_InitStruct.Speed = GPIO_SPEED_FREQ_HIGH;
+  HAL_GPIO_Init(HMC5883l_INT_GPIO_PORT, &GPIO_InitStruct);
+
+  HAL_NVIC_SetPriority(EXTI4_IRQn, 2, 0);
+  HAL_NVIC_EnableIRQ(EXTI4_IRQn);
+
   /* 配置 ICM42688P CS 引脚 PC2 为推挽输出，默认拉高不选中 */
   GPIO_InitStruct.Pin = ICM42688P_CS_PIN;
   GPIO_InitStruct.Mode = GPIO_MODE_OUTPUT_PP;
@@ -46,4 +56,12 @@ void MX_GPIO_Init(void)
 void EXTI3_IRQHandler(void)
 {
   HAL_GPIO_EXTI_IRQHandler(ICM42688P_INT_PIN);
+}
+
+/**
+ * @brief EXTI4 中断服务函数（PC4: HMC5883L DRDY）
+ */
+void EXTI4_IRQHandler(void)
+{
+  HAL_GPIO_EXTI_IRQHandler(HMC5883l_INT_PIN);
 }

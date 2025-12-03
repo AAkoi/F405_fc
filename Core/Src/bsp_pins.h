@@ -52,8 +52,8 @@
 #define HMC5883l_IIC3_SDA_GPIO_PORT      GPIOC
 #define HMC5883l_IIC3_SDA                GPIO_PIN_9 //PC9
 // 中断引脚 (INT1)
-#define HMC5883l_INT_GPIO_PORT         GPIOB
-#define HMC5883l_INT_PIN               GPIO_PIN_2
+#define HMC5883l_INT_GPIO_PORT         GPIOC
+#define HMC5883l_INT_PIN               GPIO_PIN_4
 
 //定时器
 #define timer_port                        GPIOC
@@ -117,8 +117,6 @@
 #define ICM42688P_CS_LOW()              GPIO_PIN_SET_LOW(ICM42688P_CS_GPIO_PORT, ICM42688P_CS_PIN)
 #define ICM42688P_CS_HIGH()             GPIO_PIN_SET_HIGH(ICM42688P_CS_GPIO_PORT, ICM42688P_CS_PIN)
 
-// 中断引脚读取
-#define ICM42688P_INT_READ()            GPIO_PIN_READ(ICM42688P_INT_GPIO_PORT, ICM42688P_INT_PIN)
 
 /* ============================================================================
  * 其他外设引脚定义（可在此扩展）

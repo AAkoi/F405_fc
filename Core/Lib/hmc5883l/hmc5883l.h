@@ -9,6 +9,10 @@
 
 #ifndef HMC5883L_H
 #define HMC5883L_H
+#define USE_HMC5883L_INT
+#ifndef USE_HMC5883L_INT
+#define USE_HMC5883L_INT 1
+#endif
 
 #include <stdint.h>
 #include <stdbool.h>
@@ -84,6 +88,10 @@ bool hmc5883l_run_self_test(void);
  * @return true=数据就绪, false=数据未就绪
  */
 bool hmc5883l_is_data_ready(void);
+
+#ifdef USE_HMC5883L_INT
+extern volatile uint8_t hmc5883l_data_ready_flag;
+#endif
 
 #ifdef __cplusplus
 }

@@ -2,15 +2,30 @@
 #include "icm42688p_lib.h"
 #include "bsp_pins.h"
 #include "attitude.h"
+#include "hmc5883l.h"
 #include <stdlib.h>
 #include <limits.h>
 
+#define USE_DMA
 extern SPI_HandleTypeDef hspi1;
 icm42688p_dev_t icm;
 
 // Data ready flag (set in EXTI, cleared in update)
 volatile uint8_t icm42688p_data_ready = 0;
 volatile uint8_t spi1_dma_flag = 0;
+
+// Wait for INT pin to signal data ready; timeout in milliseconds
+static bool icm42688p_wait_data_ready(uint32_t timeout_ms)
+{
+    uint32_t start = HAL_GetTick();
+    while (icm42688p_data_ready == 0) {
+        if ((HAL_GetTick() - start) >= timeout_ms) {
+            return false; // no interrupt within timeout
+        }
+    }
+    icm42688p_data_ready = 0; // consume flag
+    return true;
+}
 
 // Low-level SPI helpers
 void icm_spi_write_reg(uint8_t reg, uint8_t value)
@@ -52,7 +67,34 @@ void icm_spi_read_burst(uint8_t reg, uint8_t *buffer, uint16_t len)
 {
     reg |= 0x80;  // read command
 
+#ifdef USE_DMA
+    // 地址仍用短暂轮询发送，数据段走 DMA，减少 SPI 轮询占用
+    ICM42688P_CS_LOW();
+    HAL_SPI_Transmit(&hspi1, &reg, 1, 100);
+
+    spi1_dma_flag = 0;
+    if (HAL_SPI_Receive_DMA(&hspi1, buffer, len) != HAL_OK) {
+        ICM42688P_CS_HIGH();
+    }
+
+    uint32_t start = HAL_GetTick();
+    const uint32_t timeout_ms = 5; // 足够覆盖一次 14 字节读取
+    while (!spi1_dma_flag) {
+        if ((HAL_GetTick() - start) >= timeout_ms) {
+            HAL_SPI_DMAStop(&hspi1);
+            ICM42688P_CS_HIGH();
+        }
+    }
+    spi1_dma_flag = 0;
+
+    ICM42688P_CS_HIGH();
+#endif
+
+#ifdef USE_DMA
+    return; // DMA 成功，直接返回
+#else
     // 使用稳定的轮询模式（不用DMA）
+#endif
     ICM42688P_CS_LOW();
 
     // 发送寄存器地址并接收数据
@@ -170,6 +212,11 @@ bool icm42688p_get_all_data(int16_t *gyro_x, int16_t *gyro_y, int16_t *gyro_z,
     icm42688p_accel_data_t ad;
     icm42688p_temp_data_t  td;
 
+    // Use INT data-ready flag to avoid盲读；若超时则返回false
+    if (!icm42688p_wait_data_ready(5)) {
+        return false;
+    }
+
     if (!icm42688p_read_all(&icm, &gd, &ad, &td)) {
         return false;
     }
@@ -190,6 +237,11 @@ void HAL_GPIO_EXTI_Callback(uint16_t GPIO_Pin)
     if (GPIO_Pin == ICM42688P_INT_PIN) {
         icm42688p_data_ready = 1;
     }
+#ifdef USE_HMC5883L_INT
+    else if (GPIO_Pin == HMC5883l_INT_PIN) {
+        hmc5883l_data_ready_flag = 1;
+    }
+#endif
 }
 
 // Update using data-ready flag
