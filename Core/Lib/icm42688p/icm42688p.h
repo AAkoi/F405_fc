@@ -45,6 +45,11 @@ bool icm42688p_dataPreprocess(int16_t *gyro_x, int16_t *gyro_y, int16_t *gyro_z,
                       float *accel_x_norm,float *accel_y_norm,float *accel_z_norm,
                       float *temp_celsius);
 
+// DMA 状态查询
+bool icm42688p_dma_active(void);
+uint32_t icm42688p_dma_period_cycles(void);
+uint32_t icm42688p_dma_hold_target(void);
+
 // 数据就绪标志位（外部可访问，中断中设置）
 extern volatile uint8_t icm42688p_data_ready;
 extern volatile uint8_t spi1_dma_flag;

@@ -24,6 +24,31 @@ extern hmc5883l_dev_t hmc_dev;
 // 磁力计融合开关：如果磁力计未校准，建议设为false避免yaw漂移
 #define USE_MAG_FUSION  true  // true=使用磁力计融合, false=仅IMU
 
+static void report_dma_mode_once(void)
+{
+    static bool reported = false;
+    if (reported) {
+        return;
+    }
+
+    if (!icm42688p_dma_active()) {
+        printf("[att_full] ICM42688P 使用轮询模式（未启用或已回退）\r\n");
+        reported = true;
+        return;
+    }
+
+    const uint32_t period_cycles = icm42688p_dma_period_cycles();
+    if (period_cycles == 0) {
+        return; // 仍在 exit_counter/等待首帧
+    }
+
+    const float period_us = (float)period_cycles * 1000000.0f / (float)SystemCoreClock;
+    printf("[att_full] ICM42688P DMA 激活：hold=%lu，DRDY 周期≈%.2fus\r\n",
+           (unsigned long)icm42688p_dma_hold_target(),
+           period_us);
+    reported = true;
+}
+
 /**
  * @brief 从传感器数据初始化姿态
  * @param use_mag 是否使用磁力计初始化yaw角
@@ -218,10 +243,14 @@ void test_attitude_full_run(void)
         int16_t mx_raw = 0, my_raw = 0, mz_raw = 0;
         float temp_c;
 
+        report_dma_mode_once();
+
         // ---- 读取IMU原始数据 ----
         if (!icm42688p_get_all_data(&gx_raw, &gy_raw, &gz_raw, 
                                     &ax_raw, &ay_raw, &az_raw, &temp_c)) {
-            HAL_Delay(100);
+            if (!icm42688p_dma_active()) {
+                HAL_Delay(1); // 轮询模式放慢节奏，避免空转
+            }
             continue;
         }
 
@@ -330,7 +359,13 @@ void test_attitude_full_run(void)
             last_perf = now;
             float last_us = diag->cycles * cycles_to_us;
             float max_us  = diag->cycles_max * cycles_to_us;
-            printf("[perf] dt=%.3fs spin=%.1fdps acc=%d mag_used=%d strength_ok=%d |B|=%.3fG cycles=%lu(max %lu) => %.2fus/%.2fus\r\n",
+            const bool dma_on = icm42688p_dma_active();
+            float drdy_us = 0.0f;
+            if (dma_on && icm42688p_dma_period_cycles() > 0) {
+                drdy_us = (float)icm42688p_dma_period_cycles() * 1000000.0f / (float)SystemCoreClock;
+            }
+
+            printf("[perf] dt=%.3fs spin=%.1fdps acc=%d mag_used=%d strength_ok=%d |B|=%.3fG cycles=%lu(max %lu) => %.2fus/%.2fus dma=%s",
                    diag->dt,
                    diag->spin_rate_dps,
                    diag->acc_valid,
@@ -340,7 +375,14 @@ void test_attitude_full_run(void)
                    (unsigned long)diag->cycles,
                    (unsigned long)diag->cycles_max,
                    last_us,
-                   max_us);
+                   max_us,
+                   dma_on ? "on" : "off");
+
+            if (dma_on && drdy_us > 0.0f) {
+                printf("(%.2fus)\r\n", drdy_us);
+            } else {
+                printf("\r\n");
+            }
         }
     }
 #else
