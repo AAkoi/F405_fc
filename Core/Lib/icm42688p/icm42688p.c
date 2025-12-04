@@ -19,6 +19,8 @@
 #define ICM_EXIT_COUNTER_MIN_RATIO 0.5f   // DRDY 窗口下限（相对理想周期）
 #define ICM_EXIT_COUNTER_MAX_RATIO 1.5f   // DRDY 窗口上限（相对理想周期）
 #define ICM_DMA_BURST_LEN          14U    // TEMP(2)+ACCEL(6)+GYRO(6)
+#define ICM_CALIB_START_DELAY_MS   80U    // 校准前额外等待，避免上电瞬态
+#define ICM_CALIB_DISCARD_FRAMES   16U    // 校准前丢弃若干帧
 extern SPI_HandleTypeDef hspi1;
 icm42688p_dev_t icm;
 
@@ -370,6 +372,14 @@ bool icm42688p_calibrate(uint16_t samples)
         icm_dma_switch_to_polling();
     }
 #endif
+
+    // 上电等待 + 丢弃前几帧，避免瞬态/温飘影响零偏
+    HAL_Delay(ICM_CALIB_START_DELAY_MS);
+    for (uint8_t i = 0; i < ICM_CALIB_DISCARD_FRAMES; i++) {
+        icm42688p_gyro_data_t throw_away;
+        icm42688p_read_gyro(&icm, &throw_away);
+        HAL_Delay(1);
+    }
 
     bool ok = icm42688p_calibrate_gyro(&icm, samples);
 
