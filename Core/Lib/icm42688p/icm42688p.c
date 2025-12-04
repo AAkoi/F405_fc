@@ -8,14 +8,23 @@
 
 #define USE_DMA
 
-// DRDY -> DMA 状态机配置
-#define ICM_EXIT_COUNTER_HOLD      32U
-#define ICM_EXIT_COUNTER_MIN_RATIO 0.5f
-#define ICM_EXIT_COUNTER_MAX_RATIO 1.5f
-#define ICM_DMA_BURST_LEN          14U
+// ============================================================================
+// 配置常量（DRDY -> DMA 状态机）
+// S1/S2: DRDY 预热计数，节奏不对则回退轮询
+// S3: INT 到来，拉低 CS 启动 DMA 读帧
+// S4: DMA 完成，标记 data_ready
+// S5: 主循环消费数据，清标志
+// ============================================================================
+#define ICM_EXIT_COUNTER_HOLD      32U    // S1: 需要连续 hold 次 DRDY 才进入 DMA 模式
+#define ICM_EXIT_COUNTER_MIN_RATIO 0.5f   // DRDY 窗口下限（相对理想周期）
+#define ICM_EXIT_COUNTER_MAX_RATIO 1.5f   // DRDY 窗口上限（相对理想周期）
+#define ICM_DMA_BURST_LEN          14U    // TEMP(2)+ACCEL(6)+GYRO(6)
 extern SPI_HandleTypeDef hspi1;
 icm42688p_dev_t icm;
 
+// ============================================================================
+// 共享状态（ISR + 主循环）
+// ============================================================================
 // DRDY计数：ISR累加，主循环消费
 volatile uint32_t icm42688p_drdy_count = 0;
 // DMA状态：0空闲 1完成 2忙
@@ -26,8 +35,8 @@ volatile uint8_t icm42688p_data_ready = 0;
 #ifdef USE_DMA
 typedef enum {
     ICM_DMA_STATE_POLLING = 0,   // 回退为轮询
-    ICM_DMA_STATE_PREFLIGHT,     // 计数 exit_counter，验证 ODR
-    ICM_DMA_STATE_WAIT_INT       // 等待 INT，触发 DMA
+    ICM_DMA_STATE_PREFLIGHT,     // S1/S2: exit_counter 观察窗口
+    ICM_DMA_STATE_WAIT_INT       // S3: 等待 INT，拉低 CS 并启动 DMA
 } icm_dma_state_t;
 
 static volatile icm_dma_state_t icm_dma_state = ICM_DMA_STATE_POLLING;
@@ -40,6 +49,9 @@ static uint32_t icm_last_dma_period_cycles = 0;
 static uint8_t icm_dma_rx_buffer[ICM_DMA_BURST_LEN];
 static bool icm_dma_mode_enabled = false;
 
+// ============================================================================
+// DMA 状态机辅助函数
+// ============================================================================
 static float icm42688p_odr_to_hz(uint8_t odr)
 {
     switch (odr) {
@@ -80,6 +92,7 @@ static void icm_enable_dwt_counter(void)
 
 static void icm_dma_switch_to_polling(void)
 {
+    // 统一清理所有 DMA 状态，回到安全的轮询模式
     icm_dma_state = ICM_DMA_STATE_POLLING;
     icm_dma_mode_enabled = false;
     icm42688p_data_ready = 0;
@@ -90,6 +103,7 @@ static void icm_dma_switch_to_polling(void)
 
 static void icm_dma_start_preflight(void)
 {
+    // 进入 DRDY 节奏检测阶段（S1/S2），成功后自动切换到 DMA 模式
     icm_enable_dwt_counter();
 
     const float odr_hz = icm42688p_odr_to_hz(icm.config.gyro_odr);
@@ -130,9 +144,100 @@ static void icm_parse_all_buffer(const uint8_t *buffer,
     gyro->y = (int16_t)((buffer[10] << 8) | buffer[11]);
     gyro->z = (int16_t)((buffer[12] << 8) | buffer[13]);
 }
+
+static bool icm_dma_frame_available(icm42688p_gyro_data_t *gyro,
+                                    icm42688p_accel_data_t *accel,
+                                    icm42688p_temp_data_t *temp)
+{
+    // DMA 未启用或已回退
+    if (!icm_dma_mode_enabled || icm_dma_state == ICM_DMA_STATE_POLLING) {
+        return false;
+    }
+
+    // 预热窗口：只做节奏检测，超时则回退
+    if (icm_dma_state == ICM_DMA_STATE_PREFLIGHT) {
+        const uint32_t elapsed = DWT->CYCCNT - icm_hold_start_cycles;
+        if (elapsed > icm_hold_max_cycles) {
+            icm_dma_switch_to_polling();
+        }
+        return false;
+    }
+
+    // 数据就绪：解析固定 DMA 缓冲
+    if (icm42688p_data_ready && spi1_dma_flag == 1) {
+        icm_parse_all_buffer(icm_dma_rx_buffer, gyro, accel, temp);
+        icm42688p_data_ready = 0; // S5：消费后清除
+        spi1_dma_flag = 0;
+        return true;
+    }
+
+    return false;
+}
+
+static void icm_dma_handle_int(uint32_t now)
+{
+    // 未开启 DMA 模式：回退为计数逻辑
+    if (!icm_dma_mode_enabled) {
+        icm42688p_drdy_count++;
+        return;
+    }
+
+    // S1/S2：前期 exit_counter 窗口检测
+    if (icm_dma_state == ICM_DMA_STATE_PREFLIGHT) {
+        icm_exit_counter++;
+        if (icm_exit_counter >= ICM_EXIT_COUNTER_HOLD) {
+            const uint32_t elapsed = now - icm_hold_start_cycles;
+            const bool within_window = (elapsed >= icm_hold_min_cycles) && (elapsed <= icm_hold_max_cycles);
+            if (within_window) {
+                icm_dma_state = ICM_DMA_STATE_WAIT_INT;  // S2 完成，等待下一次 INT 触发 DMA
+                icm_last_dma_cycle = now;
+            } else {
+                icm_dma_switch_to_polling();  // 节奏不对，回退轮询
+                icm42688p_drdy_count++;
+            }
+        }
+        return;  // 预热阶段不启动 DMA
+    }
+
+    // S3：稳定后，每个 INT 拉低 CS 并启动 DMA
+    if (icm_dma_state == ICM_DMA_STATE_WAIT_INT) {
+        // 未消费完上一帧或 DMA 尚未释放，则直接丢弃本次中断
+        if (spi1_dma_flag != 0 || icm42688p_data_ready) {
+            return;
+        }
+
+        uint8_t addr = ICM42688P_REG_TEMP_DATA1 | 0x80;
+        ICM42688P_CS_LOW();
+
+        if (HAL_SPI_Transmit(&hspi1, &addr, 1, 100) != HAL_OK) {
+            ICM42688P_CS_HIGH();
+            icm_dma_switch_to_polling();
+            icm42688p_drdy_count++;
+            return;
+        }
+
+        spi1_dma_flag = 2;
+        const HAL_StatusTypeDef dma_status = HAL_SPI_Receive_DMA(&hspi1, icm_dma_rx_buffer, ICM_DMA_BURST_LEN);
+        if (dma_status != HAL_OK) {
+            ICM42688P_CS_HIGH();
+            icm_dma_switch_to_polling();
+            icm42688p_drdy_count++;
+            return;
+        }
+
+        icm_last_dma_period_cycles = now - icm_last_dma_cycle;
+        icm_last_dma_cycle = now;
+        return;
+    }
+
+    // 兜底：未知状态时回退计数
+    icm42688p_drdy_count++;
+}
 #endif
 
-// Low-level SPI helpers
+// ============================================================================
+// 低层 SPI 接口（轮询）
+// ============================================================================
 void icm_spi_write_reg(uint8_t reg, uint8_t value)
 {
     uint8_t tx[2];
@@ -172,7 +277,7 @@ void icm_spi_read_burst(uint8_t reg, uint8_t *buffer, uint16_t len)
 {
     reg |= 0x80;  // read command
 
-    // 使用稳定的轮询模式（DMA 由中断状态机驱动，此处不占用 DMA）
+    // 使用稳定的轮询模式（DMA 由中断状态机驱动，此处只做地址+数据轮询）
     ICM42688P_CS_LOW();
 
     uint8_t tx_dummy = 0xFF;
@@ -189,7 +294,9 @@ void icm_delay_ms(uint32_t ms)
     HAL_Delay(ms);
 }
 
-// High-level driver init
+// ============================================================================
+// 高层驱动初始化与配置
+// ============================================================================
 void icm42688p_init_driver(void)
 {
     // Bind SPI helpers
@@ -309,6 +416,9 @@ bool icm42688p_get_temperature(float *temp_celsius)
     return true;
 }
 
+// ============================================================================
+// 统一的数据获取入口（DMA 模式或轮询模式）
+// ============================================================================
 bool icm42688p_get_all_data(int16_t *gyro_x, int16_t *gyro_y, int16_t *gyro_z,
                             int16_t *accel_x, int16_t *accel_y, int16_t *accel_z,
                             float *temp_celsius)
@@ -318,34 +428,20 @@ bool icm42688p_get_all_data(int16_t *gyro_x, int16_t *gyro_y, int16_t *gyro_z,
     icm42688p_temp_data_t  td;
 
 #ifdef USE_DMA
-    // DMA 状态机：仅当数据 ready 时才解析，消费后清零回到 S3
+    // DMA 模式：仅在数据就绪时解析
+    if (icm_dma_frame_available(&gd, &ad, &td)) {
+        if (gyro_x)  *gyro_x  = gd.x;
+        if (gyro_y)  *gyro_y  = gd.y;
+        if (gyro_z)  *gyro_z  = gd.z;
+        if (accel_x) *accel_x = ad.x;
+        if (accel_y) *accel_y = ad.y;
+        if (accel_z) *accel_z = ad.z;
+        if (temp_celsius) *temp_celsius = td.celsius;
+        return true;
+    }
+
+    // DMA 模式但未就绪，直接返回
     if (icm_dma_mode_enabled && icm_dma_state != ICM_DMA_STATE_POLLING) {
-        if (icm_dma_state == ICM_DMA_STATE_PREFLIGHT) {
-            // 超时未达到 hold，直接回退轮询
-            const uint32_t elapsed = DWT->CYCCNT - icm_hold_start_cycles;
-            if (elapsed > icm_hold_max_cycles) {
-                icm_dma_switch_to_polling();
-            }
-            return false;
-        }
-
-        if (icm42688p_data_ready && spi1_dma_flag == 1) {
-            icm_parse_all_buffer(icm_dma_rx_buffer, &gd, &ad, &td);
-
-            icm42688p_data_ready = 0; // S5：消费后清除
-            spi1_dma_flag = 0;
-
-            if (gyro_x)  *gyro_x  = gd.x;
-            if (gyro_y)  *gyro_y  = gd.y;
-            if (gyro_z)  *gyro_z  = gd.z;
-            if (accel_x) *accel_x = ad.x;
-            if (accel_y) *accel_y = ad.y;
-            if (accel_z) *accel_z = ad.z;
-            if (temp_celsius) *temp_celsius = td.celsius;
-            return true;
-        }
-
-        // DMA 模式但数据尚未准备好
         return false;
     }
 #endif
@@ -380,57 +476,8 @@ void HAL_GPIO_EXTI_Callback(uint16_t GPIO_Pin)
 {
     if (GPIO_Pin == ICM42688P_INT_PIN) {
 #ifdef USE_DMA
-        if (icm_dma_mode_enabled) {
-            const uint32_t now = DWT->CYCCNT;
-
-            // S1/S2：前期 exit_counter 窗口检测
-            if (icm_dma_state == ICM_DMA_STATE_PREFLIGHT) {
-                icm_exit_counter++;
-                if (icm_exit_counter >= ICM_EXIT_COUNTER_HOLD) {
-                    const uint32_t elapsed = now - icm_hold_start_cycles;
-                    const bool within_window = (elapsed >= icm_hold_min_cycles) && (elapsed <= icm_hold_max_cycles);
-                    if (within_window) {
-                        icm_dma_state = ICM_DMA_STATE_WAIT_INT;  // S2 完成，等待下一次 INT 触发 DMA
-                        icm_last_dma_cycle = now;
-                    } else {
-                        icm_dma_switch_to_polling();  // 节奏不对，回退轮询
-                        icm42688p_drdy_count++;
-                    }
-                }
-                return;  // 前期阶段只计数，不启动 DMA
-            }
-
-            // S3：稳定后，每个 INT 拉低 CS 并启动 DMA
-            if (icm_dma_state == ICM_DMA_STATE_WAIT_INT) {
-                // 未消费完上一帧或 DMA 尚未释放，则直接丢弃本次中断
-                if (spi1_dma_flag != 0 || icm42688p_data_ready) {
-                    return;
-                }
-
-                uint8_t addr = ICM42688P_REG_TEMP_DATA1 | 0x80;
-                ICM42688P_CS_LOW();
-
-                if (HAL_SPI_Transmit(&hspi1, &addr, 1, 100) != HAL_OK) {
-                    ICM42688P_CS_HIGH();
-                    icm_dma_switch_to_polling();
-                    icm42688p_drdy_count++;
-                    return;
-                }
-
-                spi1_dma_flag = 2;
-                const HAL_StatusTypeDef dma_status = HAL_SPI_Receive_DMA(&hspi1, icm_dma_rx_buffer, ICM_DMA_BURST_LEN);
-                if (dma_status != HAL_OK) {
-                    ICM42688P_CS_HIGH();
-                    icm_dma_switch_to_polling();
-                    icm42688p_drdy_count++;
-                    return;
-                }
-
-                icm_last_dma_period_cycles = now - icm_last_dma_cycle;
-                icm_last_dma_cycle = now;
-                return;
-            }
-        }
+        icm_dma_handle_int(DWT->CYCCNT);
+        return;
 #endif
 
         // 回退/轮询模式：只累加标志，主循环消费
@@ -454,6 +501,9 @@ bool icm42688p_update(int16_t *gyro_x, int16_t *gyro_y, int16_t *gyro_z,
                                   temp_celsius);
 }
 
+// ============================================================================
+// 数据预处理（物理量转换、零偏处理）
+// ============================================================================
 // Read + convert to physical units
 bool icm42688p_dataPreprocess(int16_t *gyro_x, int16_t *gyro_y, int16_t *gyro_z,
                               int16_t *accel_x, int16_t *accel_y, int16_t *accel_z,
@@ -550,6 +600,9 @@ bool icm42688p_gyro_dataPreprocess(int16_t *gyro_x, int16_t *gyro_y, int16_t *gy
     return wrote;
 }
 
+// ============================================================================
+// DMA 运行状态查询（调试用）
+// ============================================================================
 bool icm42688p_dma_active(void)
 {
 #ifdef USE_DMA
@@ -577,6 +630,9 @@ uint32_t icm42688p_dma_hold_target(void)
 #endif
 }
 
+// ============================================================================
+// HAL 回调（DMA 完成 / 错误）
+// ============================================================================
 // SPI1 RX DMA complete callback
 void HAL_SPI_RxCpltCallback(SPI_HandleTypeDef *hspi)
 {
