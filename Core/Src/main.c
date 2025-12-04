@@ -12,7 +12,7 @@
 #include "test_mag.h"
 #include "test_timer_log.h"
 
-#define RUN_MODE 3 // 0: gyro+acc attitude test, 1: gyro+acc+mag attitude test, 2: magnetometer stream test
+#define RUN_MODE 1 // 0: gyro+acc attitude test, 1: gyro+acc+mag attitude test, 2: magnetometer stream test
 
 int main(void)
 {

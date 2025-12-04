@@ -32,7 +32,7 @@ void MX_GPIO_Init(void)
   /* 配置 HMC5883L DRDY 中断引脚 PC4 */
   GPIO_InitStruct.Pin = HMC5883l_INT_PIN;
   GPIO_InitStruct.Mode = GPIO_MODE_IT_RISING; // DRDY 为高电平有效
-  GPIO_InitStruct.Pull = GPIO_NOPULL;
+  GPIO_InitStruct.Pull = GPIO_PULLDOWN;      // 线缆断开时下拉，避免浮空误中断
   GPIO_InitStruct.Speed = GPIO_SPEED_FREQ_HIGH;
   HAL_GPIO_Init(HMC5883l_INT_GPIO_PORT, &GPIO_InitStruct);
 

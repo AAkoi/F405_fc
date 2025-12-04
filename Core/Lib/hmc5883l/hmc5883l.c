@@ -17,7 +17,8 @@
  * ============================================================================ */
 hmc5883l_dev_t hmc_dev;
 #ifdef USE_HMC5883L_INT
-volatile uint8_t hmc5883l_data_ready_flag = 0;
+// DRDY 中断计数：ISR 累加，主循环消费
+volatile uint32_t hmc5883l_data_ready_flag = 0;
 #endif
 
 /* ============================================================================
@@ -101,9 +102,17 @@ bool hmc5883l_read_raw_data(int16_t *mag_x, int16_t *mag_y, int16_t *mag_z)
     if (!mag_x || !mag_y || !mag_z) {
         return false;
     }
-    
+
+#ifdef USE_HMC5883L_INT
+    // 需要 DRDY，防止读到旧数据；无计数则认为暂时无新数据
+    if (hmc5883l_data_ready_flag == 0) {
+        return false;
+    }
+    hmc5883l_data_ready_flag--; // 消费一帧
+#endif
+
     hmc5883l_mag_data_t data;
-    
+
     if (!hmc5883l_read_raw(&hmc_dev, &data)) {
         return false;
     }
@@ -123,7 +132,14 @@ bool hmc5883l_read_gauss(float *mag_x, float *mag_y, float *mag_z)
     if (!mag_x || !mag_y || !mag_z) {
         return false;
     }
-    
+
+#ifdef USE_HMC5883L_INT
+    if (hmc5883l_data_ready_flag == 0) {
+        return false;
+    }
+    hmc5883l_data_ready_flag--;
+#endif
+
     hmc5883l_mag_data_float_t data;
     
     if (!hmc5883l_read(&hmc_dev, &data)) {
@@ -230,8 +246,8 @@ bool hmc5883l_run_self_test(void)
 bool hmc5883l_is_data_ready(void)
 {
 #ifdef USE_HMC5883L_INT
-    if (hmc5883l_data_ready_flag) {
-        hmc5883l_data_ready_flag = 0; // consume flag set by EXTI
+    if (hmc5883l_data_ready_flag > 0) {
+        hmc5883l_data_ready_flag--; // 消费由 EXTI 设置的计数
         return true;
     }
     return false;

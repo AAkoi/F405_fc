@@ -249,7 +249,7 @@ void test_attitude_full_run(void)
         if (!icm42688p_get_all_data(&gx_raw, &gy_raw, &gz_raw, 
                                     &ax_raw, &ay_raw, &az_raw, &temp_c)) {
             if (!icm42688p_dma_active()) {
-                HAL_Delay(1); // 轮询模式放慢节奏，避免空转
+                //HAL_Delay(1); // 轮询模式放慢节奏，避免空转
             }
             continue;
         }
@@ -328,7 +328,7 @@ void test_attitude_full_run(void)
         const AttitudeDiagnostics *diag = Attitude_GetDiagnostics();
 
         // ---- 定期输出姿态数据（100ms） ----
-        if (now - last_print >= 100) {
+        if (now - last_print >= 10) {
             last_print = now;
             printf("ATTITUDE_FULL,%lu,%.2f,%.2f,%.2f,%.3f,%.3f,%.3f,%.2f,%.2f,%.2f,%d,%d,%d\r\n",
                    (unsigned long)now,

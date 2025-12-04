@@ -90,7 +90,8 @@ bool hmc5883l_run_self_test(void);
 bool hmc5883l_is_data_ready(void);
 
 #ifdef USE_HMC5883L_INT
-extern volatile uint8_t hmc5883l_data_ready_flag;
+// EXTI 计数（ISR 累加，主循环消费）
+extern volatile uint32_t hmc5883l_data_ready_flag;
 #endif
 
 #ifdef __cplusplus

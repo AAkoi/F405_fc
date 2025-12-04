@@ -19,7 +19,7 @@
 #define ICM_EXIT_COUNTER_MIN_RATIO 0.5f   // DRDY 窗口下限（相对理想周期）
 #define ICM_EXIT_COUNTER_MAX_RATIO 1.5f   // DRDY 窗口上限（相对理想周期）
 #define ICM_DMA_BURST_LEN          14U    // TEMP(2)+ACCEL(6)+GYRO(6)
-#define ICM_CALIB_START_DELAY_MS   80U    // 校准前额外等待，避免上电瞬态
+#define ICM_CALIB_START_DELAY_MS   100U    // 校准前额外等待，避免上电瞬态
 #define ICM_CALIB_DISCARD_FRAMES   16U    // 校准前丢弃若干帧
 extern SPI_HandleTypeDef hspi1;
 icm42688p_dev_t icm;
@@ -495,7 +495,7 @@ void HAL_GPIO_EXTI_Callback(uint16_t GPIO_Pin)
     }
 #ifdef USE_HMC5883L_INT
     else if (GPIO_Pin == HMC5883l_INT_PIN) {
-        hmc5883l_data_ready_flag = 1;
+        hmc5883l_data_ready_flag++;
     }
 #endif
 }
