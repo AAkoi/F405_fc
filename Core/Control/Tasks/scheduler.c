@@ -514,9 +514,9 @@ void scheduler_print_stats(task_scheduler_fc_t *sched)
     printf("任务数量: %d/%d\r\n\r\n", sched->task_count, sched->capacity);
 
     // 打印表头
-    printf("%-18s %-8s %-10s %-8s %-8s %-8s %-8s\r\n",
-           "任务名", "优先级", "触发模式", "执行次数", "当前(us)", "最大(us)", "超时次数");
-    printf("------------------------------------------------------------------------------------\r\n");
+    printf("%-18s %-8s %-10s %-10s %-8s %-8s %-8s %-8s\r\n",
+           "任务名", "优先级", "触发模式", "间隔(us)", "执行次数", "当前(us)", "最大(us)", "超时次数");
+    printf("------------------------------------------------------------------------------------------------\r\n");
 
     // 打印每个任务的统计信息
     const char *prio_str[] = {"CRITICAL", "HIGH", "NORMAL", "LOW", "IDLE"};
@@ -524,14 +524,19 @@ void scheduler_print_stats(task_scheduler_fc_t *sched)
     
     for (uint8_t i = 0; i < sched->task_count; i++) {
         task_entry_t *t = &sched->tasks[i];
-        printf("%-18s %-8s %-10s %-8lu %-8lu %-8lu %-8lu\r\n",
+        const uint32_t interval_us = (t->trigger_mode == TASK_TRIGGER_PERIODIC)
+            ? cycles_to_us(t->period_cycles, sched->config.cpu_freq_hz)
+            : 0;
+
+        printf("%-18s %-8s %-10s %-10lu %-8lu %-8lu %-8lu %-8lu\r\n",
                t->name,                              // 任务名
                prio_str[t->priority],                // 优先级
                mode_str[t->trigger_mode],            // 触发模式
-               t->stats.exec_count,                  // 执行次数
-               t->stats.exec_time_us,                // 最近一次执行时间
-               t->stats.exec_time_max_us,            // 最大执行时间
-               t->stats.overrun_count);              // 超时次数
+               (unsigned long)interval_us,           // 周期/间隔
+               (unsigned long)t->stats.exec_count,   // 执行次数
+               (unsigned long)t->stats.exec_time_us, // 最近一次执行时间
+               (unsigned long)t->stats.exec_time_max_us, // 最大执行时间
+               (unsigned long)t->stats.overrun_count);   // 超时次数
     }
     
     printf("=================================\r\n\r\n");

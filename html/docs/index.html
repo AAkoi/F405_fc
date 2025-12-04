@@ -1,5 +1,6 @@
 <!DOCTYPE html>
 <html lang="zh-CN">
+
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
@@ -7,9 +8,10 @@
     <link rel="stylesheet" href="../styles/docs.css">
     <script src="https://unpkg.com/lucide@latest"></script>
 </head>
+
 <body>
     <div class="reading-progress" id="reading-progress"></div>
-    
+
     <aside class="sidebar">
         <div class="sidebar-header">
             <h1><i data-lucide="plane" class="icon-inline"></i> Betaflight <span class="version-tag">v1.0</span></h1>
@@ -26,13 +28,14 @@
             </ul>
         </nav>
     </aside>
-    
+
     <main class="main-content">
         <div class="content-wrapper">
             <section id="overview">
                 <h1>Betaflight 飞控固件文档</h1>
-                <p class="lead">本项目是一个基于 <span class="badge badge-info">STM32F405</span> 的飞行控制器固件，采用模块化设计，包含完整的传感器驱动、姿态解算、PID控制和通信协议支持。</p>
-                
+                <p class="lead">本项目是一个基于 <span class="badge badge-info">STM32F405</span>
+                    的飞行控制器固件，采用模块化设计，包含完整的传感器驱动、姿态解算、PID控制和通信协议支持。</p>
+
                 <div class="note">
                     <i data-lucide="lightbulb" class="icon-inline"></i>
                     <div>
@@ -41,7 +44,7 @@
                 </div>
 
                 <h2>文档章节</h2>
-                
+
                 <div class="doc-cards">
                     <a href="bsp.html" class="doc-card">
                         <div class="doc-card-icon"><i data-lucide="cpu"></i></div>
@@ -49,35 +52,35 @@
                         <p>板级支持包，包含 I2C、SPI、UART 通信接口和系统级功能。</p>
                         <span class="doc-card-arrow"><i data-lucide="arrow-right"></i></span>
                     </a>
-                    
+
                     <a href="sensors.html" class="doc-card">
                         <div class="doc-card-icon"><i data-lucide="radio"></i></div>
                         <h3>传感器驱动</h3>
                         <p>ICM42688P IMU、HMC5883L 磁力计、BMP280 气压计完整驱动。</p>
                         <span class="doc-card-arrow"><i data-lucide="arrow-right"></i></span>
                     </a>
-                    
+
                     <a href="control.html" class="doc-card">
                         <div class="doc-card-icon"><i data-lucide="settings"></i></div>
                         <h3>控制算法</h3>
                         <p>Mahony 姿态解算、PID 控制器、二阶 Butterworth 滤波器。</p>
                         <span class="doc-card-arrow"><i data-lucide="arrow-right"></i></span>
                     </a>
-                    
+
                     <a href="comm.html" class="doc-card">
                         <div class="doc-card-icon"><i data-lucide="wifi"></i></div>
                         <h3>通信协议</h3>
                         <p>ELRS/CRSF 接收机协议支持，支持 50-250Hz 更新率。</p>
                         <span class="doc-card-arrow"><i data-lucide="arrow-right"></i></span>
                     </a>
-                    
+
                     <a href="examples.html" class="doc-card">
                         <div class="doc-card-icon"><i data-lucide="code"></i></div>
                         <h3>使用示例</h3>
                         <p>完整的代码示例，包含传感器读取、姿态解算、PID控制等。</p>
                         <span class="doc-card-arrow"><i data-lucide="arrow-right"></i></span>
                     </a>
-                    
+
                     <a href="performance.html" class="doc-card">
                         <div class="doc-card-icon"><i data-lucide="activity"></i></div>
                         <h3>性能指标</h3>
@@ -88,34 +91,205 @@
 
                 <h2>主要特性</h2>
                 <ul>
-                    <li><strong>硬件平台</strong>: STM32F405 (Cortex-M4, 168MHz)</li>
+                    <li><strong>硬件平台</strong>: STM32F405 (Cortex-M4, 168MHz, 1MB Flash, 196KB SRAM)</li>
                     <li><strong>传感器支持</strong>:
                         <ul>
-                            <li>ICM42688P (6轴IMU: 加速度计 + 陀螺仪)</li>
-                            <li>HMC5883L (3轴磁力计)</li>
-                            <li>BMP280 (气压计 + 温度计)</li>
+                            <li><strong>ICM42688P</strong> - 6轴IMU (陀螺仪±2000dps + 加速度计±16g, SPI接口, 最高8kHz采样)</li>
+                            <li><strong>HMC5883L</strong> - 3轴磁力计 (±8 Gauss, I2C接口, 75Hz采样率)</li>
+                            <li><strong>BMP280</strong> - 气压计+温度计 (300-1100hPa, I2C接口, 182Hz采样)</li>
                         </ul>
                     </li>
-                    <li><strong>姿态解算</strong>: Mahony 互补滤波算法</li>
-                    <li><strong>控制算法</strong>: 基于 Betaflight 的三轴 PID 控制器</li>
-                    <li><strong>通信协议</strong>: ELRS/CRSF 接收机协议</li>
-                    <li><strong>滤波器</strong>: 二阶 Butterworth 滤波器 (LPF/Notch/BPF)</li>
+                    <li><strong>姿态解算</strong>: Mahony 互补滤波算法 (1kHz更新率, 支持磁力计融合)</li>
+                    <li><strong>控制算法</strong>:
+                        <ul>
+                            <li>三轴 PID 控制器 (支持前馈、积分抗饱和、D项滤波)</li>
+                            <li>二阶 Butterworth 数字滤波器 (低通/陷波/带通)</li>
+                        </ul>
+                    </li>
+                    <li><strong>通信协议</strong>: ELRS/CRSF 接收机协议 (420000 bps, 50-250Hz更新率)</li>
+                    <li><strong>实时性能</strong>: 1kHz 主循环频率, 中断驱动的传感器数据采集</li>
                 </ul>
-                
-                <h2>许可证</h2>
+
+                <h2>快速入门</h2>
+
+                <h3><i data-lucide="package" class="icon-inline"></i> 硬件要求</h3>
+                <table>
+                    <thead>
+                        <tr>
+                            <th>组件</th>
+                            <th>型号/规格</th>
+                            <th>接口</th>
+                            <th>说明</th>
+                        </tr>
+                    </thead>
+                    <tbody>
+                        <tr>
+                            <td>主控芯片</td>
+                            <td>STM32F405RGT6</td>
+                            <td>-</td>
+                            <td>168MHz, LQFP64封装</td>
+                        </tr>
+                        <tr>
+                            <td>IMU传感器</td>
+                            <td>ICM42688P</td>
+                            <td>SPI1</td>
+                            <td>CS=PA4</td>
+                        </tr>
+                        <tr>
+                            <td>磁力计</td>
+                            <td>HMC5883L</td>
+                            <td>I2C3</td>
+                            <td>地址0x1E</td>
+                        </tr>
+                        <tr>
+                            <td>气压计</td>
+                            <td>BMP280</td>
+                            <td>I2C1</td>
+                            <td>地址0x76</td>
+                        </tr>
+                        <tr>
+                            <td>接收机</td>
+                            <td>ELRS/CRSF</td>
+                            <td>UART1</td>
+                            <td>420000 bps</td>
+                        </tr>
+                        <tr>
+                            <td>调试接口</td>
+                            <td>ST-Link V2</td>
+                            <td>SWD</td>
+                            <td>用于烧录和调试</td>
+                        </tr>
+                    </tbody>
+                </table>
+
+                <h3><i data-lucide="tool" class="icon-inline"></i> 开发环境配置</h3>
+                <ol>
+                    <li><strong>安装工具链</strong>
+                        <ul>
+                            <li>STM32CubeIDE (推荐) 或 Keil MDK</li>
+                            <li>ARM GCC 工具链</li>
+                            <li>ST-Link 驱动程序</li>
+                        </ul>
+                    </li>
+                    <li><strong>克隆项目</strong>
+                        <pre><code>git clone https://github.com/yourusername/betaflight-f405.git
+cd betaflight-f405</code></pre>
+                    </li>
+                    <li><strong>打开项目</strong>
+                        <ul>
+                            <li>使用 STM32CubeIDE 打开 <code>.project</code> 文件</li>
+                            <li>或使用 Keil 打开 <code>.uvprojx</code> 文件</li>
+                        </ul>
+                    </li>
+                    <li><strong>编译烧录</strong>
+                        <ul>
+                            <li>点击 "Build Project" 编译</li>
+                            <li>连接 ST-Link 到飞控板</li>
+                            <li>点击 "Debug" 或 "Run" 烧录固件</li>
+                        </ul>
+                    </li>
+                </ol>
+
+                <h3><i data-lucide="zap" class="icon-inline"></i> 首次运行</h3>
+                <div class="warning">
+                    <i data-lucide="alert-triangle" class="icon-inline"></i>
+                    <div>
+                        <strong>安全提示</strong>: 首次运行前，请确保飞行器电机已拆下或螺旋桨已卸除，避免意外启动造成伤害！
+                    </div>
+                </div>
+
+                <ol>
+                    <li><strong>上电初始化</strong> - 飞控板上电后会自动进行传感器初始化（约1秒）</li>
+                    <li><strong>陀螺仪校准</strong> - 初始化时保持飞控静止，等待校准完成（LED指示）</li>
+                    <li><strong>连接地面站</strong> - 使用 USB 转串口连接飞控，波特率 115200</li>
+                    <li><strong>查看数据</strong> - 打开 <code>html/index.html</code> 查看实时传感器数据</li>
+                    <li><strong>磁力计校准</strong> - 在地面站中执行磁力计校准（旋转飞行器）</li>
+                </ol>
+
+                <h2>系统架构</h2>
+                <p>飞控系统采用 <strong>分层架构</strong> 设计，主要包含以下几个层次：</p>
+
+                <div class="doc-cards">
+                    <div class="doc-card">
+                        <div class="doc-card-icon"><i data-lucide="layers"></i></div>
+                        <h3>硬件抽象层 (HAL)</h3>
+                        <p>基于 STM32 HAL 库，提供统一的硬件接口，支持 SPI、I2C、UART、DMA 等外设。</p>
+                    </div>
+
+                    <div class="doc-card">
+                        <div class="doc-card-icon"><i data-lucide="database"></i></div>
+                        <h3>板级支持包 (BSP)</h3>
+                        <p>封装底层通信接口，提供阻塞/非阻塞模式的读写操作，简化上层调用。</p>
+                    </div>
+
+                    <div class="doc-card">
+                        <div class="doc-card-icon"><i data-lucide="Activity"></i></div>
+                        <h3>传感器驱动层</h3>
+                        <p>实现各传感器的初始化、数据读取、校准等功能，提供物理单位转换。</p>
+                    </div>
+
+                    <div class="doc-card">
+                        <div class="doc-card-icon"><i data-lucide="cpu"></i></div>
+                        <h3>控制算法层</h3>
+                        <p>包含姿态解算、PID 控制、滤波器等核心算法，运行在 1kHz 主循环中。</p>
+                    </div>
+                </div>
+
+                <h2>项目目录结构</h2>
+                <pre><code>betaflight-f405/
+├── Core/
+│   ├── BSP/              # 板级支持包
+│   │   ├── Bsp_IIC/      # I2C 通信
+│   │   ├── Bsp_SPI/      # SPI 通信
+│   │   ├── Bsp_uart/     # UART 通信
+│   │   └── Bsp_System/   # 系统功能
+│   ├── Control/          # 控制算法
+│   │   ├── Attitude Control/  # 姿态解算
+│   │   ├── PID/          # PID 控制器
+│   │   ├── Filter/       # 滤波器
+│   │   └── Tasks/        # 任务调度
+│   ├── Lib/              # 传感器驱动库
+│   │   ├── icm42688p/    # IMU 驱动
+│   │   ├── hmc5883l/     # 磁力计驱动
+│   │   ├── bmp280/       # 气压计驱动
+│   │   └── esrl/         # CRSF 协议
+│   └── Inc/Src/          # HAL 层源码
+├── html/                 # Web 地面站
+│   ├── docs/             # 在线文档
+│   ├── js/               # 前端脚本
+│   └── styles/           # 样式表
+└── README.md             # 项目说明</code></pre>
+
+                <h2>常见问题 (FAQ)</h2>
+
+                <h3>Q: 传感器初始化失败怎么办？</h3>
+                <p><strong>A:</strong> 检查硬件连接，确认 SPI/I2C 引脚配置正确。使用示波器或逻辑分析仪检查时钟和数据线。查看串口日志输出的错误代码。</p>
+
+                <h3>Q: 姿态解算漂移严重？</h3>
+                <p><strong>A:</strong> 首先重新校准陀螺仪（静止状态下采集2000+样本）。如果仍然漂移，检查 Mahony 算法的 Kp/Ki 参数，适当增加 Ki 可以减少漂移。</p>
+
+                <h3>Q: PID 参数如何调优？</h3>
+                <p><strong>A:</strong> 建议从默认参数开始 (P=45, I=80, D=30)，逐步调整。先调 P 参数直到响应迅速但不震荡，再增加 D 抑制超调，最后调 I 消除稳态误差。</p>
+
+                <h3>Q: 如何查看实时数据？</h3>
+                <p><strong>A:</strong> 打开 <code>html/index.html</code> 文件，使用 Web Serial API 连接飞控串口（需要 Chrome/Edge
+                    浏览器）。可实时查看传感器数据、姿态角、PID 输出等。</p>
+
+                <h2>许可证与贡献</h2>
                 <p>本项目部分代码源自 <strong>Betaflight</strong> 开源项目，遵循 <span class="badge badge-info">GPL-3.0</span> 许可证。</p>
+                <p>欢迎提交 Issue 和 Pull Request 贡献代码！请遵循项目的编码规范和提交规范。</p>
             </section>
         </div>
     </main>
-    
+
     <button class="back-to-top" id="back-to-top" title="返回顶部">
         <i data-lucide="arrow-up"></i>
     </button>
-    
+
     <script src="../js/docs.js"></script>
     <script>
         lucide.createIcons();
     </script>
 </body>
-</html>
 
+</html>

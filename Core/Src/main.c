@@ -11,8 +11,9 @@
 #include "test_attitude_full.h"
 #include "test_mag.h"
 #include "test_timer_log.h"
+#include "test_scheduler.h"
 
-#define RUN_MODE 1 // 0: gyro+acc attitude test, 1: gyro+acc+mag attitude test, 2: magnetometer stream test
+#define RUN_MODE 4 // 0: gyro+acc attitude test, 1: gyro+acc+mag attitude test, 2: magnetometer stream test, 3: gyro raw test, 4: scheduler pipeline test
 
 int main(void)
 {
@@ -34,6 +35,8 @@ int main(void)
         test_mag_run();
     } else if(RUN_MODE==3) {
         test_gyro_run();
+    } else if (RUN_MODE==4) {
+        test_scheduler_run();
     }else{
         test_timer_log_run();
     }
