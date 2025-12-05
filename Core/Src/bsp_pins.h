@@ -41,6 +41,20 @@
 #define ICM42688P_INT_GPIO_PORT         GPIOC
 #define ICM42688P_INT_PIN               GPIO_PIN_3
 
+/* ============================================================================
+ * 外部 SPI Flash (W25Qxx) 使用 SPI2
+ * 默认映射：PB13=SCK, PB14=MISO, PB15=MOSI，CS 默认 PB12（可按需修改）
+ * ============================================================================ */
+#define W25QXX_SPI_GPIO_PORT            GPIOB
+#define W25QXX_SPI_SCK_PIN              GPIO_PIN_13
+#define W25QXX_SPI_MISO_PIN             GPIO_PIN_14
+#define W25QXX_SPI_MOSI_PIN             GPIO_PIN_15
+#define W25QXX_SPI_AF                   GPIO_AF5_SPI2
+
+// CS 引脚：如有换脚需求请在此修改
+#define W25QXX_CS_GPIO_PORT             GPIOB
+#define W25QXX_CS_PIN                   GPIO_PIN_12
+
 //IIC1
 #define BMP280_IIC1_GPIO_PORT          GPIOB
 #define BMP280_IIC1_SCL                GPIO_PIN_6

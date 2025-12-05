@@ -41,10 +41,21 @@ char **environ = __env;
 /* Functions */
 int __io_putchar(int ch)
 {
-#if defined(USE_UART1)
+#if defined(PRINTF_USE_UART2)
   uint8_t c = (uint8_t)ch;
-  if (HAL_UART_Transmit(&huart1, &c, 1, HAL_MAX_DELAY) == HAL_OK)
-  {
+  if (HAL_UART_Transmit(&huart2, &c, 1, HAL_MAX_DELAY) == HAL_OK) {
+    return ch;
+  }
+  return -1;
+#elif defined(PRINTF_USE_UART1) || defined(USE_UART1)
+  uint8_t c = (uint8_t)ch;
+  if (HAL_UART_Transmit(&huart1, &c, 1, HAL_MAX_DELAY) == HAL_OK) {
+    return ch;
+  }
+  return -1;
+#elif defined(USE_UART2)
+  uint8_t c = (uint8_t)ch;
+  if (HAL_UART_Transmit(&huart2, &c, 1, HAL_MAX_DELAY) == HAL_OK) {
     return ch;
   }
   return -1;

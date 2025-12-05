@@ -7,8 +7,17 @@
 // 全局上下文（简单起见，单实例）
 static elrs_crsf_t g_crsf;
 
+// 绑定的 UART 端口号（1/2/3/4），用于 TX/RX 选择，默认=1
+static uint8_t g_uart_id = 1;
+// 从上位机串口（通常 UART1）触发的挂起动作标志
+static volatile uint8_t g_bind_pending = 0;  // 在主循环中执行发送
+
 // RC 状态（由 ISR 回调更新）
 static volatile elrs_rc_state_t g_rc;
+// LinkStatistics 最近一次信息
+static volatile uint8_t g_link_lq = 0;
+static volatile int8_t  g_link_rssi_dbm = 0;   // 负值
+static volatile uint32_t g_link_last_us = 0;
 
 // 启用 DWT 周期计数器（CYCCNT）用于微秒时间戳
 static void dwt_setup_cycle_counter(void)
@@ -35,11 +44,11 @@ static uint32_t crsf_now_us(void *user)
     return DWT->CYCCNT / div;
 }
 
-// 发送：通过 UART1 发送缓冲区
+// 发送：通过绑定的 UART 端口发送缓冲区
 static void crsf_tx_write(void *user, const uint8_t *data, uint16_t len)
 {
     (void)user;
-    (void)BSP_UART_Write(1, data, len);
+    (void)BSP_UART_Write(g_uart_id, data, len);
 }
 
 // 可选：解析到了 0x16 RC 通道时的回调（占位，可在此做通道映射）
@@ -117,19 +126,35 @@ static void crsf_on_rc_channels(elrs_crsf_t *ctx, const uint16_t *ch, uint8_t co
 static void crsf_on_link_stats(elrs_crsf_t *ctx, const elrs_crsf_link_stats_t *stats, uint32_t ts_us)
 {
     (void)ctx; (void)stats; (void)ts_us;
-    // TODO: 记录 RSSI / LQ 等指标
+    // 记录 RSSI / LQ 等指标
+    // RSSI 字段为正数（绝对值），转换为 dBm（负值）
+    int8_t rssi1_dbm = -(int8_t)stats->uplink_rssi1;
+    // 有的接收机提供 rssi2，可选：取更大/均值，这里用 rssi1
+    g_link_rssi_dbm = rssi1_dbm;
+    g_link_lq       = stats->uplink_lq;    // 0..100
+    g_link_last_us  = ts_us;
 }
 
-// 串口字节回调：绑定到 UART1 -> 输入到 CRSF 解析器
+// 串口字节回调：绑定到指定 UART -> 输入到 CRSF 解析器
 void BSP_UART_RxByteCallback(uint8_t uart_id, uint8_t byte)
 {
-    if (uart_id == 1) {
+    if (uart_id == g_uart_id) {
+        // ELRS/CRSF 串口：喂入解析器
         elrs_crsf_input_byte(&g_crsf, byte);
+    } else {
+        // 上位机串口（例如 UART1）：解析简单命令
+        if (uart_id == 1) {
+            if (byte == 'b' || byte == 'B') {
+                // 仅置标志，实际发送在主循环执行，避免在中断中阻塞
+                g_bind_pending = 1;
+            }
+        }
     }
 }
 
 void ELRS_CRSF_InitOnUART1(void)
 {
+    g_uart_id = 1;
     // 启用 DWT 周期计数
     dwt_setup_cycle_counter();
 
@@ -146,6 +171,27 @@ void ELRS_CRSF_InitOnUART1(void)
 
     // 设置 UART1 波特率为 CRSF 推荐值，并确保使能接收中断
     BSP_UART_Open(1, ELRS_CRSF_BAUD_DEFAULT);
+}
+
+void ELRS_CRSF_InitOnUART2(void)
+{
+    g_uart_id = 2;
+    // 启用 DWT 周期计数
+    dwt_setup_cycle_counter();
+
+    elrs_crsf_config_t cfg = (elrs_crsf_config_t){0};
+    cfg.now_us   = crsf_now_us;
+    cfg.tx_write = crsf_tx_write;
+    cfg.user     = NULL;
+    cfg.on_rc_channels = crsf_on_rc_channels;
+    cfg.on_link_stats  = crsf_on_link_stats;
+    cfg.on_frame       = NULL; // 可选处理
+    cfg.frame_timeout_us = 0;  // 使用缺省
+
+    elrs_crsf_init(&g_crsf, &cfg);
+
+    // 设置 UART2 波特率为 CRSF 推荐值，并确保使能接收中断
+    BSP_UART_Open(2, ELRS_CRSF_BAUD_DEFAULT);
 }
 
 void ELRS_CRSF_CopyRCState(elrs_rc_state_t *out)
@@ -169,4 +215,39 @@ bool ELRS_CRSF_IsActive(uint32_t timeout_ms)
 void ELRS_CRSF_SendBind(void)
 {
     elrs_crsf_send_bind(&g_crsf);
+}
+
+bool ELRS_CRSF_IsRadioLinked(uint32_t timeout_ms)
+{
+    uint32_t now_us = crsf_now_us(NULL);
+    uint32_t dt_us = now_us - g_link_last_us;
+    if (dt_us > (timeout_ms * 1000u)) return false;
+    return (g_link_lq > 0);
+}
+
+void ELRS_CRSF_GetLinkInfo(elrs_link_info_t *out)
+{
+    if (!out) return;
+    __disable_irq();
+    out->lq = g_link_lq;
+    out->rssi_dbm = g_link_rssi_dbm;
+    out->last_stats_us = g_link_last_us;
+    out->last_rc_us    = g_rc.last_update_us;
+    __enable_irq();
+}
+
+void ELRS_CRSF_Process(void)
+{
+    if (g_bind_pending) {
+        g_bind_pending = 0;
+        ELRS_CRSF_SendBind();
+        // 反馈给上位机（UART1）
+        const char ack[] = "[ESRL] bind command sent\r\n";
+        (void)BSP_UART_Write(1, (const uint8_t*)ack, (uint16_t)sizeof(ack) - 1);
+    }
+}
+
+void ELRS_CRSF_RequestBind(void)
+{
+    g_bind_pending = 1;
 }

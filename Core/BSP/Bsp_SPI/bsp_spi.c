@@ -8,6 +8,7 @@ extern void Error_Handler(void);
 SPI_HandleTypeDef hspi1;
 DMA_HandleTypeDef hdma_spi1_rx;
 DMA_HandleTypeDef hdma_spi1_tx;
+SPI_HandleTypeDef hspi2;
 
 
 /**
@@ -96,6 +97,35 @@ void MX_SPI1_Init(void)
   HAL_NVIC_EnableIRQ(DMA2_Stream3_IRQn);
 }
 
+/**
+ * @brief 初始化SPI2 (用于外部 Flash W25Qxx)
+ * @note  模式0 (CPOL=0, CPHA=0)，MSB先行，建议初始分频 8 (约5.25MHz @ APB1 42MHz)
+ */
+void MX_SPI2_Init(void)
+{
+  __HAL_RCC_SPI2_CLK_ENABLE();
+
+  hspi2.Instance = SPI2;
+  hspi2.Init.Mode = SPI_MODE_MASTER;
+  hspi2.Init.Direction = SPI_DIRECTION_2LINES;
+  hspi2.Init.DataSize = SPI_DATASIZE_8BIT;
+  hspi2.Init.CLKPolarity = SPI_POLARITY_LOW;
+  hspi2.Init.CLKPhase = SPI_PHASE_1EDGE;
+  hspi2.Init.NSS = SPI_NSS_SOFT;
+  hspi2.Init.BaudRatePrescaler = SPI_BAUDRATEPRESCALER_8; // 初始较保守，必要时可提高
+  hspi2.Init.FirstBit = SPI_FIRSTBIT_MSB;
+  hspi2.Init.TIMode = SPI_TIMODE_DISABLE;
+  hspi2.Init.CRCCalculation = SPI_CRCCALCULATION_DISABLE;
+  hspi2.Init.CRCPolynomial = 7;
+
+  if (HAL_SPI_Init(&hspi2) != HAL_OK)
+  {
+    Error_Handler();
+  }
+
+  __HAL_SPI_ENABLE(&hspi2);
+}
+
 /* MSP GPIO 配置迁移至 BSP：配置 SPI1 引脚 PA5/PA6/PA7 */
 void HAL_SPI_MspInit(SPI_HandleTypeDef* hspi)
 {
@@ -112,6 +142,22 @@ void HAL_SPI_MspInit(SPI_HandleTypeDef* hspi)
     GPIO_InitStruct.Alternate = GPIO_AF5_SPI1;
     HAL_GPIO_Init(ICM42688P_SPI1_GPIO_PORT, &GPIO_InitStruct);
   }
+  else if (hspi->Instance == SPI2)
+  {
+    GPIO_InitTypeDef GPIO_InitStruct = {0};
+
+    __HAL_RCC_GPIOB_CLK_ENABLE();
+
+    GPIO_InitStruct.Pin = W25QXX_SPI_SCK_PIN | W25QXX_SPI_MISO_PIN | W25QXX_SPI_MOSI_PIN;
+    GPIO_InitStruct.Mode = GPIO_MODE_AF_PP;
+    GPIO_InitStruct.Pull = GPIO_NOPULL;
+    GPIO_InitStruct.Speed = GPIO_SPEED_FREQ_VERY_HIGH;
+    GPIO_InitStruct.Alternate = W25QXX_SPI_AF;
+    HAL_GPIO_Init(W25QXX_SPI_GPIO_PORT, &GPIO_InitStruct);
+
+    // CS 引脚由上层手动控制，这里只保证 IO 口时钟开启
+    __HAL_RCC_GPIOB_CLK_ENABLE();
+  }
 }
 
 void HAL_SPI_MspDeInit(SPI_HandleTypeDef* hspi)
@@ -119,5 +165,9 @@ void HAL_SPI_MspDeInit(SPI_HandleTypeDef* hspi)
   if (hspi->Instance == SPI1)
   {
     HAL_GPIO_DeInit(ICM42688P_SPI1_GPIO_PORT, ICM42688P_SCK_PIN | ICM42688P_MISO_PIN | ICM42688P_MOSI_PIN);
+  }
+  else if (hspi->Instance == SPI2)
+  {
+    HAL_GPIO_DeInit(W25QXX_SPI_GPIO_PORT, W25QXX_SPI_SCK_PIN | W25QXX_SPI_MISO_PIN | W25QXX_SPI_MOSI_PIN);
   }
 }

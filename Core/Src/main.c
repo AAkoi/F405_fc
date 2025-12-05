@@ -12,8 +12,10 @@
 #include "test_mag.h"
 #include "test_timer_log.h"
 #include "test_scheduler.h"
+#include "test_w25qxx.h"
+#include "test_esrl.h"
 
-#define RUN_MODE 4 // 0: gyro+acc attitude test, 1: gyro+acc+mag attitude test, 2: magnetometer stream test, 3: gyro raw test, 4: scheduler pipeline test
+#define RUN_MODE 6 // 0: gyro+acc attitude test, 1: gyro+acc+mag attitude test, 2: magnetometer stream test, 3: gyro raw test, 4: scheduler pipeline test, 5: W25Qxx flash test, 6: ELRS/CRSF on UART2 test
 
 int main(void)
 {
@@ -37,6 +39,10 @@ int main(void)
         test_gyro_run();
     } else if (RUN_MODE==4) {
         test_scheduler_run();
+    } else if (RUN_MODE==5) {
+        test_w25qxx_run();
+    } else if (RUN_MODE==6) {
+        test_esrl_run();
     }else{
         test_timer_log_run();
     }

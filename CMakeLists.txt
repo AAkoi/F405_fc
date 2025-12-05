@@ -63,6 +63,7 @@ target_sources(${CMAKE_PROJECT_NAME} PRIVATE
     # HMC5883L Magnetometer Library
     Core/Lib/hmc5883l/hmc5883l.c
     Core/Lib/hmc5883l/hmc5883l_lib.c
+    Core/Lib/w25qxx/w25qxx.c
     
     # VL53L0X ToF Distance Sensor Library
     Core/Lib/tof/tof.c
@@ -105,6 +106,8 @@ target_sources(${CMAKE_PROJECT_NAME} PRIVATE
     Core/Test/test_pwm_servo.c
     Core/Test/test_timer_log.c
     Core/Test/test_scheduler.c
+    Core/Test/test_w25qxx.c
+    Core/Test/test_esrl.c
 )
 
 # Add include paths
@@ -124,6 +127,7 @@ target_include_directories(${CMAKE_PROJECT_NAME} PRIVATE
     Core/Lib/tof/core/inc       # VL53L0X core API headers
     Core/Lib/tof/platform/inc   # VL53L0X platform headers
     Core/Lib/esrl               # ELRS/CRSF helper
+    Core/Lib/w25qxx             # W25Qxx SPI Flash
     Core/Control/PID            # PID controller
     Core/Control/Filter         # Filters
     Core/Control/Tools          # Math helpers
@@ -138,6 +142,7 @@ target_compile_definitions(${CMAKE_PROJECT_NAME} PRIVATE
     USE_HAL_DRIVER
     ICM_USE_DMA             # Enable DMA for ICM42688P (启用后使用DMA模式)
     USE_UART1               # Enable UART1 BSP
+    USE_UART2               # Enable UART2 BSP (ELRS test / PC comm)
     
     # 注意：如果遇到DMA问题，可以注释掉ICM_USE_DMA，回退到轮询模式
 )

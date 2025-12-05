@@ -1,6 +1,6 @@
 /**
  * @file    elrs_crsf_port.h
- * @brief   将 ELRS/CRSF 绑定到 UART1 的移植层
+ * @brief   将 ELRS/CRSF 绑定到指定 UART 的移植层（UART1/2 均可）
  */
 #ifndef ELRS_CRSF_PORT_H
 #define ELRS_CRSF_PORT_H
@@ -14,6 +14,15 @@ extern "C" {
 
 // 初始化并将 elrs_crsf 绑定到 UART1（默认 420000 波特）
 void ELRS_CRSF_InitOnUART1(void);
+
+// 初始化并将 elrs_crsf 绑定到 UART2（默认 420000 波特）
+void ELRS_CRSF_InitOnUART2(void);
+
+// 在主循环中调用的处理函数（执行挂起的动作，如发送Bind）
+void ELRS_CRSF_Process(void);
+
+// 请求一次绑定（安全：可在中断环境调用，仅置标志）
+void ELRS_CRSF_RequestBind(void);
 
 // ========================= RC 映射与访问接口 =========================
 
@@ -66,6 +75,20 @@ void ELRS_CRSF_SendBind(void);
 
 // 将 0..2047 原始通道映射到近似 1000..2000us（中心 ~1500）
 uint16_t ELRS_CRSF_MapRaw11bToUs(uint16_t v11b);
+
+// ========================= Link 状态接口（基于 LinkStatistics） =========================
+typedef struct {
+    uint8_t  lq;               // uplink LQ 0..100
+    int8_t   rssi_dbm;         // 上行 RSSI dBm（负值）
+    uint32_t last_stats_us;    // 最近一次收到 LinkStatistics 的时间（us）
+    uint32_t last_rc_us;       // 最近一次收到 RC 通道帧的时间（us）
+} elrs_link_info_t;
+
+// “无线链路是否已连接”判断：要求在 timeout_ms 内收到 LinkStats 且 LQ>0
+bool ELRS_CRSF_IsRadioLinked(uint32_t timeout_ms);
+
+// 获取最近的链路信息（LQ/RSSI/时间戳），若未收到则置零
+void ELRS_CRSF_GetLinkInfo(elrs_link_info_t *out);
 
 #ifdef __cplusplus
 }

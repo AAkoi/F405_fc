@@ -254,3 +254,51 @@ void HAL_UART_RxCpltCallback(UART_HandleTypeDef *huart)
 #endif
 }
 
+// 错误回调：清除错误标志并重新启动接收，避免 ORE/FE/NE 导致 RX 卡死
+void HAL_UART_ErrorCallback(UART_HandleTypeDef *huart)
+{
+#ifdef USE_UART1
+    if (huart->Instance == USART1) {
+        __HAL_UART_CLEAR_PEFLAG(huart);
+        __HAL_UART_CLEAR_FEFLAG(huart);
+        __HAL_UART_CLEAR_NEFLAG(huart);
+        __HAL_UART_CLEAR_OREFLAG(huart);
+        __HAL_UART_CLEAR_FLAG(huart, UART_FLAG_RXNE);
+        HAL_UART_Receive_IT(&huart1, &rx1, 1);
+        return;
+    }
+#endif
+#ifdef USE_UART2
+    if (huart->Instance == USART2) {
+        __HAL_UART_CLEAR_PEFLAG(huart);
+        __HAL_UART_CLEAR_FEFLAG(huart);
+        __HAL_UART_CLEAR_NEFLAG(huart);
+        __HAL_UART_CLEAR_OREFLAG(huart);
+        __HAL_UART_CLEAR_FLAG(huart, UART_FLAG_RXNE);
+        HAL_UART_Receive_IT(&huart2, &rx2, 1);
+        return;
+    }
+#endif
+#ifdef USE_UART3
+    if (huart->Instance == USART3) {
+        __HAL_UART_CLEAR_PEFLAG(huart);
+        __HAL_UART_CLEAR_FEFLAG(huart);
+        __HAL_UART_CLEAR_NEFLAG(huart);
+        __HAL_UART_CLEAR_OREFLAG(huart);
+        __HAL_UART_CLEAR_FLAG(huart, UART_FLAG_RXNE);
+        HAL_UART_Receive_IT(&huart3, &rx3, 1);
+        return;
+    }
+#endif
+#ifdef USE_UART4
+    if (huart->Instance == UART4) {
+        __HAL_UART_CLEAR_PEFLAG(huart);
+        __HAL_UART_CLEAR_FEFLAG(huart);
+        __HAL_UART_CLEAR_NEFLAG(huart);
+        __HAL_UART_CLEAR_OREFLAG(huart);
+        __HAL_UART_CLEAR_FLAG(huart, UART_FLAG_RXNE);
+        HAL_UART_Receive_IT(&huart4, &rx4, 1);
+        return;
+    }
+#endif
+}
