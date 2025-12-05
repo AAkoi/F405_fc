@@ -24,6 +24,13 @@ void ELRS_CRSF_Process(void);
 // 请求一次绑定（安全：可在中断环境调用，仅置标志）
 void ELRS_CRSF_RequestBind(void);
 
+// 解除 CRSF 对 UART 的绑定（忽略回调输入，便于其他模块占用 UART1）
+void ELRS_CRSF_Disable(void);
+
+// 注册一个用于接收“主机串口（UART1）”字节的处理函数（可用于测试CLI）
+typedef void (*elrs_host_uart_rx_cb_t)(uint8_t byte);
+void ELRS_RegisterHostUart1Handler(elrs_host_uart_rx_cb_t cb);
+
 // ========================= RC 映射与访问接口 =========================
 
 // 通道顺序映射（可按需在编译选项中覆盖为 TAER 等）

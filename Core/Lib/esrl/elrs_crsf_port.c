@@ -11,6 +11,8 @@ static elrs_crsf_t g_crsf;
 static uint8_t g_uart_id = 1;
 // 从上位机串口（通常 UART1）触发的挂起动作标志
 static volatile uint8_t g_bind_pending = 0;  // 在主循环中执行发送
+// 上位机串口（UART1）用户处理回调
+static elrs_host_uart_rx_cb_t g_host_uart1_cb = NULL;
 
 // RC 状态（由 ISR 回调更新）
 static volatile elrs_rc_state_t g_rc;
@@ -144,6 +146,9 @@ void BSP_UART_RxByteCallback(uint8_t uart_id, uint8_t byte)
     } else {
         // 上位机串口（例如 UART1）：解析简单命令
         if (uart_id == 1) {
+            if (g_host_uart1_cb) {
+                g_host_uart1_cb(byte);
+            }
             if (byte == 'b' || byte == 'B') {
                 // 仅置标志，实际发送在主循环执行，避免在中断中阻塞
                 g_bind_pending = 1;
@@ -250,4 +255,15 @@ void ELRS_CRSF_Process(void)
 void ELRS_CRSF_RequestBind(void)
 {
     g_bind_pending = 1;
+}
+
+void ELRS_CRSF_Disable(void)
+{
+    g_uart_id = 0; // 忽略所有串口输入
+    g_bind_pending = 0;
+}
+
+void ELRS_RegisterHostUart1Handler(elrs_host_uart_rx_cb_t cb)
+{
+    g_host_uart1_cb = cb;
 }

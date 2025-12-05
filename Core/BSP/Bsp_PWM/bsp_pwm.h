@@ -26,6 +26,9 @@ typedef enum {
  */
 bool bsp_pwm_init(uint32_t pwm_hz);
 
+// 仅初始化指定通道所需的定时器与通道（便于单独测试）
+bool bsp_pwm_init_single(bsp_pwm_channel_t ch, uint32_t pwm_hz);
+
 /**
  * @brief 写入单路占空比
  * @param ch 通道
@@ -47,5 +50,8 @@ bool bsp_pwm_ready(void);
  * @brief 全部停止（占空比清零）
  */
 void bsp_pwm_stop_all(void);
+
+// Debug helper: dump TIM registers for selected channel
+void bsp_pwm_debug_dump(bsp_pwm_channel_t ch);
 
 #endif // BSP_PWM_H

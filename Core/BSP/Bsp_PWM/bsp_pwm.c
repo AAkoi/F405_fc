@@ -143,6 +143,35 @@ bool bsp_pwm_init(uint32_t pwm_hz)
     return pwm_ready;
 }
 
+bool bsp_pwm_init_single(bsp_pwm_channel_t ch, uint32_t pwm_hz)
+{
+    if (pwm_hz == 0U) {
+        pwm_hz = BSP_PWM_DEFAULT_HZ;
+    }
+
+    pwm_gpio_init();
+
+    bool ok = false;
+    if (ch == BSP_PWM_CH3 || ch == BSP_PWM_CH4) {
+        __HAL_RCC_TIM3_CLK_ENABLE();
+        if (pwm_setup_timer(&htim3, TIM3, pwm_hz)) {
+            uint32_t channel = (ch == BSP_PWM_CH3) ? TIM_CHANNEL_3 : TIM_CHANNEL_4;
+            ok = pwm_config_and_start(&htim3, channel);
+            pwm_map[ch].htim = &htim3;
+        }
+    } else if (ch == BSP_PWM_CH1 || ch == BSP_PWM_CH2) {
+        __HAL_RCC_TIM8_CLK_ENABLE();
+        if (pwm_setup_timer(&htim8, TIM8, pwm_hz)) {
+            uint32_t channel = (ch == BSP_PWM_CH1) ? TIM_CHANNEL_1 : TIM_CHANNEL_2;
+            ok = pwm_config_and_start(&htim8, channel);
+            pwm_map[ch].htim = &htim8;
+        }
+    }
+
+    pwm_ready = ok;
+    printf("[bsp_pwm] single init ch%u %lu Hz: %s\r\n", (unsigned)(ch+1), (unsigned long)pwm_hz, ok?"OK":"FAIL");
+    return ok;
+}
 void bsp_pwm_write(bsp_pwm_channel_t ch, float duty)
 {
     if (!pwm_ready || ch >= BSP_PWM_CH_MAX) {
@@ -178,4 +207,30 @@ void bsp_pwm_stop_all(void)
 {
     float zero[BSP_PWM_CH_MAX] = {0};
     bsp_pwm_write_all(zero);
+}
+
+void bsp_pwm_debug_dump(bsp_pwm_channel_t ch)
+{
+    if (ch >= BSP_PWM_CH_MAX) return;
+    TIM_HandleTypeDef *htim = pwm_map[ch].htim;
+    if (!htim) {
+        printf("[bsp_pwm] ch%u not inited\r\n", (unsigned)(ch+1));
+        return;
+    }
+    uint32_t psc = htim->Instance->PSC;
+    uint32_t arr = htim->Instance->ARR;
+    uint32_t ccr = 0;
+    switch (pwm_map[ch].channel) {
+        case TIM_CHANNEL_1: ccr = htim->Instance->CCR1; break;
+        case TIM_CHANNEL_2: ccr = htim->Instance->CCR2; break;
+        case TIM_CHANNEL_3: ccr = htim->Instance->CCR3; break;
+        case TIM_CHANNEL_4: ccr = htim->Instance->CCR4; break;
+        default: break;
+    }
+    unsigned tim_no = (htim->Instance==TIM1)?1:(htim->Instance==TIM2)?2:(htim->Instance==TIM3)?3:(htim->Instance==TIM4)?4:(htim->Instance==TIM5)?5:(htim->Instance==TIM8)?8:0;
+    unsigned ch_no  = (pwm_map[ch].channel==TIM_CHANNEL_1)?1:(pwm_map[ch].channel==TIM_CHANNEL_2)?2:(pwm_map[ch].channel==TIM_CHANNEL_3)?3:4;
+    printf("[bsp_pwm] ch%u TIM%u CH%u PSC=%u ARR=%u CCR=%u duty=%.3f\r\n",
+           (unsigned)(ch+1), tim_no, ch_no,
+           (unsigned)psc, (unsigned)arr, (unsigned)ccr,
+           (arr? ((float)ccr/(float)(arr+1)) : 0.0f));
 }
