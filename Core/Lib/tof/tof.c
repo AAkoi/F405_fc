@@ -10,12 +10,16 @@
 #include "tof.h"
 #include "vl53l0x_api.h"
 #include "vl53l0x_platform.h"
+#include "bsp_iic.h"
 #include <string.h>
 #include <stdio.h>
 
 /* ============================================================================
  * 全局变量
  * ============================================================================ */
+
+// 默认测试使用 I2C1（占用 BMP280 线路），注释掉即可回到 I2C2
+#define USE_TOF_I2C1
 
 // VL53L0X 设备结构体
 static VL53L0X_Dev_t vl53l0x_dev;
@@ -26,8 +30,14 @@ static VL53L0X_DeviceInfo_t device_info;
 // 当前测量模式
 static tof_mode_t current_mode = TOF_MODE_DEFAULT;
 
-// 外部 I2C2 句柄声明 (由 STM32 CubeMX 生成)
+// I2C 句柄切换（默认 I2C2，可通过宏切换至 I2C1）
+#ifdef USE_TOF_I2C1
+extern I2C_HandleTypeDef hi2c1;
+#define TOF_I2C_HANDLE (&hi2c1)
+#else
 extern I2C_HandleTypeDef hi2c2;
+#define TOF_I2C_HANDLE (&hi2c2)
+#endif
 
 /* ============================================================================
  * 模式配置参数
@@ -87,7 +97,7 @@ static const tof_mode_config_t mode_configs[] = {
 static inline uint8_t tof_i2c2_write_byte(uint8_t dev_addr, uint8_t reg, uint8_t value)
 {
     uint8_t data[2] = {reg, value};
-    HAL_StatusTypeDef status = HAL_I2C_Master_Transmit(&hi2c2, dev_addr, data, 2, 100);
+    HAL_StatusTypeDef status = HAL_I2C_Master_Transmit(TOF_I2C_HANDLE, dev_addr, data, 2, 100);
     return (status == HAL_OK) ? 0 : 1;
 }
 
@@ -99,11 +109,11 @@ static inline uint8_t tof_i2c2_read_byte(uint8_t dev_addr, uint8_t reg, uint8_t 
     HAL_StatusTypeDef status;
     
     // 发送寄存器地址
-    status = HAL_I2C_Master_Transmit(&hi2c2, dev_addr, &reg, 1, 100);
+    status = HAL_I2C_Master_Transmit(TOF_I2C_HANDLE, dev_addr, &reg, 1, 100);
     if (status != HAL_OK) return 1;
     
     // 读取数据
-    status = HAL_I2C_Master_Receive(&hi2c2, dev_addr, data, 1, 100);
+    status = HAL_I2C_Master_Receive(TOF_I2C_HANDLE, dev_addr, data, 1, 100);
     return (status == HAL_OK) ? 0 : 1;
 }
 
@@ -116,11 +126,11 @@ static inline uint8_t tof_i2c2_read_burst(uint8_t dev_addr, uint8_t reg,
     HAL_StatusTypeDef status;
     
     // 发送寄存器地址
-    status = HAL_I2C_Master_Transmit(&hi2c2, dev_addr, &reg, 1, 100);
+    status = HAL_I2C_Master_Transmit(TOF_I2C_HANDLE, dev_addr, &reg, 1, 100);
     if (status != HAL_OK) return 1;
     
     // 读取数据
-    status = HAL_I2C_Master_Receive(&hi2c2, dev_addr, buffer, len, 100);
+    status = HAL_I2C_Master_Receive(TOF_I2C_HANDLE, dev_addr, buffer, len, 100);
     return (status == HAL_OK) ? 0 : 1;
 }
 
@@ -137,7 +147,7 @@ static inline uint8_t tof_i2c2_write_multi(uint8_t dev_addr, uint8_t reg,
     buffer[0] = reg;
     memcpy(&buffer[1], pdata, count);
     
-    HAL_StatusTypeDef status = HAL_I2C_Master_Transmit(&hi2c2, dev_addr, buffer, count + 1, 100);
+    HAL_StatusTypeDef status = HAL_I2C_Master_Transmit(TOF_I2C_HANDLE, dev_addr, buffer, count + 1, 100);
     return (status == HAL_OK) ? 0 : 1;
 }
 

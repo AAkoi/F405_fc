@@ -108,6 +108,7 @@ target_sources(${CMAKE_PROJECT_NAME} PRIVATE
     Core/Test/test_scheduler.c
     Core/Test/test_w25qxx.c
     Core/Test/test_esrl.c
+    Core/Test/test_tof.c
 )
 
 # Add include paths

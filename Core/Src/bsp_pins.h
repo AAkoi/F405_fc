@@ -60,6 +60,11 @@
 #define BMP280_IIC1_SCL                GPIO_PIN_6
 #define BMP280_IIC1_SDA                GPIO_PIN_7
 
+// 临时 ToF 测试也使用 I2C1 (与 BMP280 共用)
+#define TOF_IIC1_GPIO_PORT             BMP280_IIC1_GPIO_PORT
+#define TOF_IIC1_SCL                   BMP280_IIC1_SCL
+#define TOF_IIC1_SDA                   BMP280_IIC1_SDA
+
 //IIC3
 #define HMC5883l_IIC3_GPIO_PORT          GPIOA
 #define HMC5883l_IIC3_SCL                GPIO_PIN_8 //PA8
