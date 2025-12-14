@@ -1,6 +1,6 @@
 /**
  * @file    w25qxx.c
- * @brief   W25Qxx SPI Flash 驱动（SPI2 + HAL）
+ * @brief   W25Qxx SPI Flash 驱动（SPI1 + HAL）
  */
 
 #include "w25qxx.h"
@@ -14,6 +14,18 @@
 #define W25QXX_CS_LOW()   GPIO_PIN_SET_LOW(W25QXX_CS_GPIO_PORT, W25QXX_CS_PIN)
 #define W25QXX_CS_HIGH()  GPIO_PIN_SET_HIGH(W25QXX_CS_GPIO_PORT, W25QXX_CS_PIN)
 
+static void w25qxx_cs_gpio_clock_enable(GPIO_TypeDef *port)
+{
+    if (port == GPIOA) __HAL_RCC_GPIOA_CLK_ENABLE();
+    else if (port == GPIOB) __HAL_RCC_GPIOB_CLK_ENABLE();
+    else if (port == GPIOC) __HAL_RCC_GPIOC_CLK_ENABLE();
+    else if (port == GPIOD) __HAL_RCC_GPIOD_CLK_ENABLE();
+    else if (port == GPIOE) __HAL_RCC_GPIOE_CLK_ENABLE();
+    else if (port == GPIOF) __HAL_RCC_GPIOF_CLK_ENABLE();
+    else if (port == GPIOG) __HAL_RCC_GPIOG_CLK_ENABLE();
+    else if (port == GPIOH) __HAL_RCC_GPIOH_CLK_ENABLE();
+}
+
 // 全局设备实例
 w25qxx_device_t w25qxx_dev = {
     .init = w25qxx_init,
@@ -24,13 +36,13 @@ w25qxx_device_t w25qxx_dev = {
 
 static HAL_StatusTypeDef w25qxx_spi_tx(const uint8_t *tx, uint8_t *rx, uint16_t len)
 {
-    return HAL_SPI_TransmitReceive(&hspi2, (uint8_t *)tx, rx, len, W25QXX_SPI_TIMEOUT);
+    return HAL_SPI_TransmitReceive(&hspi1, (uint8_t *)tx, rx, len, W25QXX_SPI_TIMEOUT);
 }
 
 static uint8_t w25qxx_rw_byte(uint8_t tx)
 {
     uint8_t rx = 0xFF;
-    HAL_SPI_TransmitReceive(&hspi2, &tx, &rx, 1, W25QXX_SPI_TIMEOUT);
+    HAL_SPI_TransmitReceive(&hspi1, &tx, &rx, 1, W25QXX_SPI_TIMEOUT);
     return rx;
 }
 
@@ -97,9 +109,9 @@ HAL_StatusTypeDef w25qxx_read(uint8_t *buf, uint32_t addr, uint16_t len)
     cmd[3] = (uint8_t)addr;
 
     W25QXX_CS_LOW();
-    HAL_StatusTypeDef ret = HAL_SPI_Transmit(&hspi2, cmd, sizeof(cmd), W25QXX_SPI_TIMEOUT);
+    HAL_StatusTypeDef ret = HAL_SPI_Transmit(&hspi1, cmd, sizeof(cmd), W25QXX_SPI_TIMEOUT);
     if (ret == HAL_OK) {
-        ret = HAL_SPI_Receive(&hspi2, buf, len, W25QXX_SPI_TIMEOUT);
+        ret = HAL_SPI_Receive(&hspi1, buf, len, W25QXX_SPI_TIMEOUT);
     }
     W25QXX_CS_HIGH();
     return ret;
@@ -118,9 +130,9 @@ static HAL_StatusTypeDef w25qxx_write_page(const uint8_t *buf, uint32_t addr, ui
     cmd[3] = (uint8_t)addr;
 
     W25QXX_CS_LOW();
-    HAL_StatusTypeDef ret = HAL_SPI_Transmit(&hspi2, cmd, sizeof(cmd), W25QXX_SPI_TIMEOUT);
+    HAL_StatusTypeDef ret = HAL_SPI_Transmit(&hspi1, cmd, sizeof(cmd), W25QXX_SPI_TIMEOUT);
     if (ret == HAL_OK) {
-        ret = HAL_SPI_Transmit(&hspi2, (uint8_t *)buf, len, W25QXX_SPI_TIMEOUT);
+        ret = HAL_SPI_Transmit(&hspi1, (uint8_t *)buf, len, W25QXX_SPI_TIMEOUT);
     }
     W25QXX_CS_HIGH();
 
@@ -167,7 +179,7 @@ HAL_StatusTypeDef w25qxx_erase_sector(uint32_t sector_idx)
     cmd[3] = (uint8_t)addr;
 
     W25QXX_CS_LOW();
-    HAL_StatusTypeDef ret = HAL_SPI_Transmit(&hspi2, cmd, sizeof(cmd), W25QXX_SPI_TIMEOUT);
+    HAL_StatusTypeDef ret = HAL_SPI_Transmit(&hspi1, cmd, sizeof(cmd), W25QXX_SPI_TIMEOUT);
     W25QXX_CS_HIGH();
 
     w25qxx_wait_busy();
@@ -178,7 +190,7 @@ HAL_StatusTypeDef w25qxx_erase_chip(void)
 {
     w25qxx_write_enable();
     W25QXX_CS_LOW();
-    HAL_StatusTypeDef ret = HAL_SPI_Transmit(&hspi2, (uint8_t[]){W25X_ChipErase}, 1, W25QXX_SPI_TIMEOUT);
+    HAL_StatusTypeDef ret = HAL_SPI_Transmit(&hspi1, (uint8_t[]){W25X_ChipErase}, 1, W25QXX_SPI_TIMEOUT);
     W25QXX_CS_HIGH();
     w25qxx_wait_busy();
     return ret;
@@ -187,7 +199,7 @@ HAL_StatusTypeDef w25qxx_erase_chip(void)
 HAL_StatusTypeDef w25qxx_power_down(void)
 {
     W25QXX_CS_LOW();
-    HAL_StatusTypeDef ret = HAL_SPI_Transmit(&hspi2, (uint8_t[]){W25X_PowerDown}, 1, W25QXX_SPI_TIMEOUT);
+    HAL_StatusTypeDef ret = HAL_SPI_Transmit(&hspi1, (uint8_t[]){W25X_PowerDown}, 1, W25QXX_SPI_TIMEOUT);
     W25QXX_CS_HIGH();
     return ret;
 }
@@ -195,7 +207,7 @@ HAL_StatusTypeDef w25qxx_power_down(void)
 HAL_StatusTypeDef w25qxx_wakeup(void)
 {
     W25QXX_CS_LOW();
-    HAL_StatusTypeDef ret = HAL_SPI_Transmit(&hspi2, (uint8_t[]){W25X_ReleasePowerDown}, 1, W25QXX_SPI_TIMEOUT);
+    HAL_StatusTypeDef ret = HAL_SPI_Transmit(&hspi1, (uint8_t[]){W25X_ReleasePowerDown}, 1, W25QXX_SPI_TIMEOUT);
     W25QXX_CS_HIGH();
     HAL_Delay(1);
     return ret;
@@ -203,11 +215,11 @@ HAL_StatusTypeDef w25qxx_wakeup(void)
 
 void w25qxx_init(void)
 {
-    // SPI2 初始化（如果已经初始化过则不会有副作用）
-    MX_SPI2_Init();
+    // SPI1 初始化（如果已经初始化过则不会有副作用）
+    MX_SPI1_Init();
 
     // CS 引脚配置为推挽输出并默认拉高
-    __HAL_RCC_GPIOB_CLK_ENABLE();
+    w25qxx_cs_gpio_clock_enable(W25QXX_CS_GPIO_PORT);
     GPIO_InitTypeDef GPIO_InitStruct = {0};
     GPIO_InitStruct.Pin = W25QXX_CS_PIN;
     GPIO_InitStruct.Mode = GPIO_MODE_OUTPUT_PP;

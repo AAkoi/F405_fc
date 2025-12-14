@@ -115,15 +115,6 @@ void HAL_I2C_MspInit(I2C_HandleTypeDef* hi2c)
         __HAL_RCC_GPIOB_CLK_ENABLE(); // 默认使用 PB10/PB11，如需更改请在 bsp_pins.h 定义 I2C2_SCL/SDA
         __HAL_RCC_I2C2_CLK_ENABLE();
 
-#ifndef I2C2_SCL_PIN
-#define I2C2_SCL_PIN     GPIO_PIN_10
-#define I2C2_SCL_PORT    GPIOB
-#endif
-#ifndef I2C2_SDA_PIN
-#define I2C2_SDA_PIN     GPIO_PIN_11
-#define I2C2_SDA_PORT    GPIOB
-#endif
-
         // SCL
         GPIO_InitStruct.Pin = I2C2_SCL_PIN;
         GPIO_InitStruct.Mode = GPIO_MODE_AF_OD;
@@ -145,18 +136,18 @@ void HAL_I2C_MspInit(I2C_HandleTypeDef* hi2c)
         __HAL_RCC_GPIOC_CLK_ENABLE();
         __HAL_RCC_I2C3_CLK_ENABLE();
 
-        // SCL: PA8
-        GPIO_InitStruct.Pin = HMC5883l_IIC3_SCL;
+        // SCL
+        GPIO_InitStruct.Pin = I2C3_SCL_PIN;
         GPIO_InitStruct.Mode = GPIO_MODE_AF_OD;
         GPIO_InitStruct.Pull = GPIO_PULLUP;
         GPIO_InitStruct.Speed = GPIO_SPEED_FREQ_VERY_HIGH;
         GPIO_InitStruct.Alternate = GPIO_AF4_I2C3;
-        HAL_GPIO_Init(HMC5883l_IIC3_GPIO_PORT, &GPIO_InitStruct);
+        HAL_GPIO_Init(I2C3_SCL_PORT, &GPIO_InitStruct);
 
-        // SDA: PC9
-        GPIO_InitStruct.Pin = HMC5883l_IIC3_SDA;
+        // SDA
+        GPIO_InitStruct.Pin = I2C3_SDA_PIN;
         GPIO_InitStruct.Alternate = GPIO_AF4_I2C3;
-        HAL_GPIO_Init(HMC5883l_IIC3_SDA_GPIO_PORT, &GPIO_InitStruct);
+        HAL_GPIO_Init(I2C3_SDA_PORT, &GPIO_InitStruct);
     }
 }
 
@@ -167,11 +158,17 @@ void HAL_I2C_MspDeInit(I2C_HandleTypeDef* hi2c)
         __HAL_RCC_I2C1_CLK_DISABLE();
         HAL_GPIO_DeInit(BMP280_IIC1_GPIO_PORT, BMP280_IIC1_SCL | BMP280_IIC1_SDA);
     }
+    else if (hi2c->Instance == I2C2)
+    {
+        __HAL_RCC_I2C2_CLK_DISABLE();
+        HAL_GPIO_DeInit(I2C2_SCL_PORT, I2C2_SCL_PIN);
+        HAL_GPIO_DeInit(I2C2_SDA_PORT, I2C2_SDA_PIN);
+    }
     else if (hi2c->Instance == I2C3)
     {
         __HAL_RCC_I2C3_CLK_DISABLE();
-        HAL_GPIO_DeInit(HMC5883l_IIC3_GPIO_PORT, HMC5883l_IIC3_SCL);
-        HAL_GPIO_DeInit(HMC5883l_IIC3_SDA_GPIO_PORT, HMC5883l_IIC3_SDA);
+        HAL_GPIO_DeInit(I2C3_SCL_PORT, I2C3_SCL_PIN);
+        HAL_GPIO_DeInit(I2C3_SDA_PORT, I2C3_SDA_PIN);
     }
 }
 
@@ -292,6 +289,22 @@ void I2C3_EV_IRQHandler(void)
 void I2C3_ER_IRQHandler(void)
 {
     HAL_I2C_ER_IRQHandler(&hi2c3);
+}
+
+/**
+ * @brief I2C2 event interrupt handler
+ */
+void I2C2_EV_IRQHandler(void)
+{
+    HAL_I2C_EV_IRQHandler(&hi2c2);
+}
+
+/**
+ * @brief I2C2 error interrupt handler
+ */
+void I2C2_ER_IRQHandler(void)
+{
+    HAL_I2C_ER_IRQHandler(&hi2c2);
 }
 
 /**

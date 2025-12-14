@@ -4,7 +4,7 @@
  * @author  Based on ST VL53L0X API
  * @date    2025
  * 
- * 使用 I2C2 接口通信（参考 BSP_IIC 实现风格）
+ * 使用 I2C3 接口通信（参考 BSP_IIC 实现风格）
  */
 
 #include "tof.h"
@@ -18,9 +18,6 @@
  * 全局变量
  * ============================================================================ */
 
-// 默认测试使用 I2C1（占用 BMP280 线路），注释掉即可回到 I2C2
-#define USE_TOF_I2C1
-
 // VL53L0X 设备结构体
 static VL53L0X_Dev_t vl53l0x_dev;
 
@@ -30,14 +27,9 @@ static VL53L0X_DeviceInfo_t device_info;
 // 当前测量模式
 static tof_mode_t current_mode = TOF_MODE_DEFAULT;
 
-// I2C 句柄切换（默认 I2C2，可通过宏切换至 I2C1）
-#ifdef USE_TOF_I2C1
-extern I2C_HandleTypeDef hi2c1;
-#define TOF_I2C_HANDLE (&hi2c1)
-#else
-extern I2C_HandleTypeDef hi2c2;
-#define TOF_I2C_HANDLE (&hi2c2)
-#endif
+// ToF 固定使用 I2C3
+extern I2C_HandleTypeDef hi2c3;
+#define TOF_I2C_HANDLE (&hi2c3)
 
 /* ============================================================================
  * 模式配置参数
@@ -88,11 +80,11 @@ static const tof_mode_config_t mode_configs[] = {
 };
 
 /* ============================================================================
- * I2C2 底层函数（基于 BSP_IIC 风格的浅封装）
+ * I2C3 底层函数（基于 BSP_IIC 风格的浅封装）
  * ============================================================================ */
 
 /**
- * @brief I2C2 写入单个字节
+ * @brief I2C3 写入单个字节
  */
 static inline uint8_t tof_i2c2_write_byte(uint8_t dev_addr, uint8_t reg, uint8_t value)
 {
@@ -102,7 +94,7 @@ static inline uint8_t tof_i2c2_write_byte(uint8_t dev_addr, uint8_t reg, uint8_t
 }
 
 /**
- * @brief I2C2 读取单个字节
+ * @brief I2C3 读取单个字节
  */
 static inline uint8_t tof_i2c2_read_byte(uint8_t dev_addr, uint8_t reg, uint8_t *data)
 {
@@ -802,7 +794,6 @@ const char* tof_get_status_string(uint8_t status)
         default: return "未知错误";
     }
 }
-
 
 
 

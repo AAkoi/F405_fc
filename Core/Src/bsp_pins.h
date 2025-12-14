@@ -31,27 +31,25 @@
 
 // SPI片选引脚 (CS)
 #define ICM42688P_CS_GPIO_PORT          GPIOC
-#define ICM42688P_CS_PIN                GPIO_PIN_2
+#define ICM42688P_CS_PIN                GPIO_PIN_5
 #define ICM42688P_SPI1_GPIO_PORT        GPIOA
 #define ICM42688P_SCK_PIN               GPIO_PIN_5 //PA5
 #define ICM42688P_MISO_PIN              GPIO_PIN_6 //PA6 
 #define ICM42688P_MOSI_PIN              GPIO_PIN_7 //PA7
 
 // 中断引脚 (INT1)
-#define ICM42688P_INT_GPIO_PORT         GPIOC
-#define ICM42688P_INT_PIN               GPIO_PIN_3
+#define ICM42688P_INT_GPIO_PORT         GPIOA
+#define ICM42688P_INT_PIN               GPIO_PIN_4
 
 /* ============================================================================
- * 外部 SPI Flash (W25Qxx) 使用 SPI2
- * 默认映射：PB13=SCK, PB14=MISO, PB15=MOSI，CS 默认 PB12（可按需修改）
+ * 外部 SPI Flash (W25Qxx) 使用 SPI1（与 ICM42688P 共用 SCK/MISO/MOSI，不同 CS）
+ * 默认映射：PA5=SCK, PA6=MISO, PA7=MOSI，CS = PB12
  * ============================================================================ */
-#define W25QXX_SPI_GPIO_PORT            GPIOB
-#define W25QXX_SPI_SCK_PIN              GPIO_PIN_13
-#define W25QXX_SPI_MISO_PIN             GPIO_PIN_14
-#define W25QXX_SPI_MOSI_PIN             GPIO_PIN_15
-#define W25QXX_SPI_AF                   GPIO_AF5_SPI2
-
-// CS 引脚：如有换脚需求请在此修改
+#define W25QXX_SPI_GPIO_PORT            GPIOA
+#define W25QXX_SPI_SCK_PIN              GPIO_PIN_5
+#define W25QXX_SPI_MISO_PIN             GPIO_PIN_6
+#define W25QXX_SPI_MOSI_PIN             GPIO_PIN_7
+#define W25QXX_SPI_AF                   GPIO_AF5_SPI1
 #define W25QXX_CS_GPIO_PORT             GPIOB
 #define W25QXX_CS_PIN                   GPIO_PIN_12
 
@@ -60,19 +58,28 @@
 #define BMP280_IIC1_SCL                GPIO_PIN_6
 #define BMP280_IIC1_SDA                GPIO_PIN_7
 
-// 临时 ToF 测试也使用 I2C1 (与 BMP280 共用)
-#define TOF_IIC1_GPIO_PORT             BMP280_IIC1_GPIO_PORT
-#define TOF_IIC1_SCL                   BMP280_IIC1_SCL
-#define TOF_IIC1_SDA                   BMP280_IIC1_SDA
+// HMC5883L 改为 IIC2（默认 PB10/PB11，可按需改引脚）
+#ifndef I2C2_SCL_PORT
+#define I2C2_SCL_PORT                  GPIOB
+#define I2C2_SCL_PIN                   GPIO_PIN_10
+#endif
+#ifndef I2C2_SDA_PORT
+#define I2C2_SDA_PORT                  GPIOB
+#define I2C2_SDA_PIN                   GPIO_PIN_11
+#endif
 
-//IIC3
-#define HMC5883l_IIC3_GPIO_PORT          GPIOA
-#define HMC5883l_IIC3_SCL                GPIO_PIN_8 //PA8
-#define HMC5883l_IIC3_SDA_GPIO_PORT      GPIOC
-#define HMC5883l_IIC3_SDA                GPIO_PIN_9 //PC9
+// TOF 为 IIC3（默认 SCL=PA8, SDA=PC9）
+#ifndef I2C3_SCL_PORT
+#define I2C3_SCL_PORT                  GPIOA
+#define I2C3_SCL_PIN                   GPIO_PIN_8
+#endif
+#ifndef I2C3_SDA_PORT
+#define I2C3_SDA_PORT                  GPIOC
+#define I2C3_SDA_PIN                   GPIO_PIN_9
+#endif
 // 中断引脚 (INT1)
-#define HMC5883l_INT_GPIO_PORT         GPIOC
-#define HMC5883l_INT_PIN               GPIO_PIN_4
+#define HMC5883l_INT_GPIO_PORT         GPIOB
+#define HMC5883l_INT_PIN               GPIO_PIN_0
 
 //定时器
 #define timer_port                        GPIOC

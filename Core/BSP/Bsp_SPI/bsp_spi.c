@@ -148,12 +148,29 @@ void HAL_SPI_MspInit(SPI_HandleTypeDef* hspi)
 
     __HAL_RCC_GPIOB_CLK_ENABLE();
 
-    GPIO_InitStruct.Pin = W25QXX_SPI_SCK_PIN | W25QXX_SPI_MISO_PIN | W25QXX_SPI_MOSI_PIN;
+    // SPI2 pins (default PB13/PB14/PB15), can be overridden by macros
+#ifndef SPI2_GPIO_PORT
+#define SPI2_GPIO_PORT GPIOB
+#endif
+#ifndef SPI2_SCK_PIN
+#define SPI2_SCK_PIN GPIO_PIN_13
+#endif
+#ifndef SPI2_MISO_PIN
+#define SPI2_MISO_PIN GPIO_PIN_14
+#endif
+#ifndef SPI2_MOSI_PIN
+#define SPI2_MOSI_PIN GPIO_PIN_15
+#endif
+#ifndef SPI2_AF
+#define SPI2_AF GPIO_AF5_SPI2
+#endif
+
+    GPIO_InitStruct.Pin = SPI2_SCK_PIN | SPI2_MISO_PIN | SPI2_MOSI_PIN;
     GPIO_InitStruct.Mode = GPIO_MODE_AF_PP;
     GPIO_InitStruct.Pull = GPIO_NOPULL;
     GPIO_InitStruct.Speed = GPIO_SPEED_FREQ_VERY_HIGH;
-    GPIO_InitStruct.Alternate = W25QXX_SPI_AF;
-    HAL_GPIO_Init(W25QXX_SPI_GPIO_PORT, &GPIO_InitStruct);
+    GPIO_InitStruct.Alternate = SPI2_AF;
+    HAL_GPIO_Init(SPI2_GPIO_PORT, &GPIO_InitStruct);
 
     // CS 引脚由上层手动控制，这里只保证 IO 口时钟开启
     __HAL_RCC_GPIOB_CLK_ENABLE();
@@ -168,6 +185,6 @@ void HAL_SPI_MspDeInit(SPI_HandleTypeDef* hspi)
   }
   else if (hspi->Instance == SPI2)
   {
-    HAL_GPIO_DeInit(W25QXX_SPI_GPIO_PORT, W25QXX_SPI_SCK_PIN | W25QXX_SPI_MISO_PIN | W25QXX_SPI_MOSI_PIN);
+    HAL_GPIO_DeInit(SPI2_GPIO_PORT, SPI2_SCK_PIN | SPI2_MISO_PIN | SPI2_MOSI_PIN);
   }
 }
